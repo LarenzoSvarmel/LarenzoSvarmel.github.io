@@ -1,19 +1,29 @@
 body {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
     margin: 0;
-    background-color: #f1f0f0;
+    overflow: hidden;
+    font-family: 'Arial', sans-serif;
 }
 
 .game-container {
-    border: 2px solid #000;
-    overflow: hidden;
+    position: relative;
+    width: 800px;
+    height: 600px;
+    margin: 20px auto;
+    background-color: #eee;
 }
 
-canvas {
-    border: 1px solid #000;
-    display: block;
-    margin: 0 auto;
+.player, .enemy, .bullet {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: red;
+    border-radius: 50%;
+}
+
+.enemy {
+    background-color: blue;
+}
+
+.bullet {
+    background-color: yellow;
 }
