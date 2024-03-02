@@ -13,86 +13,65 @@
       display: block;
     }
   </style>
-  <title>Raycast FPS Engine</title>
+  <title>3D Rotatable Triangle</title>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <canvas id="rotatingTriangle"></canvas>
   <script>
-    const canvas = document.getElementById('canvas');
+    const canvas = document.getElementById('rotatingTriangle');
     const ctx = canvas.getContext('2d');
-    
-    const screenWidth = 800;
-    const screenHeight = 600;
-    
-    canvas.width = screenWidth;
-    canvas.height = screenHeight;
 
-    const player = {
-      x: 50,
-      y: 50,
-      angle: Math.PI / 4,
-      fov: Math.PI / 2,
-      speed: 5,
-      turnSpeed: Math.PI / 180,
-    };
+    // Initial triangle vertices
+    const vertices = [
+      { x: 100, y: 100 },
+      { x: 300, y: 100 },
+      { x: 200, y: 300 }
+    ];
 
-    function update() {
-      // Handle input
-      if (keys['w']) {
-        player.x += player.speed * Math.cos(player.angle);
-        player.y += player.speed * Math.sin(player.angle);
-      }
-      if (keys['s']) {
-        player.x -= player.speed * Math.cos(player.angle);
-        player.y -= player.speed * Math.sin(player.angle);
-      }
-      if (keys['a']) {
-        player.angle -= player.turnSpeed;
-      }
-      if (keys['d']) {
-        player.angle += player.turnSpeed;
-      }
+    // Initial rotation angle
+    let angle = 0;
 
-      // Render scene
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
-      ctx.fillStyle = 'black';
-      ctx.fillRect(0, 0, screenWidth, screenHeight);
+    // Function to draw the triangle
+    function drawTriangle() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = 'red';
       ctx.beginPath();
-      ctx.arc(player.x, player.y, 5, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(vertices[0].x, vertices[0].y);
+      ctx.lineTo(vertices[1].x, vertices[1].y);
+      ctx.lineTo(vertices[2].x, vertices[2].y);
+      ctx.closePath();
 
-      // Draw rays (simple representation)
-      for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const rayX = player.x + Math.cos(rayAngle) * 100;
-        const rayY = player.y + Math.sin(rayAngle) * 100;
+      ctx.stroke();
+    }
 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.beginPath();
-        ctx.moveTo(player.x, player.y);
-        ctx.lineTo(rayX, rayY);
-        ctx.stroke();
+    // Function to rotate the triangle
+    function rotateTriangle() {
+      const centerX = (vertices[0].x + vertices[1].x + vertices[2].x) / 3;
+      const centerY = (vertices[0].y + vertices[1].y + vertices[2].y) / 3;
+
+      for (let i = 0; i < vertices.length; i++) {
+        const x = vertices[i].x - centerX;
+        const y = vertices[i].y - centerY;
+
+        vertices[i].x = x * Math.cos(angle) - y * Math.sin(angle) + centerX;
+        vertices[i].y = x * Math.sin(angle) + y * Math.cos(angle) + centerY;
       }
     }
 
-    const keys = {};
+    // Handle arrow key presses for rotation
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') {
+        angle -= 0.1;
+      } else if (event.key === 'ArrowRight') {
+        angle += 0.1;
+      }
 
-    window.addEventListener('keydown', (e) => {
-      keys[e.key] = true;
+      rotateTriangle();
+      drawTriangle();
     });
 
-    window.addEventListener('keyup', (e) => {
-      keys[e.key] = false;
-    });
-
-    function gameLoop() {
-      update();
-      requestAnimationFrame(gameLoop);
-    }
-
-    gameLoop();
+    // Initial draw
+    drawTriangle();
   </script>
 </body>
 </html>
