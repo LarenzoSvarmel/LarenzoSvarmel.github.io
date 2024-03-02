@@ -10,10 +10,24 @@ let ammoCount = 30;
 setInterval(moveEnemies, 1000);
 
 document.addEventListener('keydown', (event) => {
-    // ... (previous code)
-
+   if (event.key === 'ArrowUp' && player.offsetTop > 0) {
+        player.style.top = `${player.offsetTop - 10}px`;
+        player.classList.add('up');
+        player.classList.remove('down', 'left', 'right');
+    } else if (event.key === 'ArrowDown' && player.offsetTop < gameContainer.clientHeight - player.clientHeight) {
+        player.style.top = `${player.offsetTop + 10}px`;
+        player.classList.add('down');
+        player.classList.remove('up', 'left', 'right');
+    } else if (event.key === 'ArrowLeft' && player.offsetLeft > 0) {
+        player.style.left = `${player.offsetLeft - 10}px`;
+        player.classList.add('left');
+        player.classList.remove('up', 'down', 'right');
+    } else if (event.key === 'ArrowRight' && player.offsetLeft < gameContainer.clientWidth - player.clientWidth) {
+        player.style.left = `${player.offsetLeft + 10}px`;
+        player.classList.add('right');
+        player.classList.remove('up', 'down', 'left');
     // Add an else-if condition to handle spacebar and ammo count
-    else if (event.key === ' ' && !isShooting && ammoCount > 0) {
+   } else if (event.key === ' ' && !isShooting && ammoCount > 0) {
         shoot();
     }
 });
