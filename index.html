@@ -1,22 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Secure Page</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hacker Console</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #0F0;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        #console {
+            width: 80%;
+            margin: 0 auto;
+            border: 2px solid #0F0;
+            padding: 10px;
+            min-height: 200px;
+            overflow-y: auto;
+        }
+
+        #cursor {
+            display: inline-block;
+            width: 8px;
+            height: 20px;
+            background-color: #0F0;
+            animation: blink 0.8s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        #about {
+            margin-top: 20px;
+            cursor: pointer;
+            color: #00F;
+        }
+
+        #about:hover {
+            text-decoration: underline;
+        }
+
+        #about-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        #about-content {
+            background: #222;
+            padding: 20px;
+            border: 2px solid #0F0;
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        #close-about {
+            color: #F00;
+            cursor: pointer;
+            float: right;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Welcome to the Secure Page</h1>
-    <form id="loginForm" onsubmit="validatePassword(); return false;">
-      <label for="password">Password:</label>
-      <input type="password" id="password" name="password" required>
-      <button type="submit">Login</button>
-    </form>
-    <p id="errorMessage" class="hidden">Incorrect password. Please try again.</p>
-  </div>
+    <div id="console" onclick="focusConsole()">
+        <div id="output">Welcome to the Hacker Console</div>
+        <div id="input-line"><span id="command"></span><div id="cursor"></div></div>
+    </div>
+    
+    <div id="about" onclick="showAbout()">About</div>
 
-  <script src="script.js"></script>
+    <div id="about-modal">
+        <div id="about-content">
+            <div id="close-about" onclick="closeAbout()">X</div>
+            <h2>About Hacker Console</h2>
+            <p>This is a simple hacker console simulation for fun and educational purposes.</p>
+        </div>
+    </div>
+
+    <script>
+        function focusConsole() {
+            document.getElementById('cursor').style.animation = 'none';
+            document.getElementById('command').focus();
+        }
+
+        function showAbout() {
+            document.getElementById('about-modal').style.display = 'flex';
+        }
+
+        function closeAbout() {
+            document.getElementById('about-modal').style.display = 'none';
+        }
+    </script>
 </body>
 </html>
