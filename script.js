@@ -1,105 +1,80 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+document.addEventListener("DOMContentLoaded", function () {
+    const player = document.getElementById("player");
+    const enemy = document.getElementById("enemy");
+    const bullet = document.getElementById("bullet");
 
-const gridSize = 20;
-let snake = [{ x: 10, y: 10 }];
-let direction = 'right';
-let food = createFood();
+    let playerX = 400;
+    let playerY = 300;
 
-function createFood() {
-    return {
-        x: Math.floor(Math.random() * (canvas.width / gridSize)),
-        y: Math.floor(Math.random() * (canvas.height / gridSize)),
-    };
-}
+    let enemyX = 100;
+    let enemyY = 100;
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let bulletX = -10;
+    let bulletY = -10;
 
-    // Draw snake
-    ctx.fillStyle = '#00f';
-    snake.forEach(segment => {
-        ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+    document.addEventListener("keydown", function (event) {
+        // Move player with arrow keys
+        switch (event.key) {
+            case "ArrowUp":
+                playerY -= 10;
+                break;
+            case "ArrowDown":
+                playerY += 10;
+                break;
+            case "ArrowLeft":
+                playerX -= 10;
+                break;
+            case "ArrowRight":
+                playerX += 10;
+                break;
+        }
+        updatePlayerPosition();
     });
 
-    // Draw food
-    ctx.fillStyle = '#f00';
-    ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+    function updatePlayerPosition() {
+        player.style.left = playerX + "px";
+        player.style.top = playerY + "px";
 
-    // Draw border
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(0, 0, canvas.width, canvas.height);
-}
+        // Update bullet position based on player position
+        bulletX = playerX + 8;
+        bulletY = playerY + 8;
+        bullet.style.left = bulletX + "px";
+        bullet.style.top = bulletY + "px";
 
-function update() {
-    const head = { ...snake[0] };
-
-    // Update snake direction
-    switch (direction) {
-        case 'up':
-            head.y--;
-            break;
-        case 'down':
-            head.y++;
-            break;
-        case 'left':
-            head.x--;
-            break;
-        case 'right':
-            head.x++;
-            break;
+        // Check for collision with enemy
+        checkCollision();
     }
 
-    // Check for collision with food
-    if (head.x === food.x && head.y === food.y) {
-        snake.unshift(createFood());
-    } else {
-        // Remove the tail if no collision with food
-        snake.pop();
+    function checkCollision() {
+        const playerRect = player.getBoundingClientRect();
+        const enemyRect = enemy.getBoundingClientRect();
+
+        // Simple collision check based on bounding rectangles
+        if (
+            playerRect.right > enemyRect.left &&
+            playerRect.left < enemyRect.right &&
+            playerRect.bottom > enemyRect.top &&
+            playerRect.top < enemyRect.bottom
+        ) {
+            alert("Game Over!");
+        }
     }
 
-    // Check for collision with walls
-    if (head.x < 0 || head.x >= canvas.width / gridSize || head.y < 0 || head.y >= canvas.height / gridSize) {
-        resetGame();
-        return;
+    // Enemy shooting mechanism
+    function enemyShoot() {
+        const angle = Math.atan2(playerY - enemyY, playerX - enemyX);
+        bulletX = enemyX + 8 + Math.cos(angle) * 20;
+        bulletY = enemyY + 8 + Math.sin(angle) * 20;
+        bullet.style.left = bulletX + "px";
+        bullet.style.top = bulletY + "px";
     }
 
-    // Check for collision with itself
-    if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
-        resetGame();
-        return;
+    // Game loop
+    function gameLoop() {
+        enemyShoot();
+        updatePlayerPosition();
+        requestAnimationFrame(gameLoop);
     }
 
-    // Move the snake
-    snake.unshift(head);
-}
-
-function resetGame() {
-    snake = [{ x: 10, y: 10 }];
-    direction = 'right';
-    food = createFood();
-}
-
-function gameLoop() {
-    update();
-    draw();
-}
-
-document.addEventListener('keydown', (event) => {
-    switch (event.key) {
-        case 'ArrowUp':
-            direction = 'up';
-            break;
-        case 'ArrowDown':
-            direction = 'down';
-            break;
-        case 'ArrowLeft':
-            direction = 'left';
-            break;
-        case 'ArrowRight':
-            direction = 'right';
-            break;
-    }
+    gameLoop();
 });
-
-setInterval(gameLoop, 100);
