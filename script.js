@@ -1,7 +1,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const gridSize = 20;
+const gridSize = 21;
 let snake = [{ x: 10, y: 10 }];
 let direction = 'right';
 let food = createFood();
