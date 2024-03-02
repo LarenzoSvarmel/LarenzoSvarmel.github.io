@@ -3,78 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FPS Shooter</title>
+    <title>Raycasting FPS Engine</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
         }
-
         canvas {
             display: block;
         }
     </style>
 </head>
 <body>
-    <canvas id="fpsCanvas"></canvas>
 
-    <script>
-        const canvas = document.getElementById('fpsCanvas');
-        const ctx = canvas.getContext('2d');
+<canvas id="gameCanvas"></canvas>
 
-        // Player position
-        let playerX = canvas.width / 2;
-        let playerY = canvas.height / 2;
-
-        // Move speed
-        const speed = 5;
-
-        function drawPlayer() {
-            ctx.beginPath();
-            ctx.moveTo(playerX, playerY - 20);
-            ctx.lineTo(playerX - 10, playerY + 20);
-            ctx.lineTo(playerX + 10, playerY + 20);
-            ctx.closePath();
-            ctx.fillStyle = '#00F'; // Blue color
-            ctx.fill();
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const screenWidth = 800;
+    const screenHeight = 600;
+    const tileSize = 32;
+    
+    canvas.width = screenWidth;
+    canvas.height = screenHeight;
+    
+    const map = [
+        [1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 1],
+        [1, 0, 1, 0, 1],
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+    ];
+    
+    const player = {
+        x: 2.5 * tileSize,
+        y: 2.5 * tileSize,
+        angle: Math.PI / 4,
+        fov: Math.PI / 2,
+        speed: 5,
+        rotationSpeed: 0.02,
+    };
+    
+    function update() {
+        if (keyState.ArrowUp) {
+            player.x += player.speed * Math.cos(player.angle);
+            player.y += player.speed * Math.sin(player.angle);
         }
-
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (keyState.ArrowDown) {
+            player.x -= player.speed * Math.cos(player.angle);
+            player.y -= player.speed * Math.sin(player.angle);
         }
-
-        function update() {
-            clearCanvas();
-            drawPlayer();
+        if (keyState.ArrowLeft) {
+            player.angle -= player.rotationSpeed;
         }
-
-        function movePlayer(keyCode) {
-            switch (keyCode) {
-                case 87: // W key
-                    playerY -= speed;
-                    break;
-                case 83: // S key
-                    playerY += speed;
-                    break;
-                case 65: // A key
-                    playerX -= speed;
-                    break;
-                case 68: // D key
-                    playerX += speed;
-                    break;
+        if (keyState.ArrowRight) {
+            player.angle += player.rotationSpeed;
+        }
+    }
+    
+    function render() {
+        // Clear the canvas
+        ctx.clearRect(0, 0, screenWidth, screenHeight);
+        
+        // Render walls
+        for (let i = 0; i < screenWidth; i++) {
+            const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+            const distanceToWall = castRay(player.x, player.y, rayAngle);
+            
+            const wallHeight = (tileSize / distanceToWall) * 200;
+            const wallColor = distanceToWall > 5 ? 'white' : 'red'; // Color walls based on distance
+            
+            ctx.fillStyle = wallColor;
+            ctx.fillRect(i, (screenHeight - wallHeight) / 2, 1, wallHeight);
+        }
+        
+        // Render player
+        ctx.fillStyle = 'blue';
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    function castRay(x, y, angle) {
+        let distance = 0;
+        const stepSize = 0.1;
+        let currentX = x;
+        let currentY = y;
+    
+        while (distance < 10) {
+            currentX += stepSize * Math.cos(angle);
+            currentY += stepSize * Math.sin(angle);
+            
+            if (map[Math.floor(currentY / tileSize)][Math.floor(currentX / tileSize)] === 1) {
+                // Hit a wall
+                return distance;
             }
+            
+            distance += stepSize;
         }
+        
+        return distance;
+    }
+    
+    function gameLoop() {
+        update();
+        render();
+        requestAnimationFrame(gameLoop);
+    }
+    
+    // Keyboard input handling
+    const keyState = {};
+    
+    window.addEventListener('keydown', (e) => {
+        keyState[e.key] = true;
+    });
+    
+    window.addEventListener('keyup', (e) => {
+        keyState[e.key] = false;
+    });
+    
+    gameLoop();
+</script>
 
-        window.addEventListener('keydown', (event) => {
-            movePlayer(event.keyCode);
-        });
-
-        function gameLoop() {
-            update();
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-    </script>
 </body>
 </html>
