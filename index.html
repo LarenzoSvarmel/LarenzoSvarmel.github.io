@@ -3,107 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hacker Console</title>
+    <title>FPS Shooter</title>
     <style>
         body {
-            background-color: #111;
-            color: #0F0;
-            font-family: 'Courier New', Courier, monospace;
-            text-align: center;
-            margin-top: 50px;
+            margin: 0;
+            overflow: hidden;
         }
 
-        #console {
-            width: 80%;
-            margin: 0 auto;
-            border: 2px solid #0F0;
-            padding: 10px;
-            min-height: 200px;
-            overflow-y: auto;
-        }
-
-        #cursor {
-            display: inline-block;
-            width: 8px;
-            height: 20px;
-            background-color: #0F0;
-            animation: blink 0.8s infinite;
-        }
-
-        @keyframes blink {
-            50% {
-                opacity: 0;
-            }
-        }
-
-        #about {
-            margin-top: 20px;
-            cursor: pointer;
-            color: #00F;
-        }
-
-        #about:hover {
-            text-decoration: underline;
-        }
-
-        #about-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            justify-content: center;
-            align-items: center;
-            z-index: 999;
-        }
-
-        #about-content {
-            background: #222;
-            padding: 20px;
-            border: 2px solid #0F0;
-            border-radius: 10px;
-            text-align: left;
-        }
-
-        #close-about {
-            color: #F00;
-            cursor: pointer;
-            float: right;
-            font-weight: bold;
+        canvas {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div id="console" onclick="focusConsole()">
-        <div id="output">Welcome to the Hacker Console</div>
-        <div id="input-line"><span id="command" contenteditable="true"></span><div id="cursor"></div></div>
-    </div>
-    
-    <div id="about" onclick="showAbout()">About</div>
-
-    <div id="about-modal">
-        <div id="about-content">
-            <div id="close-about" onclick="closeAbout()">X</div>
-            <h2>About Hacker Console</h2>
-            <p>This is a simple hacker console simulation for fun and educational purposes.</p>
-        </div>
-    </div>
+    <canvas id="fpsCanvas"></canvas>
 
     <script>
-        function focusConsole() {
-            document.getElementById('cursor').style.animation = 'none';
-            document.getElementById('command').focus();
+        const canvas = document.getElementById('fpsCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Player position
+        let playerX = canvas.width / 2;
+        let playerY = canvas.height / 2;
+
+        // Move speed
+        const speed = 5;
+
+        function drawPlayer() {
+            ctx.beginPath();
+            ctx.moveTo(playerX, playerY - 20);
+            ctx.lineTo(playerX - 10, playerY + 20);
+            ctx.lineTo(playerX + 10, playerY + 20);
+            ctx.closePath();
+            ctx.fillStyle = '#00F'; // Blue color
+            ctx.fill();
         }
 
-        function showAbout() {
-            document.getElementById('about-modal').style.display = 'flex';
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        function closeAbout() {
-            document.getElementById('about-modal').style.display = 'none';
+        function update() {
+            clearCanvas();
+            drawPlayer();
         }
 
-        // Reapply animation when cursor loses focus
-        document.getElementById('command').addEventListener('blu
+        function movePlayer(keyCode) {
+            switch (keyCode) {
+                case 87: // W key
+                    playerY -= speed;
+                    break;
+                case 83: // S key
+                    playerY += speed;
+                    break;
+                case 65: // A key
+                    playerX -= speed;
+                    break;
+                case 68: // D key
+                    playerX += speed;
+                    break;
+            }
+        }
+
+        window.addEventListener('keydown', (event) => {
+            movePlayer(event.keyCode);
+        });
+
+        function gameLoop() {
+            update();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
