@@ -1,53 +1,101 @@
-// Get the canvas element and set up the rendering context
-const canvas = document.createElement('canvas');
-document.body.appendChild(canvas);
+const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Set the canvas size
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const gridSize = 20;
+let snake = [{ x: 10, y: 10 }];
+let direction = 'right';
+let food = createFood();
 
-// Player position and direction
-const player = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    angle: Math.PI / 2, // Starting angle (facing right)
-};
+function createFood() {
+    return {
+        x: Math.floor(Math.random() * (canvas.width / gridSize)),
+        y: Math.floor(Math.random() * (canvas.height / gridSize)),
+    };
+}
 
-// Raycasting variables
-const fov = Math.PI / 3; // Field of view
-const rayCount = 300;    // Number of rays
-
-// Update function
-function update() {
-    // Clear the canvas
+function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw rays
-    for (let i = 0; i < rayCount; i++) {
-        const rayAngle = player.angle - fov / 2 + (i / rayCount) * fov;
+    // Draw snake
+    ctx.fillStyle = '#00f';
+    snake.forEach(segment => {
+        ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+    });
 
-        // Perform raycasting here...
+    // Draw food
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+}
 
-        // For simplicity, let's just draw lines for now
-        const lineLength = 100;
-        const x2 = player.x + Math.cos(rayAngle) * lineLength;
-        const y2 = player.y + Math.sin(rayAngle) * lineLength;
+function update() {
+    const head = { ...snake[0] };
 
-        ctx.beginPath();
-        ctx.moveTo(player.x, player.y);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = 'white';
-        ctx.stroke();
+    // Update snake direction
+    switch (direction) {
+        case 'up':
+            head.y--;
+            break;
+        case 'down':
+            head.y++;
+            break;
+        case 'left':
+            head.x--;
+            break;
+        case 'right':
+            head.x++;
+            break;
     }
+
+    // Check for collision with food
+    if (head.x === food.x && head.y === food.y) {
+        snake.unshift(createFood());
+    } else {
+        // Remove the tail if no collision with food
+        snake.pop();
+    }
+
+    // Check for collision with walls
+    if (head.x < 0 || head.x >= canvas.width / gridSize || head.y < 0 || head.y >= canvas.height / gridSize) {
+        resetGame();
+        return;
+    }
+
+    // Check for collision with itself
+    if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+        resetGame();
+        return;
+    }
+
+    // Move the snake
+    snake.unshift(head);
 }
 
-// Animation loop
-function animate() {
+function resetGame() {
+    snake = [{ x: 10, y: 10 }];
+    direction = 'right';
+    food = createFood();
+}
+
+function gameLoop() {
     update();
-    requestAnimationFrame(animate);
+    draw();
 }
 
-// Start the animation loop
-animate();
-//Nothing here
+document.addEventListener('keydown', (event) => {
+    switch (event.key) {
+        case 'ArrowUp':
+            direction = 'up';
+            break;
+        case 'ArrowDown':
+            direction = 'down';
+            break;
+        case 'ArrowLeft':
+            direction = 'left';
+            break;
+        case 'ArrowRight':
+            direction = 'right';
+            break;
+    }
+});
+
+setInterval(gameLoop, 100);
