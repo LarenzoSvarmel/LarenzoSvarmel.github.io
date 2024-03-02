@@ -1,15 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
-    <title>Rotatable Triangle</title>
+    <title>Raycast Engine</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="triangle" id="rotatingTriangle"></div>
-    </div>
-    <script src="script.js"></script>
+    <canvas id="raycastCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('raycastCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const screenWidth = 800; // Set your desired screen width
+        const screenHeight = 600; // Set your desired screen height
+
+        canvas.width = screenWidth;
+        canvas.height = screenHeight;
+
+        const player = {
+            x: 200,
+            y: 200,
+            angle: Math.PI / 4, // Initial player angle in radians
+            fov: Math.PI / 2, // Field of view in radians
+            speed: 5 // Set your desired movement speed
+        };
+
+        function update() {
+           // Implement your raycasting logic here
+const rays = []; // Array to store ray angles
+
+// Calculate ray angles for each column of the screen
+for (let i = 0; i < screenWidth; i++) {
+    const angle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+    rays.push(angle);
+}
+
+function castRays() {
+    for (let i = 0; i < rays.length; i++) {
+        const angle = rays[i];
+
+        // Ray intersection logic (example: simple ray projection)
+        const rayEndX = player.x + Math.cos(angle) * 1000;
+        const rayEndY = player.y + Math.sin(angle) * 1000;
+
+        // Render the ray on the canvas (example: drawing lines)
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(rayEndX, rayEndY);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.stroke();
+    }
+}
+
+function update() {
+    // Update player movement logic
+
+    // Cast rays and render
+    castRays();
+
+    // Additional game logic can be added here
+}
+
+// The rest of your existing code remains unchanged
+
+            // Example: Drawing a line representing the player's view
+            ctx.clearRect(0, 0, screenWidth, screenHeight);
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            const lineEndX = player.x + Math.cos(player.angle) * 50;
+            const lineEndY = player.y + Math.sin(player.angle) * 50;
+            ctx.lineTo(lineEndX, lineEndY);
+            ctx.strokeStyle = 'white';
+            ctx.stroke();
+        }
+
+        function gameLoop() {
+            update();
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('keydown', (event) => {
+            switch (event.key) {
+                case 'ArrowUp':
+                    player.x += Math.cos(player.angle) * player.speed;
+                    player.y += Math.sin(player.angle) * player.speed;
+                    break;
+                case 'ArrowDown':
+                    player.x -= Math.cos(player.angle) * player.speed;
+                    player.y -= Math.sin(player.angle) * player.speed;
+                    break;
+                case 'ArrowLeft':
+                    player.angle -= 0.1;
+                    break;
+                case 'ArrowRight':
+                    player.angle += 0.1;
+                    break;
+            }
+        });
+
+        gameLoop();
+    </script>
 </body>
+
 </html>
