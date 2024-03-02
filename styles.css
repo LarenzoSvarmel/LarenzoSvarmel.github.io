@@ -1,30 +1,32 @@
-let rotationX = 0;
-let rotationY = 0;
-
-document.addEventListener('keydown', handleArrowKeys);
-
-function handleArrowKeys(event) {
-  switch (event.key) {
-    case 'ArrowUp':
-      rotationX += 10;
-      break;
-    case 'ArrowDown':
-      rotationX -= 10;
-      break;
-    case 'ArrowLeft':
-      rotationY -= 10;
-      break;
-    case 'ArrowRight':
-      rotationY += 10;
-      break;
-    default:
-      return;
-  }
-
-  updateRotation();
+body {
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0;
 }
 
-function updateRotation() {
-  const triangle = document.getElementById('rotatableTriangle');
-  triangle.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
+.container {
+    perspective: 800px;
+}
+
+.triangle {
+    width: 0;
+    height: 0;
+    border-left: 50px solid transparent;
+    border-right: 50px solid transparent;
+    border-bottom: 87px solid #3498db;
+    transform-style: preserve-3d;
+    animation: rotateAnimation 5s linear infinite;
+}
+
+@keyframes rotateAnimation {
+    from {
+        transform: rotateY(0deg);
+    }
+    to {
+        transform: rotateY(360deg);
+    }
 }
