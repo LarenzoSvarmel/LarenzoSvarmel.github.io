@@ -15,7 +15,7 @@ body {
 .player, .enemy, .bullet {
     position: absolute;
     width: 20px;
-    height: 20px;
+    height: 21px;
     background-color: red;
     border-radius: 50%;
 }
