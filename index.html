@@ -78,7 +78,7 @@
 <body>
     <div id="console" onclick="focusConsole()">
         <div id="output">Welcome to the Hacker Console</div>
-        <div id="input-line"><span id="command"></span><div id="cursor"></div></div>
+        <div id="input-line"><span id="command" contenteditable="true"></span><div id="cursor"></div></div>
     </div>
     
     <div id="about" onclick="showAbout()">About</div>
@@ -104,6 +104,6 @@
         function closeAbout() {
             document.getElementById('about-modal').style.display = 'none';
         }
-    </script>
-</body>
-</html>
+
+        // Reapply animation when cursor loses focus
+        document.getElementById('command').addEventListener('blu
