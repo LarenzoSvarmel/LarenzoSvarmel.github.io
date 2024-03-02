@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", function () {
             playerRect.bottom > enemyRect.top &&
             playerRect.top < enemyRect.bottom
         ) {
-            alert("Game Over!");
+            alert("Game Over");
         }
     }
 
