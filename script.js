@@ -1,13 +1,21 @@
-function validatePassword() {
-  var passwordInput = document.getElementById("password").value;
-  var errorMessage = document.getElementById("errorMessage");
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+}
 
-  // Replace this with your actual password or implement server-side validation
-  var correctPassword = "secure123";
+.triangle-container {
+  perspective: 800px;
+}
 
-  if (passwordInput === correctPassword) {
-    window.location.href = "securePage.html"; // Redirect to the secure page
-  } else {
-    errorMessage.classList.remove("hidden");
-  }
+.triangle {
+  width: 0;
+  height: 0;
+  border-left: 50px solid transparent;
+  border-right: 50px solid transparent;
+  border-bottom: 87px solid #3498db;
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
 }
