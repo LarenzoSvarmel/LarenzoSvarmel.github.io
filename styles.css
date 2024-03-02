@@ -1,29 +1,35 @@
 body {
     margin: 0;
     overflow: hidden;
-    font-family: 'Arial', sans-serif;
 }
 
-.game-container {
+#game-container {
     position: relative;
-    width: 800px;
-    height: 600px;
-    margin: 20px auto;
-    background-color: #eee;
+    width: 600px;
+    height: 400px;
+    margin: 50px auto;
+    border: 1px solid #ccc;
 }
 
-.player, .enemy, .bullet {
+#player, #bullet, .enemy {
     position: absolute;
     width: 20px;
     height: 20px;
     background-color: red;
-    border-radius: 50%;
+}
+
+#player {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#bullet {
+    background-color: yellow;
+    display: none;
 }
 
 .enemy {
     background-color: blue;
 }
 
-.bullet {
-    background-color: yellow;
-}
