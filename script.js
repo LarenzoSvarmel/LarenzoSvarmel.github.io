@@ -1,7 +1,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const gridSize = 21;
+const gridSize = 20;
 let snake = [{ x: 10, y: 10 }];
 let direction = 'right';
 let food = createFood();
@@ -25,6 +25,10 @@ function draw() {
     // Draw food
     ctx.fillStyle = '#f00';
     ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+
+    // Draw border
+    ctx.strokeStyle = '#000';
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
 }
 
 function update() {
