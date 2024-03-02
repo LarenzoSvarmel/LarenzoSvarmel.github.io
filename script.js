@@ -6,6 +6,47 @@ const enemies = document.querySelectorAll('.enemy');
 let isShooting = false;
 let ammoCount = 30;
 
+setInterval(moveEnemies, 1000);
+
+document.addEventListener('keydown', (event) => {
+    // ... (previous code)
+
+    // Add an else-if condition to handle spacebar and ammo count
+    else if (event.key === ' ' && !isShooting && ammoCount > 0) {
+        shoot();
+    }
+});
+
+function moveEnemies() {
+    enemies.forEach((enemy) => {
+        const randomDirection = Math.floor(Math.random() * 4);
+
+        switch (randomDirection) {
+            case 0: // Move up
+                if (enemy.offsetTop > 0) {
+                    enemy.style.top = `${enemy.offsetTop - 10}px`;
+                }
+                break;
+            case 1: // Move down
+                if (enemy.offsetTop < gameContainer.clientHeight - enemy.clientHeight) {
+                    enemy.style.top = `${enemy.offsetTop + 10}px`;
+                }
+                break;
+            case 2: // Move left
+                if (enemy.offsetLeft > 0) {
+                    enemy.style.left = `${enemy.offsetLeft - 10}px`;
+                }
+                break;
+            case 3: // Move right
+                if (enemy.offsetLeft < gameContainer.clientWidth - enemy.clientWidth) {
+                    enemy.style.left = `${enemy.offsetLeft + 10}px`;
+                }
+                break;
+            default:
+                break;
+        }
+    });
+
 document.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowUp' && player.offsetTop > 0) {
         player.style.top = `${player.offsetTop - 10}px`;
