@@ -4,6 +4,7 @@ const gameContainer = document.getElementById('game-container');
 const enemies = document.querySelectorAll('.enemy');
 
 let isShooting = false;
+let ammoCount = 30;
 
 document.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowUp' && player.offsetTop > 0) {
@@ -14,19 +15,28 @@ document.addEventListener('keydown', (event) => {
         player.style.left = `${player.offsetLeft - 10}px`;
     } else if (event.key === 'ArrowRight' && player.offsetLeft < gameContainer.clientWidth - player.clientWidth) {
         player.style.left = `${player.offsetLeft + 10}px`;
-    } else if (event.key === ' ' && !isShooting) {
+    } else if (event.key === ' ' && !isShooting && ammoCount > 0) {
         shoot();
     }
 });
 
 function shoot() {
     isShooting = true;
+    ammoCount--;
+
+    const bulletDirection = getBulletDirection();
     bullet.style.top = `${player.offsetTop + 5}px`;
     bullet.style.left = `${player.offsetLeft + 5}px`;
+    bullet.style.transform = `rotate(${bulletDirection}deg)`;
     bullet.style.display = 'block';
 
     const bulletInterval = setInterval(() => {
-        bullet.style.left = `${bullet.offsetLeft + 10}px`;
+        const radians = (bulletDirection * Math.PI) / 180;
+        const deltaX = Math.cos(radians) * 10;
+        const deltaY = Math.sin(radians) * 10;
+
+        bullet.style.left = `${bullet.offsetLeft + deltaX}px`;
+        bullet.style.top = `${bullet.offsetTop - deltaY}px`;
 
         // Check for collision with enemies
         enemies.forEach((enemy) => {
@@ -36,12 +46,24 @@ function shoot() {
         });
 
         // Check if the bullet is out of the game container
-        if (bullet.offsetLeft > gameContainer.clientWidth) {
+        if (
+            bullet.offsetLeft > gameContainer.clientWidth ||
+            bullet.offsetTop < 0 ||
+            bullet.offsetTop > gameContainer.clientHeight
+        ) {
             clearInterval(bulletInterval);
             bullet.style.display = 'none';
             isShooting = false;
         }
     }, 20);
+}
+
+function getBulletDirection() {
+    if (player.classList.contains('up')) return 0;
+    if (player.classList.contains('down')) return 180;
+    if (player.classList.contains('left')) return -90;
+    if (player.classList.contains('right')) return 90;
+    return 0;
 }
 
 function checkCollision(element1, element2) {
