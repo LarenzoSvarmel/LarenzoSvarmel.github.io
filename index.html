@@ -3,75 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-    }
-
-    canvas {
-      display: block;
-    }
-  </style>
-  <title>3D Rotatable Triangle</title>
+  <link rel="stylesheet" href="styles.css">
+  <title>Rotatable Triangle</title>
 </head>
 <body>
-  <canvas id="rotatingTriangle"></canvas>
-  <script>
-    const canvas = document.getElementById('rotatingTriangle');
-    const ctx = canvas.getContext('2d');
-
-    // Initial triangle vertices
-    const vertices = [
-      { x: 100, y: 100 },
-      { x: 300, y: 100 },
-      { x: 200, y: 300 }
-    ];
-
-    // Initial rotation angle
-    let angle = 0;
-
-    // Function to draw the triangle
-    function drawTriangle() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.beginPath();
-      ctx.moveTo(vertices[0].x, vertices[0].y);
-      ctx.lineTo(vertices[1].x, vertices[1].y);
-      ctx.lineTo(vertices[2].x, vertices[2].y);
-      ctx.closePath();
-
-      ctx.stroke();
-    }
-
-    // Function to rotate the triangle
-    function rotateTriangle() {
-      const centerX = (vertices[0].x + vertices[1].x + vertices[2].x) / 3;
-      const centerY = (vertices[0].y + vertices[1].y + vertices[2].y) / 3;
-
-      for (let i = 0; i < vertices.length; i++) {
-        const x = vertices[i].x - centerX;
-        const y = vertices[i].y - centerY;
-
-        vertices[i].x = x * Math.cos(angle) - y * Math.sin(angle) + centerX;
-        vertices[i].y = x * Math.sin(angle) + y * Math.cos(angle) + centerY;
-      }
-    }
-
-    // Handle arrow key presses for rotation
-    window.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowLeft') {
-        angle -= 0.1;
-      } else if (event.key === 'ArrowRight') {
-        angle += 0.1;
-      }
-
-      rotateTriangle();
-      drawTriangle();
-    });
-
-    // Initial draw
-    drawTriangle();
-  </script>
+  <div class="triangle-container">
+    <div class="triangle" id="rotatableTriangle"></div>
+  </div>
+  <script src="script.js"></script>
 </body>
 </html>
