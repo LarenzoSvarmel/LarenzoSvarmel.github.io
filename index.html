@@ -77,6 +77,28 @@
       }
     }
 
+    function hasLineOfSight(targetX, targetY) {
+      const dx = targetX - player.x;
+      const dy = targetY - player.y;
+      const angleToTarget = Math.atan2(dy, dx);
+
+      const step = 0.1; // Adjust step for better accuracy
+
+      for (let t = 0; t <= 1; t += step) {
+        const cx = player.x + dx * t;
+        const cy = player.y + dy * t;
+
+        const mapX = Math.floor(cx / tileSize);
+        const mapY = Math.floor(cy / tileSize);
+
+        if (map[mapY][mapX] === 1) {
+          return false; // Wall obstructs line of sight
+        }
+      }
+
+      return true; // No obstacles, line of sight is clear
+    }
+
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
@@ -180,6 +202,21 @@
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
+
+      // Draw line of sight to a specific point
+      const targetX = 300;
+      const targetY = 300;
+
+      if (hasLineOfSight(targetX, targetY)) {
+        ctx.strokeStyle = 'green';
+      } else {
+        ctx.strokeStyle = 'red';
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(targetX, targetY);
+      ctx.stroke();
     }
 
     function gameLoop() {
