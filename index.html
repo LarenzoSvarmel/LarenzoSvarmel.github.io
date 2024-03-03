@@ -8,31 +8,21 @@
     body {
       margin: 0;
       overflow: hidden;
-      display: flex;
     }
     canvas {
       display: block;
       image-rendering: pixelated;
     }
-    #miniMapCanvas {
-      margin-left: auto;
-    }
   </style>
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
-  <canvas id="miniMapCanvas" width="500" height="400"></canvas>
   <script>
-    const raycastingCanvas = document.getElementById('raycastingCanvas');
-    const rayCtx = raycastingCanvas.getContext('2d');
-
-    const miniMapCanvas = document.getElementById('miniMapCanvas');
-    const miniMapCtx = miniMapCanvas.getContext('2d');
+    const canvas = document.getElementById('raycastingCanvas');
+    const ctx = canvas.getContext('2d');
 
     const screenWidth = 800;
     const screenHeight = 600;
-    const miniMapWidth = 500;
-    const miniMapHeight = 400;
     const tileSize = 32;
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -53,6 +43,12 @@
       isMouseLocked: false,
     };
 
+    const light = {
+      x: 500,
+      y: 200,
+      intensity: 300, // Adjust the intensity of the light
+    };
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -71,45 +67,20 @@
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          // Apply fisheye correction
-          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
-
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * correctedDistance));
+          // Calculate darkness based on distance from the light
+          const darkness = Math.min(1, distance / light.intensity);
 
           return {
             x: x,
             y: y,
-            distance: correctedDistance,
+            distance: distance,
             height: wallHeight,
+            darkness: darkness,
           };
         }
       }
-    }
-
-    function drawMiniMap() {
-      miniMapCtx.clearRect(0, 0, miniMapWidth, miniMapHeight);
-
-      // Draw map
-      for (let row = 0; row < map.length; row++) {
-        for (let col = 0; col < map[row].length; col++) {
-          const tileX = col * (miniMapWidth / map[row].length);
-          const tileY = row * (miniMapHeight / map.length);
-          const tileWidth = miniMapWidth / map[row].length;
-          const tileHeight = miniMapHeight / map.length;
-
-          miniMapCtx.fillStyle = map[row][col] === 1 ? 'black' : 'white';
-          miniMapCtx.fillRect(tileX, tileY, tileWidth, tileHeight);
-        }
-      }
-
-      // Draw player position
-      const playerSize = 5;
-      const playerX = (player.x / tileSize) * (miniMapWidth / map[0].length);
-      const playerY = (player.y / tileSize) * (miniMapHeight / map.length);
-
-      miniMapCtx.fillStyle = 'red';
-      miniMapCtx.fillRect(playerX - playerSize / 2, playerY - playerSize / 2, playerSize, playerSize);
     }
 
     function handleInput() {
@@ -147,7 +118,7 @@
 
     function toggleMouseLock() {
       if (!player.isMouseLocked) {
-        raycastingCanvas.requestPointerLock();
+        canvas.requestPointerLock();
       } else {
         document.exitPointerLock();
       }
@@ -186,17 +157,17 @@
 
     function draw() {
       // Draw the raycasting scene here
-      rayCtx.clearRect(0, 0, screenWidth, screenHeight);
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
 
       // Draw sky
-      rayCtx.fillStyle = 'deepskyblue';
-      rayCtx.fillRect(0, 0, screenWidth, screenHeight / 2);
+      ctx.fillStyle = 'deepskyblue';
+      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
       // Draw ground
-      rayCtx.fillStyle = 'saddlebrown';
-      rayCtx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
+      ctx.fillStyle = 'saddlebrown';
+      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls
+      // Draw walls and shadows
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -209,15 +180,14 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+        // Adjust wall color based on darkness
+        const darkenedColor = Math.round(255 * ray.darkness);
+        const wallColor = `rgb(${darkenedColor}, ${darkenedColor}, ${darkenedColor})`;
 
-        // Draw vertical lines for walls
-        rayCtx.fillStyle = wallColor;
-        rayCtx.fillRect(i, wallTop, 1, wallHeight);
+        // Draw vertical lines for walls and shadows
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
       }
-
-      // Draw player on the mini-map
-      drawMiniMap();
     }
 
     function gameLoop() {
