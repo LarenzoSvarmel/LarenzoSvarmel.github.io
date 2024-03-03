@@ -51,23 +51,22 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      // Increment by small steps along the ray until a wall is hit
+      let distanceToWall = 0;
+
       while (true) {
         x += rayCos;
         y += raySin;
+        distanceToWall += 0.1; // Increment distance for smoother rendering
 
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
 
-        // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
-
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distanceToWall * Math.cos(rayAngle - player.angle)));
           return {
             x: x,
             y: y,
-            distance: distance,
+            distance: distanceToWall,
             height: wallHeight,
           };
         }
@@ -75,7 +74,6 @@
     }
 
     function handleInput() {
-      // Handle player input
       if (keys['ArrowLeft']) {
         player.angle -= 0.05;
       }
@@ -117,7 +115,6 @@
     }
 
     function isWall(x, y) {
-      // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
       const mapY = Math.floor(y / tileSize);
 
@@ -142,12 +139,10 @@
     });
 
     function update() {
-      // Update game logic here
       handleInput();
     }
 
     function draw() {
-      // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
       // Draw floor
@@ -167,9 +162,7 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
-
-        ctx.fillStyle = wallColor;
+        ctx.fillStyle = 'white'; // White color for walls
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
