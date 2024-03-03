@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced 3D Rendering</title>
+  <title>3D Rendering with Map</title>
   <style>
     body {
       margin: 0;
@@ -79,7 +79,7 @@
         return matrix;
       }
 
-      multiplyVector(vector) {
+      multiply(vector) {
         const result = new Vector3(
           this.elements[0] * vector.x + this.elements[4] * vector.y + this.elements[8] * vector.z + this.elements[12],
           this.elements[1] * vector.x + this.elements[5] * vector.y + this.elements[9] * vector.z + this.elements[13],
@@ -113,31 +113,33 @@
       }
     }
 
-    const camera = new Camera(new Vector3(0, 0, 5), new Vector3(0, 0, 0), Math.PI / 3, screenWidth / screenHeight, 0.1, 100);
+    const camera = new Camera(new Vector3(2, 1, 5), new Vector3(0, 0, 0), Math.PI / 3, screenWidth / screenHeight, 0.1, 100);
 
-    const vertices = [
-      new Vector3(-1, -1, -1),
-      new Vector3(1, -1, -1),
-      new Vector3(1, 1, -1),
-      new Vector3(-1, 1, -1),
-      new Vector3(-1, -1, 1),
-      new Vector3(1, -1, 1),
-      new Vector3(1, 1, 1),
-      new Vector3(-1, 1, 1),
-    ];
+    const gridSize = 10;
+    const tileSize = 1;
+    const map = new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0));
 
-    const faces = [
-      [0, 1, 2, 3], // Front face
-      [4, 5, 6, 7], // Back face
-      [0, 3, 7, 4], // Left face
-      [1, 2, 6, 5], // Right face
-      [3, 2, 6, 7], // Top face
-      [0, 1, 5, 4], // Bottom face
-    ];
+    // Populate the map with a simple grid
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        map[i][j] = Math.random() < 0.8 ? 0 : 1;
+      }
+    }
+
+    function drawMap() {
+      ctx.strokeStyle = 'gray';
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          if (map[i][j] === 1) {
+            ctx.strokeRect(i * tileSize * 2, j * tileSize * 2, tileSize * 2, tileSize * 2);
+          }
+        }
+      }
+    }
 
     function project(vertex, viewMatrix, projectionMatrix) {
       const viewProjectionMatrix = projectionMatrix.multiply(viewMatrix);
-      const transformedVertex = viewProjectionMatrix.multiplyVector(vertex);
+      const transformedVertex = viewProjectionMatrix.multiply(vertex);
       return {
         x: (transformedVertex.x + 1) * screenWidth / 2,
         y: (1 - transformedVertex.y) * screenHeight / 2,
@@ -147,29 +149,56 @@
     function draw() {
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
+      drawMap();
+
       const viewMatrix = camera.getViewMatrix();
 
-      for (const face of faces) {
-        ctx.beginPath();
-        const vertex = vertices[face[0]];
-        const projectedVertex = project(vertex, viewMatrix, camera.projectionMatrix);
-        ctx.moveTo(projectedVertex.x, projectedVertex.y);
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          if (map[i][j] === 1) {
+            const vertex1 = new Vector3(i * tileSize * 2, 0, j * tileSize * 2);
+            const vertex2 = new Vector3((i + 1) * tileSize * 2, 0, j * tileSize * 2);
+            const vertex3 = new Vector3((i + 1) * tileSize * 2, 0, (j + 1) * tileSize * 2);
+            const vertex4 = new Vector3(i * tileSize * 2, 0, (j + 1) * tileSize * 2);
 
-        for (let i = 1; i < face.length; i++) {
-          const vertex = vertices[face[i]];
-          const projectedVertex = project(vertex, viewMatrix, camera.projectionMatrix);
-          ctx.lineTo(projectedVertex.x, projectedVertex.y);
+            const screenVertex1 = project(vertex1, viewMatrix, camera.projectionMatrix);
+            const screenVertex2 = project(vertex2, viewMatrix, camera.projectionMatrix);
+            const screenVertex3 = project(vertex3, viewMatrix, camera.projectionMatrix);
+            const screenVertex4 = project(vertex4, viewMatrix, camera.projectionMatrix);
+
+            ctx.beginPath();
+            ctx.moveTo(screenVertex1.x, screenVertex1.y);
+            ctx.lineTo(screenVertex2.x, screenVertex2.y);
+            ctx.lineTo(screenVertex3.x, screenVertex3.y);
+            ctx.lineTo(screenVertex4.x, screenVertex4.y);
+            ctx.closePath();
+            ctx.stroke();
+          }
         }
-
-        ctx.closePath();
-        ctx.stroke();
       }
     }
 
-    function update() {
-      // Example: Rotate the object
-      camera.rotation.y += 0.01;
+    function handleKeyPress(event) {
+      const speed = 0.1;
+      switch (event.key) {
+        case 'ArrowUp':
+          camera.position.z -= speed;
+          break;
+        case 'ArrowDown':
+          camera.position.z += speed;
+          break;
+        case 'ArrowLeft':
+          camera.position.x -= speed;
+          break;
+        case 'ArrowRight':
+          camera.position.x += speed;
+          break;
+      }
+    }
 
+    document.addEventListener('keydown', handleKeyPress);
+
+    function update() {
       draw();
       requestAnimationFrame(update);
     }
