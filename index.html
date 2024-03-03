@@ -22,16 +22,15 @@
     const ctx = canvas.getContext('2d');
     let gl;
 
+    document.addEventListener('DOMContentLoaded', initWebGL);
+
     function initWebGL() {
-      gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      gl = canvas.getContext('webgl');
 
       if (!gl) {
-        console.error('Unable to initialize WebGL. Your browser may not support it or WebGL might be disabled.');
+        console.error('Unable to initialize WebGL. Your browser may not support it.');
         return;
       }
-
-      console.log('WebGL initialized successfully:', gl.getParameter(gl.VERSION));
-      console.log('Shader language version:', gl.getParameter(gl.SHADING_LANGUAGE_VERSION));
 
       const vertexShaderSource = `
         attribute vec2 a_position;
@@ -84,7 +83,7 @@
       gl.linkProgram(program);
 
       if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error('Unable to initialize the shader program:', gl.getProgramInfoLog(program));
+        console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(program));
         return null;
       }
 
@@ -97,7 +96,7 @@
       gl.compileShader(shader);
 
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('An error occurred compiling the shaders:', gl.getShaderInfoLog(shader));
+        console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
         return null;
       }
@@ -105,9 +104,6 @@
       return shader;
     }
 
-    // Call the WebGL initialization function
-    initWebGL();
-    
     // ... (rest of the code remains unchanged)
   </script>
 </body>
