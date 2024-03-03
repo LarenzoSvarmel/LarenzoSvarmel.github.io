@@ -123,6 +123,19 @@
       return map[mapY][mapX] === 1;
     }
 
+    function handleMouseClick(event) {
+      // Handle mouse click to toggle voxel state
+      const mouseX = event.clientX - canvas.getBoundingClientRect().left;
+      const mouseY = event.clientY - canvas.getBoundingClientRect().top;
+
+      const mapX = Math.floor(mouseX / tileSize);
+      const mapY = Math.floor(mouseY / tileSize);
+
+      if (mapY >= 0 && mapY < map.length && mapX >= 0 && mapX < map[0].length) {
+        map[mapY][mapX] = 1 - map[mapY][mapX]; // Toggle voxel state (0 to 1 or 1 to 0)
+      }
+    }
+
     const keys = {};
 
     document.addEventListener('keydown', (event) => {
@@ -139,6 +152,8 @@
         player.angle += deltaX * 0.01;
       }
     });
+
+    document.addEventListener('click', handleMouseClick);
 
     function update() {
       // Update game logic here
