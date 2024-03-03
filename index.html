@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo with Lighting</title>
+  <title>Raycasting Demo with Focused Light</title>
   <style>
     body {
       margin: 0;
@@ -44,8 +44,8 @@
     };
 
     const lightSource = {
-      x: 400,
-      y: 300,
+      x: screenWidth / 2,
+      y: screenHeight / 2,
       color: { r: 1, g: 1, b: 1 },
     };
 
@@ -80,9 +80,10 @@
           lightDirection.x /= lightDistance;
           lightDirection.y /= lightDistance;
 
-          // Lambertian reflection model
+          // Lambertian reflection model with attenuation
           const dotProduct = Math.max(0, surfaceNormal.x * lightDirection.x + surfaceNormal.y * lightDirection.y);
-          const lambertianReflection = dotProduct;
+          const distanceAttenuation = 1 / (distance * distance); // Adjust this factor for intensity decrease
+          const lambertianReflection = dotProduct * distanceAttenuation;
 
           // Apply lighting to pixel color
           const wallColor = {
