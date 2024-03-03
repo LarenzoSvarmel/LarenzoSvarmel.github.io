@@ -48,6 +48,11 @@
       isMouseLocked: false,
     };
 
+ const light = {
+      ambient: 0.2,
+      direction: Math.PI / 4, // Light direction angle
+    };
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -68,14 +73,35 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
+// Calculate shading based on lighting
+          const shading = calculateShading(rayAngle, distance);
+
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
+          shading: shading,
           };
         }
       }
+    }
+
+function calculateShading(rayAngle, distance) {
+      // Calculate directional light intensity based on the angle difference
+      const angleDifference = Math.abs(rayAngle - light.direction);
+      const directionalIntensity = Math.cos(angleDifference);
+
+      // Combine ambient and directional light
+      const totalIntensity = light.ambient + (1 - light.ambient) * directionalIntensity;
+
+      // Apply inverse square law for distance attenuation
+      const distanceAttenuation = 1 / (distance * distance);
+
+      // Final shading factor
+      const shading = totalIntensity * distanceAttenuation;
+
+      return shading;
     }
 
     function handleInput() {
@@ -166,6 +192,10 @@
         const ray = rays[i];
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
+
+ // Calculate shading color based on shading factor
+        const shadingColor = Math.floor(255 - ray.shading * 50);
+
 
         const gradient = ctx.createLinearGradient(i, wallTop, i, wallTop + wallHeight);
         gradient.addColorStop(0, '#222');
