@@ -38,25 +38,22 @@
       x: 100,
       y: 100,
       angle: 0,
-      verticalAngle: 0,
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
     };
 
-    function castRay(rayAngle, verticalAngle) {
+    function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
 
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
-      const verticalSin = Math.sin(verticalAngle);
-      const verticalCos = Math.cos(verticalAngle);
 
       // Increment by small steps along the ray until a wall is hit
       while (true) {
-        x += rayCos * verticalCos;
-        y += raySin * verticalCos;
+        x += rayCos;
+        y += raySin;
 
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
@@ -85,15 +82,23 @@
         player.angle += 0.05;
       }
       if (keys['ArrowUp']) {
-        player.verticalAngle += 0.05;
-        if (player.verticalAngle > Math.PI / 2) {
-          player.verticalAngle = Math.PI / 2;
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
         }
       }
       if (keys['ArrowDown']) {
-        player.verticalAngle -= 0.05;
-        if (player.verticalAngle < -Math.PI / 2) {
-          player.verticalAngle = -Math.PI / 2;
+        const moveStep = player.speed;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
         }
       }
       if (keys['KeyL']) {
@@ -132,15 +137,6 @@
       if (player.isMouseLocked) {
         const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
         player.angle += deltaX * 0.01;
-
-        const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-        player.verticalAngle -= deltaY * 0.01;
-        if (player.verticalAngle > Math.PI / 2) {
-          player.verticalAngle = Math.PI / 2;
-        }
-        if (player.verticalAngle < -Math.PI / 2) {
-          player.verticalAngle = -Math.PI / 2;
-        }
       }
     });
 
@@ -157,7 +153,7 @@
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle, player.verticalAngle);
+        const ray = castRay(rayAngle);
         rays.push(ray);
       }
 
