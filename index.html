@@ -86,7 +86,7 @@
           const distanceToLight = Math.sqrt((lightSource.x - hitPoint.x) ** 2 + (lightSource.y - hitPoint.y) ** 2);
           const attenuation = 1 / (1 + 0.1 * distanceToLight + 0.01 * distanceToLight ** 2);
 
-          // Shadow casting: Check for obstacles between hit point and light source
+          // Shadow casting: Check for shadows using the more efficient algorithm
           const isShadowed = checkForShadows(hitPoint, lightSource);
 
           // Apply shading, attenuation, and shadows
@@ -101,11 +101,34 @@
     }
 
     function checkForShadows(hitPoint, lightSource) {
-      const shadowRayAngle = Math.atan2(lightSource.y - hitPoint.y, lightSource.x - hitPoint.x);
-      const shadowHitPoint = castRay(shadowRayAngle);
+      // Shadow casting: Cast additional rays towards the light source
 
-      // Check if there's an obstacle between the hit point and the light source
-      return shadowHitPoint.distance < Math.sqrt((lightSource.x - hitPoint.x) ** 2 + (lightSource.y - hitPoint.y) ** 2);
+      const lightToHitPoint = {
+        x: hitPoint.x - lightSource.x,
+        y: hitPoint.y - lightSource.y,
+      };
+
+      const distanceToLight = Math.sqrt(lightToHitPoint.x ** 2 + lightToHitPoint.y ** 2);
+      const normalizedLightVector = {
+        x: lightToHitPoint.x / distanceToLight,
+        y: lightToHitPoint.y / distanceToLight,
+      };
+
+      const numSteps = Math.ceil(distanceToLight / tileSize);
+
+      for (let step = 1; step <= numSteps; step++) {
+        const stepX = lightSource.x + step * normalizedLightVector.x * tileSize;
+        const stepY = lightSource.y + step * normalizedLightVector.y * tileSize;
+
+        const mapX = Math.floor(stepX / tileSize);
+        const mapY = Math.floor(stepY / tileSize);
+
+        if (map[mapY][mapX] === 1) {
+          return true; // Hit an obstacle, point is in shadow
+        }
+      }
+
+      return false; // No obstacles found, point is lit
     }
 
     function handleInput() {
