@@ -43,8 +43,27 @@
       isMouseLocked: false,
     };
 
-    const wallTexture = new Image();
-    wallTexture.src = 'wall_texture.jpg';
+    const textureSize = 64; // Size of the texture image (assumes square)
+    const wallTextures = [
+      document.createElement('canvas'), // Texture for walls
+      document.createElement('canvas')  // Texture for floor and ceiling
+    ];
+
+    wallTextures.forEach((texture, index) => {
+      texture.width = textureSize;
+      texture.height = textureSize;
+      const textureCtx = texture.getContext('2d');
+      const imageData = textureCtx.createImageData(textureSize, textureSize);
+      for (let i = 0; i < textureSize * textureSize * 4; i += 4) {
+        // Assign color based on the texture index (checkerboard pattern for demonstration)
+        const color = (index === 0) ? 255 : ((i / 4) % 2 === 0) ? 200 : 100;
+        imageData.data[i] = color;
+        imageData.data[i + 1] = color;
+        imageData.data[i + 2] = color;
+        imageData.data[i + 3] = 255;
+      }
+      textureCtx.putImageData(imageData, 0, 0);
+    });
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -66,11 +85,14 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
+          const textureIndex = map[mapY][mapX] - 1; // Map value to texture index
+
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
+            textureIndex: textureIndex,
           };
         }
       }
@@ -159,7 +181,7 @@
       ctx.fillStyle = 'green';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls with texture mapping
+      // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -172,8 +194,13 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Draw textured wall
-        ctx.drawImage(wallTexture, i, wallTop, 1, wallHeight, i, wallTop, 1, wallHeight);
+        const texture = wallTextures[ray.textureIndex];
+
+        // Calculate texture coordinates
+        const textureX = Math.floor(ray.x % tileSize / tileSize * textureSize);
+
+        // Draw vertical lines for walls with texture
+        ctx.drawImage(texture, textureX, 0, 1, textureSize, i, wallTop, 1, wallHeight);
       }
     }
 
