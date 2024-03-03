@@ -112,15 +112,14 @@
             // Remove bullets that are out of bounds
             player.bullets = player.bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
 
-            // Handle reloading
-            if (player.ammo === 0 && !player.reloading) {
-                player.reloading = true;
-                setTimeout(() => {
-                    player.ammo = 20;
-                    player.reloading = false;
-                }, player.reloadTime);
-            }
-        }
+             if (player.ammo === 0 && !player.reloading) {
+        player.reloading = true;
+        const bulletsToReload = 20 - player.ammo; // Calculate the number of bullets needed to reach the full magazine
+        setTimeout(() => {
+            player.ammo += bulletsToReload; // Reload by adding the needed bullets
+            player.reloading = false;
+        }, player.reloadTime);
+    }
 
         function shoot() {
             if (player.ammo > 0 && !player.reloading) {
