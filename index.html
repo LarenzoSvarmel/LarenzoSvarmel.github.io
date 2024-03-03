@@ -38,10 +38,9 @@
       x: 100,
       y: 100,
       angle: 0,
-      verticalAngle: 0,  // Added for vertical aiming
+      verticalAngle: 0,
       fov: Math.PI / 3,
       speed: 5,
-      rotationSpeed: 0.03,  // Added for smoother rotation
       isMouseLocked: false,
     };
 
@@ -51,8 +50,7 @@
 
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
-      const rayVerticalSin = Math.sin(verticalAngle);
-      const rayVerticalCos = Math.cos(verticalAngle);
+      const rayTan = Math.tan(verticalAngle);
 
       // Increment by small steps along the ray until a wall is hit
       while (true) {
@@ -69,7 +67,8 @@
           // Apply fisheye correction
           const correctedDistance = distance * Math.cos(rayAngle - player.angle);
 
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * correctedDistance));
+          // Calculate wall height based on corrected distance and vertical angle
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * correctedDistance * Math.cos(verticalAngle - player.verticalAngle)));
 
           return {
             x: x,
@@ -84,10 +83,10 @@
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
-        player.angle -= player.rotationSpeed;
+        player.angle -= 0.05;
       }
       if (keys['ArrowRight']) {
-        player.angle += player.rotationSpeed;
+        player.angle += 0.05;
       }
       if (keys['ArrowUp']) {
         const moveStep = player.speed;
@@ -109,16 +108,6 @@
           player.y = newY;
         }
       }
-
-      // Vertical aiming with the mouse
-      if (player.isMouseLocked) {
-        const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-        player.verticalAngle -= deltaY * 0.01;
-        
-        // Limit vertical angle to avoid looking too high or too low
-        player.verticalAngle = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.verticalAngle));
-      }
-
       if (keys['KeyL']) {
         toggleMouseLock();
       }
@@ -155,6 +144,12 @@
       if (player.isMouseLocked) {
         const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
         player.angle += deltaX * 0.01;
+
+        const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+        player.verticalAngle -= deltaY * 0.01;
+
+        // Limit vertical angle to prevent flipping
+        player.verticalAngle = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.verticalAngle));
       }
     });
 
@@ -179,7 +174,7 @@
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle, player.verticalAngle);  // Pass vertical angle
+        const ray = castRay(rayAngle, player.verticalAngle);
         rays.push(ray);
       }
 
