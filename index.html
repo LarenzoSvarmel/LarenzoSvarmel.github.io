@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Rendering with Centered Map</title>
+  <title>Raycasting Engine</title>
   <style>
     body {
       margin: 0;
@@ -151,37 +151,57 @@
       };
     }
 
-    function draw() {
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
+    function castRay(mouseX, mouseY) {
+      const normalizedX = (mouseX / screenWidth) * 2 - 1;
+      const normalizedY = 1 - (mouseY / screenHeight) * 2;
 
-      drawMap();
+      const rayClip = new Vector3(normalizedX, normalizedY, -1);
+      const rayEye = camera.projectionMatrix.multiply(rayClip);
 
-      const viewMatrix = camera.getViewMatrix();
+      rayEye.z = -1;
+      rayEye.w = 0;
 
-      for (let i = 0; i < gridSize; i++) {
-        for (let j = 0; j < gridSize; j++) {
-          if (map[i][j] === 1) {
-            const vertex1 = new Vector3(i * tileSize * 2, 0, j * tileSize * 2);
-            const vertex2 = new Vector3((i + 1) * tileSize * 2, 0, j * tileSize * 2);
-            const vertex3 = new Vector3((i + 1) * tileSize * 2, 0, (j + 1) * tileSize * 2);
-            const vertex4 = new Vector3(i * tileSize * 2, 0, (j + 1) * tileSize * 2);
+      const rayWorld = camera.getViewMatrix().multiply(rayEye);
+      rayWorld.normalize();
 
-            const screenVertex1 = project(vertex1, viewMatrix, camera.projectionMatrix);
-            const screenVertex2 = project(vertex2, viewMatrix, camera.projectionMatrix);
-            const screenVertex3 = project(vertex3, viewMatrix, camera.projectionMatrix);
-            const screenVertex4 = project(vertex4, viewMatrix, camera.projectionMatrix);
+      return rayWorld;
+    }
 
-            ctx.beginPath();
-            ctx.moveTo(screenVertex1.x, screenVertex1.y);
-            ctx.lineTo(screenVertex2.x, screenVertex2.y);
-            ctx.lineTo(screenVertex3.x, screenVertex3.y);
-            ctx.lineTo(screenVertex4.x, screenVertex4.y);
-            ctx.closePath();
-            ctx.stroke();
-          }
+    function findWallHit(ray) {
+      const stepSize = 0.1;
+
+      let position = new Vector3(camera.position.x, camera.position.y, camera.position.z);
+
+      for (let step = 0; step < 30; step++) {
+        position = position.add(ray.multiplyScalar(stepSize));
+
+        const gridX = Math.floor(position.x / (tileSize * 2));
+        const gridY = Math.floor(position.z / (tileSize * 2));
+
+        if (gridX >= 0 && gridX < gridSize && gridY >= 0 && gridY < gridSize && map[gridX][gridY] === 1) {
+          return { x: gridX, y: gridY };
         }
       }
+
+      return null;
     }
+
+    function drawHighlightedWall(hit) {
+      if (hit) {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(hit.x * tileSize * 2, hit.y * tileSize * 2, tileSize * 2, tileSize * 2);
+      }
+    }
+
+    function handleMouseMove(event) {
+      const ray = castRay(event.clientX, event.clientY);
+      const hit = findWallHit(ray);
+
+      draw();
+      drawHighlightedWall(hit);
+    }
+
+    document.addEventListener('mousemove', handleMouseMove);
 
     function handleKeyPress(event) {
       const speed = 0.1;
@@ -206,6 +226,11 @@
     function update() {
       draw();
       requestAnimationFrame(update);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
+      drawMap();
     }
 
     update();
