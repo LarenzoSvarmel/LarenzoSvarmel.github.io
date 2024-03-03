@@ -34,12 +34,6 @@
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
 
-    const sun = {
-      x: 200, // Adjust the sun position based on your map layout
-      y: 200,
-      brightness: 0.7, // Sun brightness factor
-    };
-
     const player = {
       x: 100,
       y: 100,
@@ -49,6 +43,13 @@
       isMouseLocked: false,
     };
 
+    const circle = {
+      x: 400,
+      y: 300,
+      radius: 50,
+      color: 'yellow',
+    };
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -56,7 +57,7 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      // Increment by small steps along the ray until a wall is hit
+      // Increment by small steps along the ray until a wall or the circle is hit
       while (true) {
         x += rayCos;
         y += raySin;
@@ -74,24 +75,21 @@
             y: y,
             distance: distance,
             height: wallHeight,
+            hitWall: true,
+          };
+        }
+
+        // Check if the ray hit the circle
+        const distanceToCircle = Math.sqrt((x - circle.x) ** 2 + (y - circle.y) ** 2);
+        if (distanceToCircle <= circle.radius) {
+          return {
+            x: x,
+            y: y,
+            distance: distanceToCircle,
+            hitWall: false,
           };
         }
       }
-    }
-
-    function calculateShadow(rayAngle, distanceToWall) {
-      const sunAngle = Math.atan2(sun.y - player.y, sun.x - player.x);
-      const angleDifference = Math.abs(rayAngle - sunAngle);
-
-      if (angleDifference > Math.PI / 2) {
-        // The wall is on the opposite side of the sun, no shadow
-        return 1;
-      }
-
-      const shadowFactor = Math.cos(angleDifference);
-      const shadowLength = distanceToWall * shadowFactor;
-
-      return Math.min(1, shadowLength / 200); // Adjust the shadow length based on your preferences
     }
 
     function handleInput() {
@@ -161,13 +159,6 @@
       }
     });
 
-    function interpolateColor(color1, color2, t) {
-      const r = Math.round(color1[0] + (color2[0] - color1[0]) * t);
-      const g = Math.round(color1[1] + (color2[1] - color1[1]) * t);
-      const b = Math.round(color1[2] + (color2[2] - color1[2]) * t);
-      return `rgb(${r}, ${g}, ${b})`;
-    }
-
     function update() {
       // Update game logic here
       handleInput();
@@ -187,12 +178,6 @@
       ctx.fillStyle = 'green';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw sun
-      ctx.fillStyle = 'yellow';
-      ctx.beginPath();
-      ctx.arc(sun.x, sun.y, 10, 0, Math.PI * 2);
-      ctx.fill();
-
       // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
@@ -209,16 +194,28 @@
         // Calculate blending factor based on the wall's distance
         const blendFactor = Math.min(1, ray.distance / 400); // Adjust 400 based on your preferences
 
-        // Calculate shadow based on sun position
-        const shadow = calculateShadow(player.angle - player.fov / 2 + (i / screenWidth) * player.fov, ray.distance);
-
-        // Interpolate between wall color and sky color with shadow
-        const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor * shadow * sun.brightness);
+        // Interpolate between wall color and sky color
+        const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor);
 
         // Draw vertical lines for walls with blended color
         ctx.fillStyle = blendedColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
+
+        // Check if the ray hits the circle and render it
+        if (!ray.hitWall && ray.distance <= circle.radius) {
+          ctx.fillStyle = circle.color;
+          ctx.beginPath();
+          ctx.arc(ray.x, ray.y, 2, 0, 2 * Math.PI);
+          ctx.fill();
+        }
       }
+    }
+
+    function interpolateColor(color1, color2, t) {
+      const r = Math.round(color1[0] + (color2[0] - color1[0]) * t);
+      const g = Math.round(color1[1] + (color2[1] - color1[1]) * t);
+      const b = Math.round(color1[2] + (color2[2] - color1[2]) * t);
+      return `rgb(${r}, ${g}, ${b})`;
     }
 
     function gameLoop() {
