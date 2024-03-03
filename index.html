@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Playable Voxel Rendering Demo</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -16,17 +16,14 @@
   </style>
 </head>
 <body>
-  <canvas id="voxelCanvas" width="800" height="600"></canvas>
+  <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
-    const canvas = document.getElementById('voxelCanvas');
-    const ctx = canvas.getContext('3d');
+    const canvas = document.getElementById('raycastingCanvas');
+    const ctx = canvas.getContext('2d');
 
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
-    const mapWidth = 16;
-    const mapHeight = 7;
-
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -43,50 +40,69 @@
       angle: 0,
       fov: Math.PI / 3,
       speed: 5,
-      rotationSpeed: 0.05,
       isMouseLocked: false,
     };
 
-    function drawVoxel(x, y, height) {
-      const voxelSize = screenWidth / mapWidth;
-      const depth = 0.8; // Adjust depth to control perspective
+    function castRay(rayAngle) {
+      let x = player.x;
+      let y = player.y;
 
-      const screenX = x * voxelSize;
-      const screenY = y * voxelSize;
+      const raySin = Math.sin(rayAngle);
+      const rayCos = Math.cos(rayAngle);
 
-      const wallHeight = screenHeight / (height * depth);
-      const wallTop = screenHeight / 2 - wallHeight / 2;
+      // Increment by small steps along the ray until a wall is hit
+      while (true) {
+        x += rayCos;
+        y += raySin;
 
-      ctx.fillStyle = 'gray';
-      ctx.fillRect(screenX, wallTop, voxelSize, wallHeight);
+        const mapX = Math.floor(x / tileSize);
+        const mapY = Math.floor(y / tileSize);
+
+        // Check if the ray hit a wall
+        if (map[mapY][mapX] === 1) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
+
+          return {
+            x: x,
+            y: y,
+            distance: distance,
+            height: wallHeight,
+          };
+        }
+      }
     }
 
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
-        player.angle -= player.rotationSpeed;
+        player.angle -= 0.05;
       }
       if (keys['ArrowRight']) {
-        player.angle += player.rotationSpeed;
+        player.angle += 0.05;
       }
       if (keys['ArrowUp']) {
-        movePlayer(player.speed);
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
       if (keys['ArrowDown']) {
-        movePlayer(-player.speed);
+        const moveStep = player.speed;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
       if (keys['KeyL']) {
         toggleMouseLock();
-      }
-    }
-
-    function movePlayer(speed) {
-      const newX = player.x + Math.cos(player.angle) * speed;
-      const newY = player.y + Math.sin(player.angle) * speed;
-
-      if (!isWall(newX, newY)) {
-        player.x = newX;
-        player.y = newY;
       }
     }
 
@@ -130,7 +146,7 @@
     }
 
     function draw() {
-      // Draw the voxel scene here
+      // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
       // Draw sky
@@ -141,14 +157,24 @@
       ctx.fillStyle = 'saddlebrown';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw voxels
-      for (let x = 0; x < mapWidth; x++) {
-        for (let y = 0; y < mapHeight; y++) {
-          const voxelHeight = map[y][x];
-          if (voxelHeight > 0) {
-            drawVoxel(x, y, voxelHeight);
-          }
-        }
+      // Draw walls
+      const rays = [];
+      for (let i = 0; i < screenWidth; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle);
+        rays.push(ray);
+      }
+
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
+        const wallHeight = ray.height;
+        const wallTop = (screenHeight - wallHeight) / 2;
+
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+
+        // Draw vertical lines for walls
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
 
