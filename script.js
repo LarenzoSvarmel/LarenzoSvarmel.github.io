@@ -61,6 +61,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Draw the triangle
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    render(gl, shaderProgram);
+
+ // Initial rotation angle
+    let rotationAngle = 0;
+
+    // Call a function to render the triangle with rotation
+    render(gl, shaderProgram, rotationAngle);
+
+    // Add event listener for arrow key presses
+    document.addEventListener('keydown', function (event) {
+        handleKeyPress(event, gl, shaderProgram, rotationAngle);
+    });
+
 });
 
 function render(gl, shaderProgram) {
@@ -88,6 +102,24 @@ function createShader(gl, type, source) {
     }
 
     return shader;
+}
+
+function handleKeyPress(event, gl, shaderProgram, rotationAngle) {
+    // Arrow key codes: Left - 37, Up - 38, Right - 39, Down - 40
+    switch (event.keyCode) {
+        case 37: // Left arrow
+            rotationAngle -= 0.1;
+            break;
+        case 39: // Right arrow
+            rotationAngle += 0.1;
+            break;
+    }
+
+    // Normalize the rotation angle to keep it within [0, 2π)
+    rotationAngle = (rotationAngle + 2 * Math.PI) % (2 * Math.PI);
+
+    // Call the render function with the updated rotation angle
+    render(gl, shaderProgram, rotationAngle);
 }
 
 // Function to create and link a program
