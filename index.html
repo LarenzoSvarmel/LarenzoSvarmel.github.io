@@ -63,18 +63,16 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          // Calculate the normal vector for Phong shading
-          const wallNormal = {
-            x: x - mapX * tileSize,
-            y: y - mapY * tileSize,
-          };
+          // Calculate shading based on the angle of the wall and the ray
+          const wallNormalAngle = Math.atan2(y - player.y, x - player.x);
+          const shadingFactor = Math.cos(rayAngle - wallNormalAngle);
 
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-            normal: wallNormal,
+            shading: shadingFactor,
           };
         }
       }
@@ -154,12 +152,6 @@
       return `rgb(${r}, ${g}, ${b})`;
     }
 
-    function calculateLighting(normal, lightDirection) {
-      const dotProduct = normal.x * lightDirection.x + normal.y * lightDirection.y;
-      const intensity = Math.max(0, dotProduct);
-      return intensity;
-    }
-
     function update() {
       // Update game logic here
       handleInput();
@@ -179,16 +171,13 @@
       ctx.fillStyle = 'green';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls with Phong shading
+      // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
         rays.push(ray);
       }
-
-      // Light direction vector (adjust as needed)
-      const lightDirection = { x: 1, y: -1 };
 
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
@@ -201,16 +190,20 @@
         // Interpolate between wall color and sky color
         const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor);
 
-        // Phong shading: calculate lighting intensity based on wall normal
-        const lightingIntensity = calculateLighting(ray.normal, lightDirection);
+        // Apply shading based on the angle of the wall and the ray
+        const shadedColor = applyShading(blendedColor, ray.shading);
 
-        // Adjust the intensity to control the shading effect
-        const shadedColor = `rgb(${lightingIntensity * 255}, ${lightingIntensity * 255}, ${lightingIntensity * 255})`;
-
-        // Draw vertical lines for walls with shaded color
+        // Draw vertical lines for walls with shading
         ctx.fillStyle = shadedColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
+    }
+
+    function applyShading(color, shadingFactor) {
+      // Apply shading to the color
+      const shadingIntensity = 0.5; // Adjust based on your preferences
+      const shadedColor = interpolateColor([0, 0, 0], color.split(',').map(Number), 1 - shadingFactor * shadingIntensity);
+      return shadedColor;
     }
 
     function gameLoop() {
