@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voxel Rendering Demo</title>
+  <title>Playable Voxel Rendering Demo</title>
   <style>
     body {
       margin: 0;
@@ -43,63 +43,50 @@
       angle: 0,
       fov: Math.PI / 3,
       speed: 5,
+      rotationSpeed: 0.05,
       isMouseLocked: false,
     };
 
     function drawVoxel(x, y, height) {
       const voxelSize = screenWidth / mapWidth;
+      const depth = 0.8; // Adjust depth to control perspective
 
       const screenX = x * voxelSize;
       const screenY = y * voxelSize;
 
+      const wallHeight = screenHeight / (height * depth);
+      const wallTop = screenHeight / 2 - wallHeight / 2;
+
       ctx.fillStyle = 'gray';
-      ctx.fillRect(screenX, screenY, voxelSize, voxelSize);
-
-      ctx.strokeStyle = 'black';
-      ctx.strokeRect(screenX, screenY, voxelSize, voxelSize);
-
-      // Draw the top face of the voxel
-      ctx.fillStyle = 'darkgray';
-      ctx.beginPath();
-      ctx.moveTo(screenX, screenY);
-      ctx.lineTo(screenX + voxelSize, screenY);
-      ctx.lineTo(screenX + voxelSize, screenY - height * voxelSize);
-      ctx.lineTo(screenX, screenY - height * voxelSize);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      ctx.fillRect(screenX, wallTop, voxelSize, wallHeight);
     }
 
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
-        player.angle -= 0.05;
+        player.angle -= player.rotationSpeed;
       }
       if (keys['ArrowRight']) {
-        player.angle += 0.05;
+        player.angle += player.rotationSpeed;
       }
       if (keys['ArrowUp']) {
-        const moveStep = player.speed;
-        const newX = player.x + Math.cos(player.angle) * moveStep;
-        const newY = player.y + Math.sin(player.angle) * moveStep;
-
-        if (!isWall(newX, newY)) {
-          player.x = newX;
-          player.y = newY;
-        }
+        movePlayer(player.speed);
       }
       if (keys['ArrowDown']) {
-        const moveStep = player.speed;
-        const newX = player.x - Math.cos(player.angle) * moveStep;
-        const newY = player.y - Math.sin(player.angle) * moveStep;
-
-        if (!isWall(newX, newY)) {
-          player.x = newX;
-          player.y = newY;
-        }
+        movePlayer(-player.speed);
       }
       if (keys['KeyL']) {
         toggleMouseLock();
+      }
+    }
+
+    function movePlayer(speed) {
+      const newX = player.x + Math.cos(player.angle) * speed;
+      const newY = player.y + Math.sin(player.angle) * speed;
+
+      if (!isWall(newX, newY)) {
+        player.x = newX;
+        player.y = newY;
       }
     }
 
