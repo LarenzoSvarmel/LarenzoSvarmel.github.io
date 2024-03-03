@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Movement</title>
+    <title>AI Movement with Shooting</title>
     <style>
         body {
             margin: 0;
@@ -16,13 +16,13 @@
     </style>
 </head>
 <body>
-    <canvas id="aiCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
     <script>
-        const canvas = document.getElementById('aiCanvas');
+        const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        const ai = {
+        const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
             size: 20,
@@ -31,83 +31,140 @@
             isMoving: false,
             targetX: 0,
             targetY: 0,
+            ammo: 20,
+            bullets: [],
+            reloading: false,
+            reloadTime: 4000, // in milliseconds
         };
 
-        function drawAI() {
+        const bullet = {
+            size: 5,
+            speed: 5,
+            color: 'yellow',
+        };
+
+        function drawPlayer() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw AI dot
+            // Draw bullets
+            player.bullets.forEach(b => {
+                ctx.fillStyle = bullet.color;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, bullet.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw player
             ctx.fillStyle = 'blue';
             ctx.beginPath();
-            ctx.arc(ai.x, ai.y, ai.size, 0, Math.PI * 2);
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
             ctx.fill();
 
-            // Draw arrow indicating AI direction
+            // Draw arrow indicating player direction
             ctx.save();
-            ctx.translate(ai.x, ai.y);
-            ctx.rotate(ai.angle);
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
             ctx.beginPath();
             ctx.moveTo(0, 0);
-            ctx.lineTo(ai.size * 2, 0);
-            ctx.lineTo(ai.size * 1.8, ai.size * 0.2);
-            ctx.lineTo(ai.size * 1.8, -ai.size * 0.2);
+            ctx.lineTo(player.size * 2, 0);
+            ctx.lineTo(player.size * 1.8, player.size * 0.2);
+            ctx.lineTo(player.size * 1.8, -player.size * 0.2);
             ctx.closePath();
             ctx.fillStyle = 'white';
             ctx.fill();
             ctx.restore();
 
-            // Draw line if AI is moving
-            if (ai.isMoving) {
-                ctx.beginPath();
-                ctx.moveTo(ai.x, ai.y);
-                ctx.lineTo(ai.targetX, ai.targetY);
-                ctx.strokeStyle = 'gray';
-                ctx.lineWidth = 2;
-                ctx.stroke();
+            // Draw reloading text
+            if (player.reloading) {
+                ctx.fillStyle = 'red';
+                ctx.font = '16px Arial';
+                ctx.fillText('Reloading...', player.x - 30, player.y + player.size + 20);
+            }
+
+            // Draw ammo counter
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.fillText(`Ammo: ${player.ammo} / 20`, 10, 20);
+        }
+
+        function updatePlayer() {
+            if (player.isMoving) {
+                const dx = player.targetX - player.x;
+                const dy = player.targetY - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > player.speed) {
+                    player.x += (dx / distance) * player.speed;
+                    player.y += (dy / distance) * player.speed;
+                } else {
+                    player.isMoving = false;
+                }
+
+                player.angle = Math.atan2(dy, dx);
+            }
+
+            // Update bullet positions
+            player.bullets.forEach(b => {
+                b.x += Math.cos(b.angle) * bullet.speed;
+                b.y += Math.sin(b.angle) * bullet.speed;
+            });
+
+            // Remove bullets that are out of bounds
+            player.bullets = player.bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
+
+            // Handle reloading
+            if (player.ammo === 0 && !player.reloading) {
+                player.reloading = true;
+                setTimeout(() => {
+                    player.ammo = 20;
+                    player.reloading = false;
+                }, player.reloadTime);
             }
         }
 
-        function updateAI() {
-            if (ai.isMoving) {
-                const dx = ai.targetX - ai.x;
-                const dy = ai.targetY - ai.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+        function shoot() {
+            if (player.ammo > 0 && !player.reloading) {
+                player.bullets.push({
+                    x: player.x,
+                    y: player.y,
+                    angle: player.angle,
+                });
 
-                if (distance > ai.speed) {
-                    ai.x += (dx / distance) * ai.speed;
-                    ai.y += (dy / distance) * ai.speed;
-                } else {
-                    ai.isMoving = false;
-                }
-
-                ai.angle = Math.atan2(dy, dx);
+                player.ammo--;
             }
         }
 
         function onMouseDown(event) {
-            ai.isMoving = true;
-            ai.targetX = event.clientX - canvas.getBoundingClientRect().left;
-            ai.targetY = event.clientY - canvas.getBoundingClientRect().top;
+            player.isMoving = true;
+            player.targetX = event.clientX - canvas.getBoundingClientRect().left;
+            player.targetY = event.clientY - canvas.getBoundingClientRect().top;
         }
 
         function onMouseUp() {
-            ai.isMoving = false;
+            player.isMoving = false;
         }
 
         function onMouseMove(event) {
-            if (ai.isMoving) {
-                ai.targetX = event.clientX - canvas.getBoundingClientRect().left;
-                ai.targetY = event.clientY - canvas.getBoundingClientRect().top;
+            if (player.isMoving) {
+                player.targetX = event.clientX - canvas.getBoundingClientRect().left;
+                player.targetY = event.clientY - canvas.getBoundingClientRect().top;
+            }
+        }
+
+        function onKeyDown(event) {
+            if (event.code === 'Space') {
+                shoot();
             }
         }
 
         canvas.addEventListener('mousedown', onMouseDown);
         canvas.addEventListener('mouseup', onMouseUp);
         canvas.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('keydown', onKeyDown);
 
         function gameLoop() {
-            updateAI();
-            drawAI();
+            updatePlayer();
+            drawPlayer();
             requestAnimationFrame(gameLoop);
         }
 
@@ -115,7 +172,7 @@
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            drawAI();
+            drawPlayer();
         });
 
         // Initial setup
