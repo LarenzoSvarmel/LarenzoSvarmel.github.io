@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo with Lighting</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -42,10 +42,9 @@
       speed: 5,
     };
 
-    const light = {
-      x: screenWidth / 2,
+    const lightSource = {
+      x: screenWidth - 50,
       y: screenHeight / 2,
-      radius: 150,
     };
 
     function castRay(rayAngle) {
@@ -55,8 +54,11 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
+      let hitWall = false;
+      let distance = 0;
+
       // Increment by small steps along the ray until a wall is hit
-      while (true) {
+      while (!hitWall && distance < 1000) {
         x += rayCos;
         y += raySin;
 
@@ -65,30 +67,18 @@
 
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
-
-          // Check if the point is in shadow
-          const shadowRay = Math.atan2(y - light.y, x - light.x);
-          const angleDiff = Math.abs(rayAngle - shadowRay);
-
-          if (distance <= light.radius && angleDiff < Math.PI / 4) {
-            // Apply lighting based on distance from light source
-            const brightness = 1 - (distance / light.radius);
-            const wallColor = `rgb(${255 * brightness}, ${255 * brightness}, ${255 * brightness})`;
-            ctx.fillStyle = wallColor;
-          } else {
-            ctx.fillStyle = '#000';
-          }
-
-          return {
-            x: x,
-            y: y,
-            distance: distance,
-            height: wallHeight,
-          };
+          hitWall = true;
+          distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
         }
+        distance++;
       }
+
+      return {
+        x: x,
+        y: y,
+        distance: distance,
+        hitWall: hitWall,
+      };
     }
 
     function handleInput() {
@@ -153,27 +143,26 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls
-      const rays = [];
+      // Draw walls with shadows
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
-        rays.push(ray);
-      }
 
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
-        const wallHeight = ray.height;
+        const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * ray.distance * Math.cos(rayAngle - player.angle)));
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        ctx.fillStyle = ray.color;
+        // Calculate shadow intensity based on the distance from the light source
+        const shadowIntensity = 1 - Math.min(ray.distance / 400, 1);
+
+        // Draw walls with shadows
+        ctx.fillStyle = `rgba(0, 0, 0, ${shadowIntensity})`;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
 
       // Draw light source
-      ctx.fillStyle = '#ff0';
+      ctx.fillStyle = 'yellow';
       ctx.beginPath();
-      ctx.arc(light.x, light.y, 5, 0, 2 * Math.PI);
+      ctx.arc(lightSource.x, lightSource.y, 5, 0, 2 * Math.PI);
       ctx.fill();
     }
 
