@@ -123,6 +123,10 @@
       return map[mapY][mapX] === 1;
     }
 
+    function lerp(start, end, t) {
+      return start + t * (end - start);
+    }
+
     const keys = {};
 
     document.addEventListener('keydown', (event) => {
@@ -149,6 +153,14 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
+      // Draw skybox (blue background)
+      ctx.fillStyle = 'rgb(135, 206, 250)'; // Light blue color
+      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
+
+      // Draw ground
+      ctx.fillStyle = 'rgb(46, 139, 87)'; // Green color
+      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
+
       // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
@@ -162,7 +174,9 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+        // Linear interpolation for smoother transitions
+        const brightness = lerp(1, 0.5, i / screenWidth);
+        const wallColor = `rgb(${brightness * (255 - ray.distance * 2)}, ${brightness * (255 - ray.distance * 2)}, ${brightness * (255 - ray.distance * 2)})`;
 
         // Draw vertical lines for walls
         ctx.fillStyle = wallColor;
