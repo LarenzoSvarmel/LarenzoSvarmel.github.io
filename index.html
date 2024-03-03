@@ -120,6 +120,11 @@
       keys[event.key] = false;
     });
 
+    document.addEventListener('mousemove', (event) => {
+      const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+      player.angle += deltaX * 0.01;
+    });
+
     function update() {
       // Update game logic here
       handleInput();
