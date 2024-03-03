@@ -42,8 +42,39 @@
       uniform sampler2D uTexture;
       varying vec2 vTextureCoord;
 
+      const int mapWidth = 16;
+      const int mapHeight = 7;
+      const int map[mapHeight][mapWidth] = int[7](int[16](1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+                                                   int[16](1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+                                                   int[16](1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1),
+                                                   int[16](1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1),
+                                                   int[16](1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
+                                                   int[16](1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+                                                   int[16](1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1));
+
       void main(void) {
-        gl_FragColor = texture2D(uTexture, vTextureCoord);
+        vec3 rayColor = vec3(0.0, 0.0, 0.0);
+
+        // Calculate map coordinates based on the texture coordinates
+        int mapX = int(vTextureCoord.x * float(mapWidth));
+        int mapY = int(vTextureCoord.y * float(mapHeight));
+
+        // Sample the texture (framebuffer) at the current pixel
+        vec4 framebufferColor = texture2D(uTexture, vTextureCoord);
+
+        // Raycasting calculations based on the map
+        if (framebufferColor.r > 0.9 && framebufferColor.g > 0.9 && framebufferColor.b > 0.9) {
+          // Wall color
+          rayColor = vec3(1.0, 0.0, 0.0);
+        } else if (map[mapY][mapX] == 1) {
+          // Map space color
+          rayColor = vec3(0.0, 0.0, 1.0);
+        } else {
+          // Open space color
+          rayColor = vec3(0.0, 1.0, 0.0);
+        }
+
+        gl_FragColor = vec4(rayColor, 1.0);
       }
     `;
 
@@ -95,14 +126,14 @@
     // Create a texture
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-
-    // Fill the texture with a solid color
-    const pixel = new Uint8Array([255, 255, 255, 255]); // White color
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-    // Set texture parameters
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    // Create a framebuffer
+    const framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
 
     // Buffer for a square
     const positionBuffer = gl.createBuffer();
@@ -117,7 +148,34 @@
 
     // Draw the scene
     function drawScene() {
-      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+      // Render to the framebuffer
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+
+      gl.clearColor(1.0, 1.0, 1.0, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      gl.useProgram(programInfo.program);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.vertexAttribPointer(
+        programInfo.attribLocations.vertexPosition,
+        2,         // size
+        gl.FLOAT,  // type
+        false,     // normalize
+        0,         // stride
+        0          // offset
+      );
+      gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+
+      gl.uniform1i(programInfo.uniformLocations.texture, 0);
+
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      // Render to the canvas
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clear(gl.COLOR_BUFFER_BIT);
 
