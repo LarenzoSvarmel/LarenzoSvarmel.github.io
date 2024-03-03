@@ -8,15 +8,29 @@
         body {
             margin: 0;
             overflow: hidden;
+            background-color: darkgreen;
         }
 
         canvas {
             display: block;
         }
+
+        #debugMenu {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div id="debugMenu">
+        <button onclick="addEnemy()">Add Enemy</button>
+    </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -34,11 +48,11 @@
             targetX: 0,
             targetY: 0,
             ammo: 20,
-            maxAmmo: 20, // Maximum magazine size
+            maxAmmo: 20,
             bullets: [],
             reloading: false,
-            reloadTime: 4000, // in milliseconds
-            shootDelay: 1000, // in milliseconds
+            reloadTime: 4000,
+            shootDelay: 1000,
             lastShotTime: 0,
             weaponType: 'Pistol',
             damage: 20,
@@ -53,10 +67,16 @@
             color: 'yellow',
         };
 
+        const enemies = [];
+
         let isPaused = false;
 
         function drawPlayer() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background
+            ctx.fillStyle = 'darkgreen';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Draw bullets
             player.bullets.forEach(b => {
@@ -105,6 +125,18 @@
             const staminaWidth = (player.stamina / player.maxStamina) * 100;
             ctx.fillStyle = 'green';
             ctx.fillRect(10, 60, staminaWidth, 10);
+
+            // Draw enemies
+            enemies.forEach(enemy => {
+                ctx.fillStyle = 'lightgreen';
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw enemy health bar
+                ctx.fillStyle = 'green';
+                ctx.fillRect(enemy.x - enemy.size, enemy.y - enemy.size - 10, (enemy.health / 100) * (enemy.size * 2), 5);
+            });
 
             // Draw pause text
             if (isPaused) {
@@ -169,7 +201,28 @@
                 } else if (player.stamina < player.maxStamina) {
                     player.stamina += 0.1;
                 }
+
+                // Check for collisions with enemies
+                checkCollisions();
             }
+        }
+
+        function checkCollisions() {
+            player.bullets.forEach((bullet, bulletIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
+                    const distance = Math.sqrt((bullet.x - enemy.x) ** 2 + (bullet.y - enemy.y) ** 2);
+                    if (distance < player.size + enemy.size) {
+                        // Bullet hit enemy
+                        enemies[enemyIndex].health -= player.damage;
+                        player.bullets.splice(bulletIndex, 1);
+
+                        if (enemies[enemyIndex].health <= 0) {
+                            // Enemy defeated
+                            enemies.splice(enemyIndex, 1);
+                        }
+                    }
+                });
+            });
         }
 
         function shoot() {
@@ -199,6 +252,15 @@
 
         function togglePause() {
             isPaused = !isPaused;
+        }
+
+        function addEnemy() {
+            enemies.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 15,
+                health: 100,
+            });
         }
 
         function onMouseDown(event) {
