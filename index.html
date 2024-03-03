@@ -36,6 +36,8 @@
             bullets: [],
             reloading: false,
             reloadTime: 4000, // in milliseconds
+            shootDelay: 1000, // in milliseconds
+            lastShotTime: 0,
         };
 
         const bullet = {
@@ -85,7 +87,7 @@
             // Draw ammo counter
             ctx.fillStyle = 'black';
             ctx.font = '16px Arial';
-            ctx.fillText(`Ammo: ${player.ammo} / ${player.maxAmmo}`, 10, 20);
+            ctx.fillText(`Ammo: ${player.ammo}`, 10, 20);
         }
 
         function updatePlayer() {
@@ -126,7 +128,9 @@
         }
 
         function shoot() {
-            if (player.ammo > 0 && !player.reloading) {
+            const currentTime = new Date().getTime();
+
+            if (player.ammo > 0 && !player.reloading && currentTime - player.lastShotTime > player.shootDelay) {
                 player.bullets.push({
                     x: player.x,
                     y: player.y,
@@ -134,6 +138,7 @@
                 });
 
                 player.ammo--;
+                player.lastShotTime = currentTime;
             }
         }
 
@@ -160,10 +165,17 @@
             }
         }
 
+        function onKeyUp(event) {
+            if (event.code === 'Space') {
+                player.lastShotTime = 0; // Reset last shot time when releasing the spacebar
+            }
+        }
+
         canvas.addEventListener('mousedown', onMouseDown);
         canvas.addEventListener('mouseup', onMouseUp);
         canvas.addEventListener('mousemove', onMouseMove);
         window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('keyup', onKeyUp);
 
         function gameLoop() {
             updatePlayer();
