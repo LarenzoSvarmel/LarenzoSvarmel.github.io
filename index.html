@@ -3,16 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGL Triangle</title>
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #111;
+        }
+
+        canvas {
+            border: 1px solid #333;
+        }
     </style>
+    <title>Raycasting Engine</title>
 </head>
 <body>
-    <canvas id="webgl-canvas"></canvas>
-    <script src="script.js"></script>
-<!-- Add this script tag to include the gl-matrix library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.4.0/gl-matrix.js"></script>
+    <canvas id="raycastingCanvas" width="800" height="600"></canvas>
+    <script src="raycasting.js"></script>
 </body>
 </html>
