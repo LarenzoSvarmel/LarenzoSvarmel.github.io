@@ -81,22 +81,21 @@
             height: wallHeight,
           };
 
-          // Calculate shading using Phong reflection model
-          const ambientShading = 0.2; // Ambient reflection coefficient
-          const diffuseShading = Math.max(0, Math.cos(angleToLight(hitPoint) - normalAngle(hitPoint)));
-          const specularShading = Math.pow(Math.max(0, -reflect(rayAngle, normalAngle(hitPoint)).x * rayCos + reflect(rayAngle, normalAngle(hitPoint)).y * raySin), 10);
-          const phongShading = ambientShading + (diffuseShading + specularShading) * lightSource.intensity;
+          // Calculate shading using Lambertian reflection model
+          const angleToLight = Math.atan2(lightSource.y - hitPoint.y, lightSource.x - hitPoint.x);
+          const normalAngle = (Math.atan2(hitPoint.y - player.y, hitPoint.x - player.x) - player.angle + Math.PI) % (2 * Math.PI);
+          const shading = Math.max(0, Math.cos(angleToLight - normalAngle));
 
           // Adjust shading based on distance from the light source
           const distanceToLight = Math.sqrt((lightSource.x - hitPoint.x) ** 2 + (lightSource.y - hitPoint.y) ** 2);
           const attenuation = 1 / (1 + 0.1 * distanceToLight + 0.01 * distanceToLight ** 2);
 
           // Reflection effect
-          const reflectionRayAngle = 2 * angleToLight(hitPoint) - rayAngle;
+          const reflectionRayAngle = 2 * angleToLight - normalAngle;
           const reflectionRay = castRay(reflectionRayAngle, recursionDepth + 1);
 
           // Apply shading, attenuation, and reflection
-          const finalShading = phongShading * attenuation * (1 + reflectionRay.shading);
+          const finalShading = shading * attenuation * (1 + reflectionRay.shading);
 
           return {
             ...hitPoint,
@@ -105,22 +104,6 @@
           };
         }
       }
-    }
-
-    function angleToLight(hitPoint) {
-      return Math.atan2(lightSource.y - hitPoint.y, lightSource.x - hitPoint.x);
-    }
-
-    function normalAngle(hitPoint) {
-      return (Math.atan2(hitPoint.y - player.y, hitPoint.x - player.x) - player.angle + Math.PI) % (2 * Math.PI);
-    }
-
-    function reflect(incidentAngle, normalAngle) {
-      const reflectAngle = normalAngle * 2 - incidentAngle;
-      return {
-        x: Math.cos(reflectAngle),
-        y: Math.sin(reflectAngle),
-      };
     }
 
     function handleInput() {
@@ -208,8 +191,6 @@
 
         // Apply shading
         const shadedColor = applyShading(wallColor, ray.shading);
-
-        // Draw the wall column
         ctx.fillStyle = shadedColor;
         ctx.fillRect(i, (screenHeight - ray.height) / 2, 1, ray.height);
       }
@@ -224,7 +205,7 @@
     function applyShading(color, shading) {
       // Apply shading to the color
       const rgb = color.match(/\d+/g);
-      const shadedColor = `rgb(${Math.floor(rgb[0] * shading)}, ${Math.floor(rgb[1] * shading)}, ${Math.floor(rgb[2] * shading)})`;
+      const shadedColor = `rgb(${rgb[0] * shading}, ${rgb[1] * shading}, ${rgb[2] * shading})`;
       return shadedColor;
     }
 
