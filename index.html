@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo</title>
+  <title>Raycasting Demo with Lighting</title>
   <style>
     body {
       margin: 0;
@@ -20,9 +20,6 @@
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
-
-    // Enable antialiasing for smoother lines
-    ctx.imageSmoothingEnabled = true;
 
     const screenWidth = 800;
     const screenHeight = 600;
@@ -46,10 +43,9 @@
     };
 
     const light = {
-      x: 400,
-      y: 300,
-      brightness: 0.8,
-      specularPower: 10,
+      x: screenWidth / 2,
+      y: screenHeight / 2,
+      radius: 150,
     };
 
     function castRay(rayAngle) {
@@ -59,6 +55,7 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
+      // Increment by small steps along the ray until a wall is hit
       while (true) {
         x += rayCos;
         y += raySin;
@@ -66,30 +63,36 @@
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
 
+        // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
-          const brightness = Math.max(0, Math.min(1, 1 - distance / 300)) * light.brightness;
 
-          const dx = light.x - x;
-          const dy = light.y - y;
-          const distanceToLight = Math.sqrt(dx * dx + dy * dy);
-          const dotProduct = (rayCos * dx + raySin * dy) / (distanceToLight * distance);
-          const specularIntensity = Math.pow(Math.max(0, dotProduct), light.specularPower);
+          // Check if the point is in shadow
+          const shadowRay = Math.atan2(y - light.y, x - light.x);
+          const angleDiff = Math.abs(rayAngle - shadowRay);
+
+          if (distance <= light.radius && angleDiff < Math.PI / 4) {
+            // Apply lighting based on distance from light source
+            const brightness = 1 - (distance / light.radius);
+            const wallColor = `rgb(${255 * brightness}, ${255 * brightness}, ${255 * brightness})`;
+            ctx.fillStyle = wallColor;
+          } else {
+            ctx.fillStyle = '#000';
+          }
 
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-            brightness: brightness,
-            specular: specularIntensity,
           };
         }
       }
     }
 
     function handleInput() {
+      // Handle player input
       if (keys['ArrowLeft']) {
         player.angle -= 0.05;
       }
@@ -119,6 +122,7 @@
     }
 
     function isWall(x, y) {
+      // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
       const mapY = Math.floor(y / tileSize);
 
@@ -141,12 +145,15 @@
     });
 
     function update() {
+      // Update game logic here
       handleInput();
     }
 
     function draw() {
+      // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
+      // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -159,15 +166,12 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const brightnessAdjusted = Math.floor(255 * ray.brightness);
-        const specularAdjusted = Math.floor(255 * ray.specular);
-        const wallColor = `rgb(${brightnessAdjusted + specularAdjusted}, ${brightnessAdjusted + specularAdjusted}, ${brightnessAdjusted + specularAdjusted})`;
-
-        ctx.fillStyle = wallColor;
+        ctx.fillStyle = ray.color;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
 
-      ctx.fillStyle = 'yellow';
+      // Draw light source
+      ctx.fillStyle = '#ff0';
       ctx.beginPath();
       ctx.arc(light.x, light.y, 5, 0, 2 * Math.PI);
       ctx.fill();
