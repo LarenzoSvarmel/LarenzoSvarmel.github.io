@@ -24,6 +24,7 @@
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
+    const raysPerPixel = 4; // Number of rays per pixel for subpixel rendering
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -161,18 +162,17 @@
       ctx.fillStyle = 'rgb(46, 139, 87)'; // Green color
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls
-      const rays = [];
+      // Draw walls with subpixel rendering
       for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
-        rays.push(ray);
-      }
+        const totalHeight = 0;
+        for (let j = 0; j < raysPerPixel; j++) {
+          const subRayAngle = player.angle - player.fov / 2 + ((i + j / raysPerPixel) / screenWidth) * player.fov;
+          const ray = castRay(subRayAngle);
+          totalHeight += ray.height;
+        }
 
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
-        const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
+        const avgHeight = totalHeight / raysPerPixel;
+        const wallTop = (screenHeight - avgHeight) / 2;
 
         // Linear interpolation for smoother transitions
         const brightness = lerp(1, 0.5, i / screenWidth);
@@ -180,7 +180,7 @@
 
         // Draw vertical lines for walls
         ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
+        ctx.fillRect(i, wallTop, 1, avgHeight);
       }
     }
 
