@@ -63,6 +63,18 @@ document.addEventListener("DOMContentLoaded", function () {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 });
 
+function render(gl, shaderProgram) {
+    // Set the clear color and clear the canvas
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Use the shader program
+    gl.useProgram(shaderProgram);
+
+    // Draw the triangle
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+} // Add this closing curly brace
+
 // Function to create and compile a shader
 function createShader(gl, type, source) {
     const shader = gl.createShader(type);
@@ -93,3 +105,4 @@ function createProgram(gl, vertexShader, fragmentShader) {
 
     return program;
 }
+
