@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo</title>
+  <title>Raycasting with Lighting</title>
   <style>
     body {
       margin: 0;
@@ -43,6 +43,13 @@
       isMouseLocked: false,
     };
 
+    const lightSource = {
+      x: 200,
+      y: 200,
+      color: '#FFD700', // Gold color
+      intensity: 1.5,
+    };
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -63,14 +70,42 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          return {
+          const hitPoint = {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
           };
+
+          // Calculate shading
+          const angleToLight = Math.atan2(lightSource.y - hitPoint.y, lightSource.x - hitPoint.x);
+          const normalAngle = (rayAngle - player.angle + Math.PI) % (2 * Math.PI);
+          const shading = Math.max(0, Math.cos(angleToLight - normalAngle));
+
+          // Adjust shading based on distance from the light source
+          const distanceToLight = Math.sqrt((lightSource.x - hitPoint.x) ** 2 + (lightSource.y - hitPoint.y) ** 2);
+          const attenuation = 1 / (1 + 0.1 * distanceToLight + 0.01 * distanceToLight ** 2);
+
+          // Shadow casting: Check for obstacles between hit point and light source
+          const isShadowed = checkForShadows(hitPoint, lightSource);
+
+          // Apply shading, attenuation, and shadows
+          const finalShading = isShadowed ? 0 : shading * attenuation * lightSource.intensity;
+
+          return {
+            ...hitPoint,
+            shading: finalShading,
+          };
         }
       }
+    }
+
+    function checkForShadows(hitPoint, lightSource) {
+      const shadowRayAngle = Math.atan2(lightSource.y - hitPoint.y, lightSource.x - hitPoint.x);
+      const shadowHitPoint = castRay(shadowRayAngle);
+
+      // Check if there's an obstacle between the hit point and the light source
+      return shadowHitPoint.distance < Math.sqrt((lightSource.x - hitPoint.x) ** 2 + (lightSource.y - hitPoint.y) ** 2);
     }
 
     function handleInput() {
@@ -149,24 +184,31 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls
-      const rays = [];
+      // Draw walls and apply shading
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
-        rays.push(ray);
-      }
-
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
-        const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
-        ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
+        // Apply shading
+        const shadedColor = applyShading(wallColor, ray.shading);
+        ctx.fillStyle = shadedColor;
+        ctx.fillRect(i, (screenHeight - ray.height) / 2, 1, ray.height);
       }
+
+      // Draw light source
+      ctx.fillStyle = lightSource.color;
+      ctx.beginPath();
+      ctx.arc(lightSource.x, lightSource.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    function applyShading(color, shading) {
+      // Apply shading to the color
+      const rgb = color.match(/\d+/g);
+      const shadedColor = `rgb(${rgb[0] * shading}, ${rgb[1] * shading}, ${rgb[2] * shading})`;
+      return shadedColor;
     }
 
     function gameLoop() {
