@@ -43,8 +43,7 @@
             damage: 20,
             stamina: 100,
             maxStamina: 100,
-            staminaRechargeRate: 5, // per second
-            staminaDepletionRate: 50, // per second
+            isRunning: false,
         };
 
         const bullet = {
@@ -99,9 +98,10 @@
             // Draw weapon type text
             ctx.fillText(`Weapon: ${player.weaponType}`, 10, 40);
 
-            // Draw stamina bar
+            // Draw stamina meter
+            const staminaWidth = (player.stamina / player.maxStamina) * 100;
             ctx.fillStyle = 'green';
-            ctx.fillRect(10, 60, (player.stamina / player.maxStamina) * 100, 10);
+            ctx.fillRect(10, 60, staminaWidth, 10);
         }
 
         function updatePlayer() {
@@ -140,16 +140,15 @@
                 }, player.reloadTime);
             }
 
-            // Handle stamina
-            if (player.isMoving && player.stamina > 0) {
-                player.stamina -= player.staminaDepletionRate / 60; // assuming 60 fps
+            // Update stamina
+            if (player.isRunning) {
+                player.stamina -= 0.2;
+                if (player.stamina <= 0) {
+                    player.stamina = 0;
+                    player.isRunning = false;
+                }
             } else if (player.stamina < player.maxStamina) {
-                player.stamina += player.staminaRechargeRate / 60; // assuming 60 fps
-            }
-
-            // Stop sprinting if stamina is depleted
-            if (player.stamina <= 0) {
-                player.speed = player.baseSpeed;
+                player.stamina += 0.1;
             }
         }
 
@@ -166,6 +165,16 @@
                 player.ammo--;
                 player.lastShotTime = currentTime;
             }
+        }
+
+        function startRunning() {
+            if (!player.isRunning && player.stamina > 0) {
+                player.isRunning = true;
+            }
+        }
+
+        function stopRunning() {
+            player.isRunning = false;
         }
 
         function onMouseDown(event) {
@@ -188,14 +197,14 @@
         function onKeyDown(event) {
             if (event.code === 'Space') {
                 shoot();
-            } else if (event.code === 'ShiftLeft' && player.stamina > 0) {
-                player.speed = player.baseSpeed + 2;
+            } else if (event.code === 'ShiftLeft') {
+                startRunning();
             }
         }
 
         function onKeyUp(event) {
             if (event.code === 'ShiftLeft') {
-                player.speed = player.baseSpeed;
+                stopRunning();
             }
         }
 
