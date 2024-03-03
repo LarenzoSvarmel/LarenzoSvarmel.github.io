@@ -172,6 +172,13 @@
       requestAnimationFrame(gameLoop);
     }
 
+    window.addEventListener('resize', () => {
+      screenWidth = window.innerWidth;
+      screenHeight = window.innerHeight;
+      canvas.width = screenWidth;
+      canvas.height = screenHeight;
+    });
+
     gameLoop();
   </script>
 </body>
