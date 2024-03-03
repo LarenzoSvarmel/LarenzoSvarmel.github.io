@@ -41,6 +41,7 @@
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
+      mouseSensitivity: 0.002,
     };
 
     function castRay(rayAngle) {
@@ -76,15 +77,18 @@
     function handleInput() {
       // Handle player input
       const moveStep = player.speed;
+      const rotateStep = player.mouseSensitivity;
+
       if (keys['ArrowLeft'] || keys['KeyA']) {
-        player.angle -= 0.05;
+        player.angle -= rotateStep;
       }
       if (keys['ArrowRight'] || keys['KeyD']) {
-        player.angle += 0.05;
+        player.angle += rotateStep;
       }
       if (keys['ArrowUp'] || keys['KeyW']) {
         const newX = player.x + Math.cos(player.angle) * moveStep;
         const newY = player.y + Math.sin(player.angle) * moveStep;
+
         if (!isWall(newX, newY)) {
           player.x = newX;
           player.y = newY;
@@ -93,6 +97,7 @@
       if (keys['ArrowDown'] || keys['KeyS']) {
         const newX = player.x - Math.cos(player.angle) * moveStep;
         const newY = player.y - Math.sin(player.angle) * moveStep;
+
         if (!isWall(newX, newY)) {
           player.x = newX;
           player.y = newY;
@@ -133,7 +138,7 @@
     document.addEventListener('mousemove', (event) => {
       if (player.isMouseLocked) {
         const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        player.angle += deltaX * 0.01;
+        player.angle += deltaX * player.mouseSensitivity;
       }
     });
 
@@ -162,7 +167,6 @@
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
         ctx.fillStyle = wallColor;
-        // Draw vertical lines for walls
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
