@@ -8,30 +8,21 @@
     body {
       margin: 0;
       overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background-color: #222;
     }
     canvas {
       display: block;
-      border: 2px solid white;
+      image-rendering: pixelated;
     }
   </style>
 </head>
 <body>
-  <canvas id="raycastingCanvas"></canvas>
+  <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
-    let screenWidth = window.innerWidth;
-    let screenHeight = window.innerHeight;
-
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
-    canvas.width = screenWidth;
-    canvas.height = screenHeight;
-
+    const screenWidth = 800;
+    const screenHeight = 600;
     const tileSize = 32;
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1],
@@ -44,7 +35,7 @@
     ];
 
     const player = {
-      x: screenWidth - 100,
+      x: 100,
       y: 100,
       angle: 0,
       fov: Math.PI / 3,
@@ -138,41 +129,23 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw map
-      for (let i = 0; i < map.length; i++) {
-        for (let j = 0; j < map[i].length; j++) {
-          if (map[i][j] === 1) {
-            ctx.fillStyle = '#333';
-            ctx.fillRect(j * tileSize, i * tileSize, tileSize, tileSize);
-          }
-        }
-      }
-
-      // Draw player
-      ctx.fillStyle = '#f00';
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
-      ctx.fill();
-
-      // Draw rays
+      // Draw walls
       const rays = [];
-      for (let i = -player.fov / 2; i < player.fov / 2; i += player.fov / screenWidth) {
-        const rayAngle = player.angle + i;
+      for (let i = 0; i < screenWidth; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
         rays.push(ray);
       }
 
-      // Draw walls
-      for (const ray of rays) {
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
-        const columnWidth = screenWidth / rays.length;
 
-        ctx.strokeStyle = '#00f';
-        ctx.beginPath();
-        ctx.moveTo(rays.indexOf(ray) * columnWidth, wallTop);
-        ctx.lineTo(rays.indexOf(ray) * columnWidth, wallTop + wallHeight);
-        ctx.stroke();
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
 
@@ -181,14 +154,6 @@
       draw();
       requestAnimationFrame(gameLoop);
     }
-
-    window.addEventListener('resize', () => {
-      screenWidth = window.innerWidth;
-      screenHeight = window.innerHeight;
-      canvas.width = screenWidth;
-      canvas.height = screenHeight;
-      player.x = screenWidth - 100; // Adjust player position on resize
-    });
 
     gameLoop();
   </script>
