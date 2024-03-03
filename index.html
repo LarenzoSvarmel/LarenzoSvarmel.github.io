@@ -63,8 +63,13 @@
             // Calculate distance to the wall
             float distance = length(rayPosition - vec2(1.0, 1.0));
 
-            // Map distance to color (fake shading)
-            color = vec3(1.0 - smoothstep(1.0, 2.0, distance));
+            // Map distance to texture coordinate for wall texture
+            vec2 texCoord = vec2(float(mapX), float(mapY)) - rayPosition;
+            texCoord = normalize(texCoord);
+
+            // Apply lighting and texture
+            vec3 wallColor = texture2D(u_wallTexture, texCoord).rgb;
+            color = wallColor * (1.0 - smoothstep(1.0, 2.0, distance));
             break;
           }
 
@@ -96,7 +101,7 @@
 
     const texture = gl.createTexture();
     const wallImage = new Image();
-    wallImage.src = 'path/to/your/wall_texture.jpg';  // Replace with your wall texture path
+    wallImage.src = 'wall_texture.jpg';  // Replace with your wall texture path
     wallImage.onload = () => {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texture);
