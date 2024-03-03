@@ -42,6 +42,12 @@
       speed: 5,
     };
 
+    const light = {
+      x: 400,
+      y: 300,
+      brightness: 0.8,
+    };
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -61,12 +67,14 @@
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
+          const brightness = Math.max(0, Math.min(1, 1 - distance / 300)) * light.brightness;
 
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
+            brightness: brightness,
           };
         }
       }
@@ -147,12 +155,18 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+        const brightnessAdjusted = Math.floor(255 * ray.brightness);
+        const wallColor = `rgb(${brightnessAdjusted}, ${brightnessAdjusted}, ${brightnessAdjusted})`;
 
-        // Adjust the starting point for drawing the walls to center them
         ctx.fillStyle = wallColor;
-        ctx.fillRect(i - (screenWidth - ray.distance * 2) / 2, wallTop, 1, wallHeight);
+        ctx.fillRect(i, wallTop, 1, wallHeight);
       }
+
+      // Draw light source
+      ctx.fillStyle = 'yellow';
+      ctx.beginPath();
+      ctx.arc(light.x, light.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
     }
 
     function gameLoop() {
