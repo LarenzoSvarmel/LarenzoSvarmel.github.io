@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Raycasting Demo</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -16,13 +16,13 @@
   </style>
 </head>
 <body>
-  <canvas id="raycastingCanvas" width="800" height="600"></canvas>
+  <canvas id="raycastingCanvas" width="1600" height="1200"></canvas>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
-    const screenWidth = 800;
-    const screenHeight = 600;
+    const screenWidth = 1600;
+    const screenHeight = 1200;
     const tileSize = 32;
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -43,45 +43,6 @@
       isMouseLocked: false,
     };
 
-    const textureSize = 64;
-    const wallTextures = [
-      document.createElement('canvas'),
-      document.createElement('canvas'),
-    ];
-
-    const floorTexture = document.createElement('canvas');
-    const ceilingTexture = document.createElement('canvas');
-
-    wallTextures.forEach((texture, index) => {
-      texture.width = textureSize;
-      texture.height = textureSize;
-      const textureCtx = texture.getContext('2d');
-      const imageData = textureCtx.createImageData(textureSize, textureSize);
-      for (let i = 0; i < textureSize * textureSize * 4; i += 4) {
-        const color = (index === 0) ? 255 : ((i / 4) % 2 === 0) ? 200 : 100;
-        imageData.data[i] = color;
-        imageData.data[i + 1] = color;
-        imageData.data[i + 2] = color;
-        imageData.data[i + 3] = 255;
-      }
-      textureCtx.putImageData(imageData, 0, 0);
-    });
-
-    floorTexture.width = screenWidth;
-    floorTexture.height = screenHeight / 2;
-    const floorTextureCtx = floorTexture.getContext('2d');
-    const floorGradient = floorTextureCtx.createLinearGradient(0, 0, 0, screenHeight / 2);
-    floorGradient.addColorStop(0, '#444');
-    floorGradient.addColorStop(1, '#111');
-    floorTextureCtx.fillStyle = floorGradient;
-    floorTextureCtx.fillRect(0, 0, screenWidth, screenHeight / 2);
-
-    ceilingTexture.width = screenWidth;
-    ceilingTexture.height = screenHeight / 2;
-    const ceilingTextureCtx = ceilingTexture.getContext('2d');
-    ceilingTextureCtx.fillStyle = '#666';
-    ceilingTextureCtx.fillRect(0, 0, screenWidth, screenHeight / 2);
-
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -89,48 +50,31 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      let distanceToWall = 0;
-      let hitWall = false;
-      let wallHeight = 0;
-      let textureIndex = 0;
+      // Increment by small steps along the ray until a wall is hit
+      while (true) {
+        x += rayCos;
+        y += raySin;
 
-      while (!hitWall && distanceToWall < 20) {
-        distanceToWall += 0.1;
+        const mapX = Math.floor(x / tileSize);
+        const mapY = Math.floor(y / tileSize);
 
-        const testX = Math.floor(x + rayCos * distanceToWall);
-        const testY = Math.floor(y + raySin * distanceToWall);
+        // Check if the ray hit a wall
+        if (map[mapY][mapX] === 1) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-        if (testX < 0 || testX >= map[0].length || testY < 0 || testY >= map.length) {
-          hitWall = true;
-          distanceToWall = 20; // Set distance to max if out of bounds
-          wallHeight = screenHeight; // Render full height for out-of-bounds walls
-          textureIndex = 0; // Default texture for out-of-bounds walls
-        } else {
-          if (map[testY][testX] === 1) {
-            hitWall = true;
-
-            const deltaX = x - testX + 0.5;
-            const deltaY = y - testY + 0.5;
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-            distanceToWall = distance;
-
-            // Calculate the wall height based on distance and FOV
-            wallHeight = Math.floor(screenHeight / distanceToWall * Math.cos(rayAngle - player.angle));
-
-            textureIndex = map[testY][testX] - 1; // Map value to texture index
-          }
+          return {
+            x: x,
+            y: y,
+            distance: distance,
+            height: wallHeight,
+          };
         }
       }
-
-      return {
-        distance: distanceToWall,
-        height: wallHeight,
-        textureIndex: textureIndex,
-      };
     }
 
     function handleInput() {
+      // Handle player input
       if (keys['ArrowLeft']) {
         player.angle -= 0.05;
       }
@@ -141,6 +85,7 @@
         const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle) * moveStep;
         const newY = player.y + Math.sin(player.angle) * moveStep;
+
         if (!isWall(newX, newY)) {
           player.x = newX;
           player.y = newY;
@@ -150,6 +95,7 @@
         const moveStep = player.speed;
         const newX = player.x - Math.cos(player.angle) * moveStep;
         const newY = player.y - Math.sin(player.angle) * moveStep;
+
         if (!isWall(newX, newY)) {
           player.x = newX;
           player.y = newY;
@@ -170,8 +116,10 @@
     }
 
     function isWall(x, y) {
+      // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
       const mapY = Math.floor(y / tileSize);
+
       return map[mapY][mapX] === 1;
     }
 
@@ -193,11 +141,12 @@
     });
 
     function update() {
+      // Update game logic here
       handleInput();
     }
 
     function draw() {
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
+      // Draw the raycasting scene here
 
       // Draw skybox (background)
       ctx.fillStyle = 'deepskyblue';
@@ -207,39 +156,19 @@
       ctx.fillStyle = 'green';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls
-      const rays = [];
+      // Draw walls using column casting
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
-        rays.push(ray);
-      }
 
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
         const wallHeight = ray.height;
-        const wallTop = Math.max(0, (screenHeight - wallHeight) / 2);
+        const wallTop = (screenHeight - wallHeight) / 2;
 
-        const texture = (ray.textureIndex === 0) ? wallTextures[ray.textureIndex] : floorTexture;
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
-        const textureX = Math.floor((i / screenWidth) * texture.width);
-
-        // Draw vertical lines for walls with texture
-        ctx.drawImage(texture, textureX, 0, 1, texture.height, i, wallTop, 1, wallHeight);
-
-        // Draw floor and ceiling
-        const floorStart = Math.min(screenHeight, screenHeight / 2 + wallTop);
-        const ceilingStart = Math.max(0, wallTop);
-
-        ctx.fillStyle = (ray.textureIndex === 0) ? '#444' : '#666'; // Use different colors for floor and ceiling
-        ctx.fillRect(i, floorStart, 1, screenHeight - floorStart); // Draw floor
-        ctx.fillRect(i, 0, 1, ceilingStart); // Draw ceiling
-
-        // Apply distance-based fog for more realism
-        const fogFactor = Math.min(1, ray.distance / 20);
-        const fogColor = `rgba(255, 255, 255, ${1 - fogFactor})`;
-        ctx.fillStyle = fogColor;
-        ctx.fillRect(i, 0, 1, screenHeight);
+        // Draw vertical lines for walls
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
 
@@ -253,4 +182,3 @@
   </script>
 </body>
 </html>
-
