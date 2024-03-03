@@ -3,61 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatroom</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
-
-        #chat-container {
-            max-width: 600px;
-            margin: 20px auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        #messages {
-            height: 300px;
+        #chat-box {
+            flex: 1;
             overflow-y: scroll;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-        }
-
-        #message-input {
-            width: 100%;
             padding: 10px;
-            box-sizing: border-box;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        }
+        #input-box {
+            display: flex;
+            padding: 10px;
+        }
+        #message-input {
+            flex: 1;
+            margin-right: 10px;
         }
     </style>
-    <title>Chatroom</title>
 </head>
 <body>
-    <div id="chat-container">
-        <div id="messages"></div>
-        <input type="text" id="message-input" placeholder="Type your message..." onkeydown="sendMessage(event)">
+    <div id="chat-box"></div>
+    <div id="input-box">
+        <input type="text" id="message-input" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
     </div>
 
     <script>
-        let username = prompt("Enter your username:");
-        document.getElementById("messages").innerHTML += `<div><strong>${username}:</strong> joined the chat</div>`;
+        const username = prompt("Enter your username:");
+        const socket = new WebSocket("wss://larenzosvarmel.github.io/chatroom");
 
-        function sendMessage(event) {
-            if (event.key === "Enter") {
-                const messageInput = document.getElementById("message-input");
-                const message = messageInput.value.trim();
+        socket.onopen = (event) => {
+            console.log("Connection opened:", event);
+            sendMessage(`${username} has joined the chat.`);
+        };
 
-                if (message !== "") {
-                    document.getElementById("messages").innerHTML += `<div><strong>${username}:</strong> ${message}</div>`;
-                    messageInput.value = "";
-                    messageInput.focus();
-                }
+        socket.onmessage = (event) => {
+            const chatBox = document.getElementById("chat-box");
+            const message = document.createElement("p");
+            message.textContent = event.data;
+            chatBox.appendChild(message);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the bottom
+        };
+
+        socket.onclose = (event) => {
+            console.log("Connection closed:", event);
+        };
+
+        function sendMessage() {
+            const messageInput = document.getElementById("message-input");
+            const message = messageInput.value.trim();
+
+            if (message !== "") {
+                socket.send(`${username}: ${message}`);
+                messageInput.value = "";
             }
         }
     </script>
