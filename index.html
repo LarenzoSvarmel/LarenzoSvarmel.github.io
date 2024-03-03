@@ -33,12 +33,11 @@
             speed: 3,
         };
 
-        const wall = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            width: 10,
-            height: 200,
-        };
+        const walls = [
+            { x: canvas.width / 2, y: canvas.height / 2, width: 10, height: 200 },
+            { x: canvas.width / 2 + 50, y: canvas.height / 2 + 50, width: 10, height: 150 },
+            // Add more walls as needed
+        ];
 
         const enemies = [];
 
@@ -60,10 +59,12 @@
             ctx.stroke();
         }
 
-        function drawWall() {
-            // Draw wall
+        function drawWalls() {
+            // Draw walls
             ctx.fillStyle = 'gray';
-            ctx.fillRect(wall.x - wall.width / 2, wall.y - wall.height / 2, wall.width, wall.height);
+            walls.forEach(wall => {
+                ctx.fillRect(wall.x - wall.width / 2, wall.y - wall.height / 2, wall.width, wall.height);
+            });
         }
 
         function drawEnemies() {
@@ -84,11 +85,13 @@
 
                 const intersection = raycast(player.x, player.y, rayEndX, rayEndY);
 
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.beginPath();
-                ctx.moveTo(player.x, player.y);
-                ctx.lineTo(intersection.x, intersection.y);
-                ctx.stroke();
+                // Calculate wall distance and height based on player's view
+                const distance = getDistance(player.x, player.y, intersection.x, intersection.y);
+                const wallHeight = (canvas.height / distance) * player.viewDist;
+
+                // Draw walls
+                ctx.fillStyle = 'gray';
+                ctx.fillRect(i, canvas.height / 2 - wallHeight / 2, 1, wallHeight);
             }
         }
 
@@ -103,7 +106,7 @@
             let x = startX;
             let y = startY;
 
-            while (getDistance(x, y, wall.x, wall.y) > player.size) {
+            while (!checkWallCollision(x, y) && getDistance(x, y, startX, startY) < player.viewDist) {
                 x += stepX;
                 y += stepY;
             }
@@ -143,11 +146,11 @@
         }
 
         function checkWallCollision(x, y) {
-            return (
-                x - player.size < wall.x + wall.width / 2 &&
+            return walls.some(wall =>
                 x + player.size > wall.x - wall.width / 2 &&
-                y - player.size < wall.y + wall.height / 2 &&
-                y + player.size > wall.y - wall.height / 2
+                x - player.size < wall.x + wall.width / 2 &&
+                y + player.size > wall.y - wall.height / 2 &&
+                y - player.size < wall.y + wall.height / 2
             );
         }
 
@@ -157,7 +160,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             castRays();
-            drawWall();
+            drawWalls();
             drawEnemies();
             drawPlayer();
 
