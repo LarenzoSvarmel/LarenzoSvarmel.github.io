@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo WebGL</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -11,6 +11,7 @@
     }
     canvas {
       display: block;
+      image-rendering: pixelated;
     }
   </style>
 </head>
@@ -18,164 +19,156 @@
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
-    const gl = canvas.getContext('webgl');
+    const ctx = canvas.getContext('2d');
 
-    if (!gl) {
-      console.error('Unable to initialize WebGL. Your browser may not support it.');
-    }
+    const screenWidth = 800;
+    const screenHeight = 600;
+    const tileSize = 32;
+    const map = [
+      [1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1],
+    ];
 
-    const vertexShaderSource = `
-      attribute vec2 a_position;
-      void main() {
-        gl_Position = vec4(a_position, 0, 1);
-      }
-    `;
-
-    const fragmentShaderSource = `
-      precision mediump float;
-      uniform vec2 u_resolution;
-      uniform float u_time;
-      uniform sampler2D u_wallTexture;
-
-      // Map representation (1: wall, 0: empty)
-      const int map[8][8] = int[8](int[8](1,0,0,0,0,0,0,1), int[8](1,0,1,0,0,1,0,1), int[8](1,0,1,0,0,1,0,1), int[8](1,0,1,0,0,1,0,1), int[8](1,0,1,0,0,1,0,1), int[8](1,0,1,0,0,1,0,1), int[8](1,0,0,0,0,0,0,1), int[8](1,1,1,1,1,1,1,1));
-
-      void main() {
-        vec2 uv = (gl_FragCoord.xy - u_resolution / 2.0) / min(u_resolution.x, u_resolution.y);
-        uv.x *= u_resolution.x / u_resolution.y;
-
-        vec3 color = vec3(0.0);
-
-        // Raycasting logic
-        float angle = atan(uv.x, uv.y) + u_time;
-        vec2 rayDirection = vec2(cos(angle), sin(angle));
-
-        vec2 rayPosition = vec2(1.0, 1.0);  // Start ray position
-        float deltaDist = 0.01;  // Step size for ray marching
-        float maxDist = 20.0;    // Maximum distance to check for collisions
-
-        for (int i = 0; i < 200; i++) {
-          // Check if the ray hits a wall
-          int mapX = int(rayPosition.x);
-          int mapY = int(rayPosition.y);
-
-          if (mapX >= 0 && mapY >= 0 && mapX < 8 && mapY < 8 && map[mapY][mapX] == 1) {
-            // Calculate distance to the wall
-            float distance = length(rayPosition - vec2(1.0, 1.0));
-
-            // Map distance to texture coordinate for wall texture
-            vec2 texCoord = vec2(float(mapX), float(mapY)) - rayPosition;
-            texCoord = normalize(texCoord);
-
-            // Apply lighting and texture
-            vec3 wallColor = texture2D(u_wallTexture, texCoord).rgb;
-            color = wallColor * (1.0 - smoothstep(1.0, 2.0, distance));
-            break;
-          }
-
-          // Move the ray forward
-          rayPosition += rayDirection * deltaDist;
-
-          // Break if we're beyond the maximum distance
-          if (length(rayPosition - vec2(1.0, 1.0)) > maxDist) {
-            break;
-          }
-        }
-
-        gl_FragColor = vec4(color, 1.0);
-      }
-    `;
-
-    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-    const program = createProgram(gl, vertexShader, fragmentShader);
-
-    const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
-    const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
-    const timeUniformLocation = gl.getUniformLocation(program, 'u_time');
-    const wallTextureUniformLocation = gl.getUniformLocation(program, 'u_wallTexture');
-
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    setRectangle(gl, 0, 0, canvas.width, canvas.height);
-
-    const texture = gl.createTexture();
-    const wallImage = new Image();
-    wallImage.src = 'wall_texture.jpg';  // Replace with your wall texture path
-    wallImage.onload = () => {
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, wallImage);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.uniform1i(wallTextureUniformLocation, 0);
+    const player = {
+      x: 100,
+      y: 100,
+      angle: 0,
+      fov: Math.PI / 3,
+      speed: 5,
+      isMouseLocked: false,
     };
 
-    const vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
+    const rays = new Float32Array(screenWidth);
+    const wallColors = new Uint8Array(screenWidth * 3);
 
-    gl.enableVertexAttribArray(positionAttributeLocation);
-    const size = 2;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset);
+    function castRay(rayIndex) {
+      const rayAngle = player.angle - player.fov / 2 + (rayIndex / screenWidth) * player.fov;
 
-    gl.useProgram(program);
-    gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
+      let x = player.x;
+      let y = player.y;
+      const raySin = Math.sin(rayAngle);
+      const rayCos = Math.cos(rayAngle);
 
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.viewport(0, 0, canvas.width, canvas.height);
+      while (true) {
+        x += rayCos;
+        y += raySin;
 
-    gl.bindVertexArray(vao);
+        const mapX = Math.floor(x / tileSize);
+        const mapY = Math.floor(y / tileSize);
 
-    let time = 0.0;
+        if (map[mapY][mapX] === 1) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
+
+          rays[rayIndex] = { distance, height: wallHeight };
+          return;
+        }
+      }
+    }
+
+    function handleInput() {
+      if (keys['ArrowLeft']) {
+        player.angle -= 0.05;
+      }
+      if (keys['ArrowRight']) {
+        player.angle += 0.05;
+      }
+      if (keys['ArrowUp']) {
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
+      }
+      if (keys['ArrowDown']) {
+        const moveStep = player.speed;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
+      }
+      if (keys['KeyL']) {
+        toggleMouseLock();
+      }
+    }
+
+    function toggleMouseLock() {
+      if (!player.isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
+      }
+      player.isMouseLocked = !player.isMouseLocked;
+    }
+
+    function isWall(x, y) {
+      const mapX = Math.floor(x / tileSize);
+      const mapY = Math.floor(y / tileSize);
+      return map[mapY][mapX] === 1;
+    }
+
+    const keys = {};
+
+    document.addEventListener('keydown', (event) => {
+      keys[event.code] = true;
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keys[event.code] = false;
+    });
+
+    document.addEventListener('mousemove', (event) => {
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        player.angle += deltaX * 0.01;
+      }
+    });
 
     function update() {
-      time += 0.01;
-      gl.uniform1f(timeUniformLocation, time);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-      requestAnimationFrame(update);
+      handleInput();
     }
 
-    update();
+    function draw() {
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-    function createShader(gl, type, source) {
-      const shader = gl.createShader(type);
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
+      for (let i = 0; i < screenWidth; i++) {
+        castRay(i);
       }
-      return shader;
-    }
 
-    function createProgram(gl, vertexShader, fragmentShader) {
-      const program = gl.createProgram();
-      gl.attachShader(program, vertexShader);
-      gl.attachShader(program, fragmentShader);
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error('Program linking error:', gl.getProgramInfoLog(program));
-        gl.deleteProgram(program);
-        return null;
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
+        const wallHeight = ray.height;
+        const wallTop = (screenHeight - wallHeight) / 2;
+
+        const wallColor = Math.min(255, 255 - ray.distance * 2);
+
+        wallColors[i * 3] = wallColor;
+        wallColors[i * 3 + 1] = wallColor;
+        wallColors[i * 3 + 2] = wallColor;
+
+        ctx.fillStyle = `rgb(${wallColor}, ${wallColor}, ${wallColor})`;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
       }
-      return program;
     }
 
-    function setRectangle(gl, x, y, width, height) {
-      const x1 = x;
-      const x2 = x + width;
-      const y1 = y;
-      const y2 = y + height;
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([x1, y1, x2, y1, x1, y2, x1, y2, x2, y1, x2, y2]), gl.STATIC_DRAW);
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
     }
+
+    gameLoop();
   </script>
 </body>
 </html>
