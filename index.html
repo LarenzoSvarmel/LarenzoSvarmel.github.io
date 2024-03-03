@@ -34,6 +34,12 @@
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
 
+    const sun = {
+      x: 200, // Adjust the sun position based on your map layout
+      y: 200,
+      brightness: 0.7, // Sun brightness factor
+    };
+
     const player = {
       x: 100,
       y: 100,
@@ -41,11 +47,6 @@
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
-    };
-
-    const sun = {
-      x: 300,
-      y: 50,
     };
 
     function castRay(rayAngle) {
@@ -68,47 +69,29 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          // Check if the wall is in shadow
-          const shadowFactor = calculateShadowFactor(x, y, rayAngle);
-          const blendedColor = applyShadowFactor([255, 255, 255], shadowFactor);
-
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-            color: blendedColor,
           };
         }
       }
     }
 
-    function calculateShadowFactor(x, y, rayAngle) {
-      // Calculate the shadow factor based on the sun's position and angle
-      const sunDirX = Math.cos(rayAngle);
-      const sunDirY = Math.sin(rayAngle);
+    function calculateShadow(rayAngle, distanceToWall) {
+      const sunAngle = Math.atan2(sun.y - player.y, sun.x - player.x);
+      const angleDifference = Math.abs(rayAngle - sunAngle);
 
-      const playerToSunX = sun.x - player.x;
-      const playerToSunY = sun.y - player.y;
+      if (angleDifference > Math.PI / 2) {
+        // The wall is on the opposite side of the sun, no shadow
+        return 1;
+      }
 
-      const playerToWallX = x - player.x;
-      const playerToWallY = y - player.y;
+      const shadowFactor = Math.cos(angleDifference);
+      const shadowLength = distanceToWall * shadowFactor;
 
-      // Check if the wall is between the player and the sun
-      const dotProduct = (playerToWallX * sunDirX + playerToWallY * sunDirY) /
-                         Math.sqrt(playerToWallX ** 2 + playerToWallY ** 2);
-
-      return Math.max(0, dotProduct);
-    }
-
-    function applyShadowFactor(color, shadowFactor) {
-      // Apply the shadow factor to darken the color based on the wall's shadow
-      const darkeningFactor = 0.7; // Adjust based on your preferences
-      return [
-        Math.round(color[0] * (1 - shadowFactor) + darkeningFactor * color[0] * shadowFactor),
-        Math.round(color[1] * (1 - shadowFactor) + darkeningFactor * color[1] * shadowFactor),
-        Math.round(color[2] * (1 - shadowFactor) + darkeningFactor * color[2] * shadowFactor),
-      ];
+      return Math.min(1, shadowLength / 200); // Adjust the shadow length based on your preferences
     }
 
     function handleInput() {
@@ -205,9 +188,9 @@
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw sun
-      ctx.beginPath();
-      ctx.arc(sun.x, sun.y, 10, 0, 2 * Math.PI);
       ctx.fillStyle = 'yellow';
+      ctx.beginPath();
+      ctx.arc(sun.x, sun.y, 10, 0, Math.PI * 2);
       ctx.fill();
 
       // Draw walls
@@ -223,8 +206,17 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
+        // Calculate blending factor based on the wall's distance
+        const blendFactor = Math.min(1, ray.distance / 400); // Adjust 400 based on your preferences
+
+        // Calculate shadow based on sun position
+        const shadow = calculateShadow(player.angle - player.fov / 2 + (i / screenWidth) * player.fov, ray.distance);
+
+        // Interpolate between wall color and sky color with shadow
+        const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor * shadow * sun.brightness);
+
         // Draw vertical lines for walls with blended color
-        ctx.fillStyle = interpolateColor(ray.color, [255, 255, 255], 0.3);
+        ctx.fillStyle = blendedColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
