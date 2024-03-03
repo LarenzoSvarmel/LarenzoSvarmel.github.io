@@ -3,68 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatroom</title>
+    <title>Point and Click Adventure</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 50px;
         }
-        #chat-box {
-            flex: 1;
-            overflow-y: scroll;
+
+        .scene {
+            display: none;
+        }
+
+        #scene1, #scene2 {
+            cursor: pointer;
+            border: 2px solid #000;
             padding: 10px;
-        }
-        #input-box {
-            display: flex;
-            padding: 10px;
-        }
-        #message-input {
-            flex: 1;
-            margin-right: 10px;
+            margin: 10px;
+            display: inline-block;
         }
     </style>
 </head>
 <body>
-    <div id="chat-box"></div>
-    <div id="input-box">
-        <input type="text" id="message-input" placeholder="Type your message...">
-        <button onclick="sendMessage()">Send</button>
-    </div>
 
-    <script>
-        const username = prompt("Enter your username:");
-        const socket = new WebSocket("wss://larenzosvarmel.github.io/chatroom");
+<div id="scene1" class="scene" onclick="enterRoom()">
+    <h1>Scene 1: Door</h1>
+    <p>Click the door to enter the room.</p>
+</div>
 
-        socket.onopen = (event) => {
-            console.log("Connection opened:", event);
-            sendMessage(`${username} has joined the chat.`);
-        };
+<div id="scene2" class="scene">
+    <h1>Scene 2: Room</h1>
+    <p>You've entered the room!</p>
+</div>
 
-        socket.onmessage = (event) => {
-            const chatBox = document.getElementById("chat-box");
-            const message = document.createElement("p");
-            message.textContent = event.data;
-            chatBox.appendChild(message);
-            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the bottom
-        };
+<script>
+    function enterRoom() {
+        document.getElementById('scene1').style.display = 'none';
+        document.getElementById('scene2').style.display = 'block';
+    }
+</script>
 
-        socket.onclose = (event) => {
-            console.log("Connection closed:", event);
-        };
-
-        function sendMessage() {
-            const messageInput = document.getElementById("message-input");
-            const message = messageInput.value.trim();
-
-            if (message !== "") {
-                socket.send(`${username}: ${message}`);
-                messageInput.value = "";
-            }
-        }
-    </script>
 </body>
 </html>
