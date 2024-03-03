@@ -21,8 +21,8 @@
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
-    const screenWidth = 1600;
-    const screenHeight = 1200;
+    const screenWidth = 800;
+    const screenHeight = 600;
     const tileSize = 32;
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -147,20 +147,18 @@
 
     function draw() {
       // Draw the raycasting scene here
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw skybox (background)
-      ctx.fillStyle = 'deepskyblue';
-      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
-
-      // Draw ground
-      ctx.fillStyle = 'green';
-      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
-
-      // Draw walls using column casting
+      // Draw walls
+      const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
+        rays.push(ray);
+      }
 
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
