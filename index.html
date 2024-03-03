@@ -14,22 +14,22 @@
             background-color: #f0f0f0;
         }
 
-        #ai-container {
+        #aiContainer {
             position: relative;
-            width: 80vw;
-            height: 80vh;
+            width: 80vmin; /* Adjust the size as needed */
+            height: 80vmin; /* Adjust the size as needed */
             background-color: #fff;
-            border: 2px solid #333;
-            overflow: hidden;
+            border: 2px solid #000;
+            border-radius: 50%;
         }
 
-        #ai {
+        #aiDot {
             position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: #3498db;
+            width: 20px; /* Adjust the size of the AI dot */
+            height: 20px; /* Adjust the size of the AI dot */
+            background-color: blue;
             border-radius: 50%;
-            transition: transform 0.2s ease-in-out;
+            transform-origin: 50% 50%;
         }
 
         #arrow {
@@ -38,61 +38,46 @@
             height: 0;
             border-left: 10px solid transparent;
             border-right: 10px solid transparent;
-            border-bottom: 20px solid #3498db;
+            border-bottom: 20px solid red; /* Adjust the arrow color */
             transform-origin: 50% 0;
-            transition: transform 0.2s ease-in-out;
         }
     </style>
 </head>
 <body>
+    <div id="aiContainer">
+        <div id="aiDot"></div>
+        <div id="arrow"></div>
+    </div>
 
-<div id="ai-container">
-    <div id="ai"></div>
-    <div id="arrow"></div>
-</div>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const aiContainer = document.getElementById('ai-container');
-        const ai = document.getElementById('ai');
+    <script>
+        const aiContainer = document.getElementById('aiContainer');
+        const aiDot = document.getElementById('aiDot');
         const arrow = document.getElementById('arrow');
 
-        let aiPosition = { x: aiContainer.clientWidth / 2, y: aiContainer.clientHeight / 2 };
-        let angle = 0;
+        let posX = aiContainer.offsetWidth / 2;
+        let posY = aiContainer.offsetHeight / 2;
+        let rotation = 0;
 
-        function updateAI() {
-            ai.style.transform = `translate(${aiPosition.x - 10}px, ${aiPosition.y - 10}px)`;
-            arrow.style.transform = `translate(${aiPosition.x}px, ${aiPosition.y}px) rotate(${angle}deg)`;
+        function updatePosition() {
+            aiDot.style.transform = `translate(-50%, -50%) translate(${posX}px, ${posY}px)`;
+            arrow.style.transform = `rotate(${rotation}deg) translate(-50%, -100%)`;
         }
 
-        function clamp(value, min, max) {
-            return Math.min(Math.max(value, min), max);
+        function moveAI(event) {
+            const bounds = aiContainer.getBoundingClientRect();
+            const mouseX = event.clientX - bounds.left;
+            const mouseY = event.clientY - bounds.top;
+
+            posX = Math.max(0, Math.min(bounds.width, mouseX));
+            posY = Math.max(0, Math.min(bounds.height, mouseY));
+
+            rotation = Math.atan2(mouseY - bounds.height / 2, mouseX - bounds.width / 2) * (180 / Math.PI);
+
+            updatePosition();
         }
 
-        function handleMouseMove(event) {
-            const mouseX = event.clientX - aiContainer.getBoundingClientRect().left;
-            const mouseY = event.clientY - aiContainer.getBoundingClientRect().top;
-
-            aiPosition.x = clamp(mouseX, 0, aiContainer.clientWidth);
-            aiPosition.y = clamp(mouseY, 0, aiContainer.clientHeight);
-
-            updateAI();
-        }
-
-        function handleResize() {
-            aiPosition.x = clamp(aiPosition.x, 0, aiContainer.clientWidth);
-            aiPosition.y = clamp(aiPosition.y, 0, aiContainer.clientHeight);
-
-            updateAI();
-        }
-
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('resize', handleResize);
-
-        // Initial update
-        updateAI();
-    });
-</script>
-
+        aiContainer.addEventListener('mousemove', moveAI);
+        updatePosition(); // Initial position update
+    </script>
 </body>
 </html>
