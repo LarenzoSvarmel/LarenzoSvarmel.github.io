@@ -18,6 +18,25 @@
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
+    class Vector {
+      constructor(x, y) {
+        this.x = x || 0;
+        this.y = y || 0;
+      }
+
+      add(vector) {
+        return new Vector(this.x + vector.x, this.y + vector.y);
+      }
+
+      subtract(vector) {
+        return new Vector(this.x - vector.x, this.y - vector.y);
+      }
+
+      multiplyScalar(scalar) {
+        return new Vector(this.x * scalar, this.y * scalar);
+      }
+    }
+
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -35,8 +54,7 @@
     ];
 
     const player = {
-      x: 100,
-      y: 100,
+      position: new Vector(100, 100),
       angle: 0,
       fov: Math.PI / 3,
       speed: 5,
@@ -44,28 +62,22 @@
     };
 
     function castRay(rayAngle) {
-      let x = player.x;
-      let y = player.y;
+      let position = player.position;
 
-      const raySin = Math.sin(rayAngle);
-      const rayCos = Math.cos(rayAngle);
+      const rayDirection = new Vector(Math.cos(rayAngle), Math.sin(rayAngle));
 
-      // Increment by small steps along the ray until a wall is hit
       while (true) {
-        x += rayCos;
-        y += raySin;
+        position = position.add(rayDirection);
 
-        const mapX = Math.floor(x / tileSize);
-        const mapY = Math.floor(y / tileSize);
+        const mapX = Math.floor(position.x / tileSize);
+        const mapY = Math.floor(position.y / tileSize);
 
-        // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          const distance = position.subtract(player.position).length();
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
           return {
-            x: x,
-            y: y,
+            position: position,
             distance: distance,
             height: wallHeight,
           };
@@ -74,7 +86,6 @@
     }
 
     function handleInput() {
-      // Handle player input
       if (keys['ArrowLeft']) {
         player.angle -= 0.05;
       }
@@ -83,23 +94,13 @@
       }
       if (keys['ArrowUp']) {
         const moveStep = player.speed;
-        const newX = player.x + Math.cos(player.angle) * moveStep;
-        const newY = player.y + Math.sin(player.angle) * moveStep;
-
-        if (!isWall(newX, newY)) {
-          player.x = newX;
-          player.y = newY;
-        }
+        const moveVector = new Vector(Math.cos(player.angle) * moveStep, Math.sin(player.angle) * moveStep);
+        player.position = player.position.add(moveVector);
       }
       if (keys['ArrowDown']) {
         const moveStep = player.speed;
-        const newX = player.x - Math.cos(player.angle) * moveStep;
-        const newY = player.y - Math.sin(player.angle) * moveStep;
-
-        if (!isWall(newX, newY)) {
-          player.x = newX;
-          player.y = newY;
-        }
+        const moveVector = new Vector(Math.cos(player.angle) * moveStep, Math.sin(player.angle) * moveStep);
+        player.position = player.position.subtract(moveVector);
       }
       if (keys['KeyL']) {
         toggleMouseLock();
@@ -116,7 +117,6 @@
     }
 
     function isWall(x, y) {
-      // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
       const mapY = Math.floor(y / tileSize);
 
@@ -141,25 +141,19 @@
     });
 
     function update() {
-      // Update game logic here
       handleInput();
     }
 
     function draw() {
-      // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
       // Draw sky
       ctx.fillStyle = 'deepskyblue';
       ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
-      // Draw ground with darkness effect
-      for (let y = screenHeight / 2; y < screenHeight; y++) {
-        const darknessFactor = (y - screenHeight / 2) / (screenHeight / 2);
-        const darknessColor = Math.floor(255 - darknessFactor * 50);
-        ctx.fillStyle = `rgb(${darknessColor}, ${darknessColor}, ${darknessColor})`;
-        ctx.fillRect(0, y, screenWidth, 1);
-      }
+      // Draw ground
+      ctx.fillStyle = 'saddlebrown';
+      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw walls
       for (let i = 0; i < screenWidth; i++) {
@@ -167,19 +161,15 @@
         const ray = castRay(rayAngle);
 
         const projectedWallHeight = (tileSize / ray.distance) * player.distanceToProjectionPlane;
-
-        // Calculate the position of the wall on the screen
         const wallTop = (screenHeight - projectedWallHeight) / 2;
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
-        // Draw vertical lines for walls
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, projectedWallHeight);
       }
     }
 
-    // Pre-calculate the distance to the projection plane for better performance
     player.distanceToProjectionPlane = (screenWidth / 2) / Math.tan(player.fov / 2);
 
     function gameLoop() {
