@@ -23,13 +23,37 @@
             font-family: Arial, sans-serif;
             font-size: 14px;
             z-index: 1;
+            user-select: none;
+        }
+
+        #debugDropdown {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            cursor: move;
+        }
+
+        #debugDropdownTitle {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .debugItem {
+            margin-bottom: 5px;
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <div id="debugMenu">
-        <button onclick="addEnemy()">Add Enemy</button>
+    <div id="debugDropdown">
+        <div id="debugDropdownTitle">DEBUG</div>
+        <div id="debugMenu" style="display: none;">
+            <button class="debugItem" onclick="addEnemy()">Add Enemy</button>
+            <!-- Add more debug items here if needed -->
+        </div>
     </div>
 
     <script>
@@ -59,6 +83,9 @@
             stamina: 100,
             maxStamina: 100,
             isRunning: false,
+            health: 100,
+            maxHealth: 100,
+            isDead: false,
         };
 
         const bullet = {
@@ -70,6 +97,10 @@
         const enemies = [];
 
         let isPaused = false;
+        let debugMenuVisible = true;
+        let isDebugDropdownFolded = false;
+        let debugDropdownTitle = document.getElementById('debugDropdownTitle');
+        let debugMenu = document.getElementById('debugMenu');
 
         function drawPlayer() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -126,6 +157,11 @@
             ctx.fillStyle = 'green';
             ctx.fillRect(10, 60, staminaWidth, 10);
 
+            // Draw player health bar
+            const healthWidth = (player.health / player.maxHealth) * 100;
+            ctx.fillStyle = 'red';
+            ctx.fillRect(player.x - player.size, player.y - player.size - 20, healthWidth, 10);
+
             // Draw enemies
             enemies.forEach(enemy => {
                 ctx.fillStyle = 'lightgreen';
@@ -147,7 +183,7 @@
         }
 
         function updatePlayer() {
-            if (!isPaused) {
+            if (!isPaused && !player.isDead) {
                 if (player.isMoving) {
                     const dx = player.targetX - player.x;
                     const dy = player.targetY - player.y;
@@ -207,6 +243,14 @@
 
                 // Update enemy positions
                 moveEnemies();
+
+                // Check for collisions with player
+                checkPlayerCollision();
+
+                // Check player health
+                if (player.health <= 0) {
+                    player.isDead = true;
+                }
             }
         }
 
@@ -225,6 +269,16 @@
                         }
                     }
                 });
+            });
+        }
+
+        function checkPlayerCollision() {
+            enemies.forEach(enemy => {
+                const distance = Math.sqrt((player.x - enemy.x) ** 2 + (player.y - enemy.y) ** 2);
+                if (distance < player.size + enemy.size) {
+                    // Enemy touched player
+                    player.health -= 20;
+                }
             });
         }
 
@@ -317,6 +371,35 @@
         canvas.addEventListener('mousemove', onMouseMove);
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('keyup', onKeyUp);
+
+        // Make the debug dropdown movable
+        let offsetX, offsetY;
+
+        debugDropdownTitle.addEventListener('mousedown', (e) => {
+            if (!isDebugDropdownFolded) {
+                offsetX = e.clientX - debugMenu.offsetLeft;
+                offsetY = e.clientY - debugMenu.offsetTop;
+                window.addEventListener('mousemove', handleMove);
+                window.addEventListener('mouseup', () => {
+                    window.removeEventListener('mousemove', handleMove);
+                });
+            }
+        });
+
+        function handleMove(e) {
+            debugMenu.style.left = e.clientX - offsetX + 'px';
+            debugMenu.style.top = e.clientY - offsetY + 'px';
+        }
+
+        // Make the debug dropdown foldable
+        debugDropdownTitle.addEventListener('click', () => {
+            if (isDebugDropdownFolded) {
+                debugMenu.style.display = 'block';
+            } else {
+                debugMenu.style.display = 'none';
+            }
+            isDebugDropdownFolded = !isDebugDropdownFolded;
+        });
 
         function gameLoop() {
             updatePlayer();
