@@ -24,14 +24,17 @@
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
+    const mapWidth = 20;
+    const mapHeight = 15;
+
     const map = [
-      [1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 1, 0, 1],
-      [1, 0, 1, 0, 0, 1, 0, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
 
     const player = {
@@ -40,12 +43,12 @@
       angle: 0,
       fov: Math.PI / 3,
       speed: 5,
+      isMouseLocked: false,
     };
 
-    const enemy = {
-      x: 300,
-      y: 300,
-      speed: 1,
+    const sprite = {
+      x: 200,
+      y: 150,
       size: 10,
     };
 
@@ -121,13 +124,6 @@
       player.isMouseLocked = !player.isMouseLocked;
     }
 
-    function moveEnemy() {
-      // Move the enemy towards the player slowly
-      const angleToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-      enemy.x += Math.cos(angleToPlayer) * enemy.speed;
-      enemy.y += Math.sin(angleToPlayer) * enemy.speed;
-    }
-
     function isWall(x, y) {
       // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
@@ -156,7 +152,25 @@
     function update() {
       // Update game logic here
       handleInput();
-      moveEnemy();
+      updateSprite();
+    }
+
+    function updateSprite() {
+      // Update sprite position based on player's position
+      const relativeX = sprite.x - player.x;
+      const relativeY = sprite.y - player.y;
+      const spriteDistance = Math.sqrt(relativeX ** 2 + relativeY ** 2);
+      const spriteAngle = Math.atan2(relativeY, relativeX) - player.angle;
+
+      // Calculate sprite position in screen coordinates
+      const spriteScreenX = Math.tan(spriteAngle) * screenWidth / 2;
+
+      // Draw the sprite
+      const spriteSize = (screenHeight / spriteDistance) * sprite.size;
+      const spriteTop = (screenHeight - spriteSize) / 2;
+
+      ctx.fillStyle = 'red';
+      ctx.fillRect(screenWidth / 2 + spriteScreenX - spriteSize / 2, spriteTop, spriteSize, spriteSize);
     }
 
     function draw() {
@@ -181,16 +195,6 @@
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
-
-      // Draw enemy
-      ctx.fillStyle = 'blue';
-      ctx.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
-
-      // Draw player
-      ctx.fillStyle = '#f00';
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
-      ctx.fill();
     }
 
     function gameLoop() {
