@@ -8,7 +8,6 @@
     body {
       margin: 0;
       overflow: hidden;
-      background: linear-gradient(to bottom, #87CEEB, #4682B4); /* Skybox gradient */
     }
     canvas {
       display: block;
@@ -17,10 +16,14 @@
   </style>
 </head>
 <body>
+  <input type="color" id="skyColorPicker" value="#87CEEB"> <!-- Sky color picker -->
+  <input type="color" id="floorColorPicker" value="#808080"> <!-- Floor color picker -->
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
+    const skyColorPicker = document.getElementById('skyColorPicker');
+    const floorColorPicker = document.getElementById('floorColorPicker');
 
     const screenWidth = 800;
     const screenHeight = 600;
@@ -44,81 +47,34 @@
       isMouseLocked: false,
     };
 
-    function castRay(rayAngle, cameraX, cameraY) {
-      let x = cameraX;
-      let y = cameraY;
-      const deltaDistX = Math.abs(1 / Math.cos(rayAngle));
-      const deltaDistY = Math.abs(1 / Math.sin(rayAngle));
+    function castRay(rayAngle) {
+      let x = player.x;
+      let y = player.y;
 
-      let stepX, stepY, sideDistX, sideDistY;
-      let hit = false, side = 0;
+      const raySin = Math.sin(rayAngle);
+      const rayCos = Math.cos(rayAngle);
 
-      if (rayAngle < Math.PI) {
-        stepX = 1;
-        sideDistX = (Math.ceil(x) - x) * deltaDistX;
-      } else {
-        stepX = -1;
-        sideDistX = (x - Math.floor(x)) * deltaDistX;
-      }
+      // Increment by small steps along the ray until a wall is hit
+      while (true) {
+        x += rayCos;
+        y += raySin;
 
-      if (rayAngle < Math.PI / 2 || rayAngle > 3 * Math.PI / 2) {
-        stepY = 1;
-        sideDistY = (Math.ceil(y) - y) * deltaDistY;
-      } else {
-        stepY = -1;
-        sideDistY = (y - Math.floor(y)) * deltaDistY;
-      }
+        const mapX = Math.floor(x / tileSize);
+        const mapY = Math.floor(y / tileSize);
 
-      while (!hit) {
-        if (sideDistX < sideDistY) {
-          sideDistX += deltaDistX;
-          x += stepX;
-          side = 0;
-        } else {
-          sideDistY += deltaDistY;
-          y += stepY;
-          side = 1;
-        }
+        // Check if the ray hit a wall
+        if (map[mapY][mapX] === 1) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-        if (map[Math.floor(y)][Math.floor(x)] === 1) {
-          hit = true;
+          return {
+            x: x,
+            y: y,
+            distance: distance,
+            height: wallHeight,
+          };
         }
       }
-
-      const perpWallDist = side === 0 ? (x - cameraX + (1 - stepX) / 2) / Math.cos(rayAngle) : (y - cameraY + (1 - stepY) / 2) / Math.sin(rayAngle);
-      const lineHeight = Math.round(screenHeight / perpWallDist);
-      const wallTop = Math.max(0, (screenHeight - lineHeight) / 2);
-
-      const wallColor = getWallColor(rayAngle, perpWallDist);
-
-      return {
-        lineHeight,
-        wallTop,
-        wallColor,
-      };
-    }
-
-    function getWallColor(rayAngle, perpWallDist) {
-      let distanceFactor = Math.min(1, perpWallDist / 400); // Adjust based on maximum distance
-      distanceFactor = 1 - distanceFactor; // Invert for more contrast
-
-      // Apply shading based on distance
-      const shading = 1 - Math.min(1, distanceFactor * 1.5);
-
-      // Apply color variation based on ray angle
-      const colorVariation = Math.sin(rayAngle) * 30;
-
-      // Calculate final color
-      const red = 200 - distanceFactor * 100 + colorVariation;
-      const green = 100 - distanceFactor * 50 + colorVariation;
-      const blue = 50 - distanceFactor * 25 + colorVariation;
-
-      // Apply shading to the color
-      const finalRed = Math.round(red * shading);
-      const finalGreen = Math.round(green * shading);
-      const finalBlue = Math.round(blue * shading);
-
-      return `rgb(${finalRed},${finalGreen},${finalBlue})`;
     }
 
     function handleInput() {
@@ -165,7 +121,10 @@
 
     function isWall(x, y) {
       // Check if the given coordinates are inside a wall
-      return map[Math.floor(y)][Math.floor(x)] === 1;
+      const mapX = Math.floor(x / tileSize);
+      const mapY = Math.floor(y / tileSize);
+
+      return map[mapY][mapX] === 1;
     }
 
     const keys = {};
@@ -185,6 +144,15 @@
       }
     });
 
+    skyColorPicker.addEventListener('input', (event) => {
+      document.body.style.background = `linear-gradient(to bottom, ${event.target.value}, #4682B4)`;
+    });
+
+    floorColorPicker.addEventListener('input', (event) => {
+      ctx.fillStyle = event.target.value;
+      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
+    });
+
     function update() {
       // Update game logic here
       handleInput();
@@ -194,19 +162,27 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw floor and ceiling
-      ctx.fillStyle = '#222'; // Dark gray for floor and ceiling
-      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
-      ctx.fillStyle = '#444'; // Slightly lighter gray for ceiling
+      // Draw floor
+      ctx.fillStyle = floorColorPicker.value;
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw walls
+      const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle, player.x, player.y);
+        const ray = castRay(rayAngle);
+        rays.push(ray);
+      }
 
-        ctx.fillStyle = ray.wallColor;
-        ctx.fillRect(i, ray.wallTop, 1, ray.lineHeight);
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
+        const wallHeight = ray.height;
+        const wallTop = (screenHeight - wallHeight) / 2;
+
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
 
