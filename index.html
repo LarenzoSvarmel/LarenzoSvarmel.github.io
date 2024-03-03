@@ -8,35 +8,21 @@
     body {
       margin: 0;
       overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background-color: #222;
-      position: relative;
     }
     canvas {
       display: block;
       image-rendering: pixelated;
-      border: 1px solid #fff; /* Add a border for better visibility */
-    }
-    #resolutionSlider {
-      position: absolute;
-      top: 10px;
-      right: 10px;
     }
   </style>
 </head>
 <body>
-  <input type="range" id="resolutionSlider" min="1" max="4" step="1" value="1">
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
-    let screenWidth = 800;
-    let screenHeight = 600;
-    let renderingResolution = 1; // Initial rendering resolution
+    const screenWidth = 800;
+    const screenHeight = 600;
     const tileSize = 32;
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1],
@@ -56,9 +42,6 @@
       speed: 5,
       isMouseLocked: false,
     };
-
-    const skyboxImage = new Image();
-    skyboxImage.src = 'your_skybox_image_url.jpg'; // Replace with the URL of your skybox image
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -157,18 +140,6 @@
       }
     });
 
-    document.getElementById('resolutionSlider').addEventListener('input', (event) => {
-      renderingResolution = parseInt(event.target.value);
-      updateCanvasSize();
-    });
-
-    function updateCanvasSize() {
-      screenWidth = 800 * renderingResolution;
-      screenHeight = 600 * renderingResolution;
-      canvas.width = screenWidth;
-      canvas.height = screenHeight;
-    }
-
     function update() {
       // Update game logic here
       handleInput();
@@ -176,33 +147,26 @@
 
     function draw() {
       // Draw the raycasting scene here
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw skybox
-      ctx.drawImage(skyboxImage, 0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
 
       // Draw walls
       const rays = [];
-      for (let i = 0; i < canvas.width; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / canvas.width) * player.fov;
+      for (let i = 0; i < screenWidth; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
         rays.push(ray);
       }
 
-      for (let i = 0; i < canvas.width; i++) {
+      for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
         const wallHeight = ray.height;
-        const wallTop = (canvas.height - wallHeight) / 2;
+        const wallTop = (screenHeight - wallHeight) / 2;
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
-
-      // Draw floor with a green color
-      ctx.fillStyle = "#008000"; // Green color for the floor
-      ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
     }
 
     function gameLoop() {
@@ -211,8 +175,7 @@
       requestAnimationFrame(gameLoop);
     }
 
-    updateCanvasSize(); // Set initial canvas size
-    skyboxImage.onload = gameLoop; // Start the game loop once the skybox image is loaded
+    gameLoop();
   </script>
 </body>
 </html>
