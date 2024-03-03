@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo</title>
+  <title>3D Rendering Pipeline</title>
   <style>
     body {
       margin: 0;
@@ -11,171 +11,98 @@
     }
     canvas {
       display: block;
-      image-rendering: pixelated;
     }
   </style>
 </head>
 <body>
-  <canvas id="raycastingCanvas" width="800" height="600"></canvas>
+  <canvas id="renderCanvas" width="800" height="600"></canvas>
   <script>
-    const canvas = document.getElementById('raycastingCanvas');
+    const canvas = document.getElementById('renderCanvas');
     const ctx = canvas.getContext('2d');
 
     const screenWidth = 800;
     const screenHeight = 600;
-    const tileSize = 32;
-    const map = [
-      [1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 1, 0, 1],
-      [1, 0, 1, 0, 0, 1, 0, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1],
+
+    // Define a simple 3D object (a cube)
+    const vertices = [
+      { x: -1, y: -1, z: -1 },
+      { x:  1, y: -1, z: -1 },
+      { x:  1, y:  1, z: -1 },
+      { x: -1, y:  1, z: -1 },
+      { x: -1, y: -1, z:  1 },
+      { x:  1, y: -1, z:  1 },
+      { x:  1, y:  1, z:  1 },
+      { x: -1, y:  1, z:  1 },
     ];
 
-    const player = {
-      x: 100,
-      y: 100,
-      angle: 0,
+    const faces = [
+      [0, 1, 2, 3], // Front face
+      [4, 5, 6, 7], // Back face
+      [0, 3, 7, 4], // Left face
+      [1, 2, 6, 5], // Right face
+      [3, 2, 6, 7], // Top face
+      [0, 1, 5, 4], // Bottom face
+    ];
+
+    // Camera properties
+    const camera = {
+      position: { x: 0, y: 0, z: 5 },
+      rotation: { x: 0, y: 0, z: 0 },
       fov: Math.PI / 3,
-      speed: 5,
-      isMouseLocked: false,
     };
 
-    function castRay(rayAngle) {
-      let x = player.x;
-      let y = player.y;
-
-      const raySin = Math.sin(rayAngle);
-      const rayCos = Math.cos(rayAngle);
-
-      // Increment by small steps along the ray until a wall is hit
-      while (true) {
-        x += rayCos;
-        y += raySin;
-
-        const mapX = Math.floor(x / tileSize);
-        const mapY = Math.floor(y / tileSize);
-
-        // Check if the ray hit a wall
-        if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
-
-          return {
-            x: x,
-            y: y,
-            distance: distance,
-            height: wallHeight,
-          };
-        }
-      }
+    // Function to project 3D coordinates to 2D screen coordinates
+    function project(vertex) {
+      const scale = camera.fov / (camera.position.z - vertex.z);
+      const x = (vertex.x - camera.position.x) * scale + screenWidth / 2;
+      const y = (vertex.y - camera.position.y) * scale + screenHeight / 2;
+      return { x, y };
     }
 
-    function handleInput() {
-      // Handle player input
-      if (keys['ArrowLeft']) {
-        player.angle -= 0.05;
-      }
-      if (keys['ArrowRight']) {
-        player.angle += 0.05;
-      }
-      if (keys['ArrowUp']) {
-        const moveStep = player.speed;
-        const newX = player.x + Math.cos(player.angle) * moveStep;
-        const newY = player.y + Math.sin(player.angle) * moveStep;
-
-        if (!isWall(newX, newY)) {
-          player.x = newX;
-          player.y = newY;
-        }
-      }
-      if (keys['ArrowDown']) {
-        const moveStep = player.speed;
-        const newX = player.x - Math.cos(player.angle) * moveStep;
-        const newY = player.y - Math.sin(player.angle) * moveStep;
-
-        if (!isWall(newX, newY)) {
-          player.x = newX;
-          player.y = newY;
-        }
-      }
-      if (keys['KeyL']) {
-        toggleMouseLock();
-      }
-    }
-
-    function toggleMouseLock() {
-      if (!player.isMouseLocked) {
-        canvas.requestPointerLock();
-      } else {
-        document.exitPointerLock();
-      }
-      player.isMouseLocked = !player.isMouseLocked;
-    }
-
-    function isWall(x, y) {
-      // Check if the given coordinates are inside a wall
-      const mapX = Math.floor(x / tileSize);
-      const mapY = Math.floor(y / tileSize);
-
-      return map[mapY][mapX] === 1;
-    }
-
-    const keys = {};
-
-    document.addEventListener('keydown', (event) => {
-      keys[event.code] = true;
-    });
-
-    document.addEventListener('keyup', (event) => {
-      keys[event.code] = false;
-    });
-
-    document.addEventListener('mousemove', (event) => {
-      if (player.isMouseLocked) {
-        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        player.angle += deltaX * 0.01;
-      }
-    });
-
-    function update() {
-      // Update game logic here
-      handleInput();
-    }
-
+    // Function to draw the 3D object
     function draw() {
-      // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls
-      const rays = [];
-      for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
-        rays.push(ray);
-      }
+      // Apply camera rotation to the vertices
+      const rotatedVertices = vertices.map((vertex) => {
+        const x = vertex.x * Math.cos(camera.rotation.y) - vertex.z * Math.sin(camera.rotation.y);
+        const z = vertex.x * Math.sin(camera.rotation.y) + vertex.z * Math.cos(camera.rotation.y);
+        return { x, y: vertex.y, z };
+      });
 
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
-        const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
+      // Project and draw each face
+      faces.forEach((face) => {
+        const screenVertices = face.map((vertexIndex) => project(rotatedVertices[vertexIndex]));
 
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+        ctx.beginPath();
+        ctx.moveTo(screenVertices[0].x, screenVertices[0].y);
 
-        ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
-      }
+        for (let i = 1; i < screenVertices.length; i++) {
+          ctx.lineTo(screenVertices[i].x, screenVertices[i].y);
+        }
+
+        ctx.closePath();
+        ctx.stroke();
+      });
     }
 
-    function gameLoop() {
-      update();
+    // Update function for animations or interactions
+    function update() {
+      // Example: Rotate the object
+      camera.rotation.y += 0.01;
+
+      // Example: Move the camera
+      // camera.position.x += 0.1;
+
       draw();
-      requestAnimationFrame(gameLoop);
+      requestAnimationFrame(update);
     }
 
-    gameLoop();
+    // Initial draw
+    draw();
+
+    // Start the animation loop
+    update();
   </script>
 </body>
 </html>
