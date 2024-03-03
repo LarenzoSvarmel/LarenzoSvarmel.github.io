@@ -8,18 +8,26 @@
     body {
       margin: 0;
       overflow: hidden;
+      display: flex;
     }
     canvas {
       display: block;
       image-rendering: pixelated;
     }
+    #mapInfoCanvas {
+      margin-left: 20px;
+    }
   </style>
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
+  <canvas id="mapInfoCanvas" width="200" height="150"></canvas>
   <script>
-    const canvas = document.getElementById('raycastingCanvas');
-    const ctx = canvas.getContext('2d');
+    const raycastingCanvas = document.getElementById('raycastingCanvas');
+    const rayCtx = raycastingCanvas.getContext('2d');
+
+    const mapInfoCanvas = document.getElementById('mapInfoCanvas');
+    const mapInfoCtx = mapInfoCanvas.getContext('2d');
 
     const screenWidth = 800;
     const screenHeight = 600;
@@ -46,7 +54,7 @@
     const light = {
       x: 500,
       y: 200,
-      intensity: 300, // Adjust the intensity of the light
+      intensity: 300,
     };
 
     function castRay(rayAngle) {
@@ -56,7 +64,6 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      // Increment by small steps along the ray until a wall is hit
       while (true) {
         x += rayCos;
         y += raySin;
@@ -64,12 +71,10 @@
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
 
-        // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          // Calculate darkness based on distance from the light
           const darkness = Math.min(1, distance / light.intensity);
 
           return {
@@ -84,7 +89,6 @@
     }
 
     function handleInput() {
-      // Handle player input
       if (keys['ArrowLeft']) {
         player.angle -= 0.05;
       }
@@ -118,7 +122,7 @@
 
     function toggleMouseLock() {
       if (!player.isMouseLocked) {
-        canvas.requestPointerLock();
+        raycastingCanvas.requestPointerLock();
       } else {
         document.exitPointerLock();
       }
@@ -126,7 +130,6 @@
     }
 
     function isWall(x, y) {
-      // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
       const mapY = Math.floor(y / tileSize);
 
@@ -151,21 +154,19 @@
     });
 
     function update() {
-      // Update game logic here
       handleInput();
     }
 
     function draw() {
-      // Draw the raycasting scene here
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
+      rayCtx.clearRect(0, 0, screenWidth, screenHeight);
 
       // Draw sky
-      ctx.fillStyle = 'deepskyblue';
-      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
+      rayCtx.fillStyle = 'deepskyblue';
+      rayCtx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
       // Draw ground
-      ctx.fillStyle = 'saddlebrown';
-      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
+      rayCtx.fillStyle = 'saddlebrown';
+      rayCtx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw walls and shadows
       const rays = [];
@@ -180,14 +181,23 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Adjust wall color based on darkness
         const darkenedColor = Math.round(255 * ray.darkness);
         const wallColor = `rgb(${darkenedColor}, ${darkenedColor}, ${darkenedColor})`;
 
-        // Draw vertical lines for walls and shadows
-        ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
+        rayCtx.fillStyle = wallColor;
+        rayCtx.fillRect(i, wallTop, 1, wallHeight);
       }
+
+      // Draw player on the map info canvas
+      mapInfoCtx.clearRect(0, 0, mapInfoCanvas.width, mapInfoCanvas.height);
+      mapInfoCtx.fillStyle = 'red';
+      mapInfoCtx.fillRect(player.x / tileSize, player.y / tileSize, 1, 1);
+
+      // Draw light source on the map info canvas
+      mapInfoCtx.fillStyle = 'yellow';
+      mapInfoCtx.beginPath();
+      mapInfoCtx.arc(light.x / tileSize, light.y / tileSize, 3, 0, 2 * Math.PI);
+      mapInfoCtx.fill();
     }
 
     function gameLoop() {
