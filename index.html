@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo</title>
+  <title>Raycasting Demo with Shadow Casting</title>
   <style>
     body {
       margin: 0;
@@ -14,6 +14,7 @@
       image-rendering: pixelated;
     }
   </style>
+  <script src="rot.js"></script>
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
@@ -25,13 +26,17 @@
     const screenHeight = 600;
     const tileSize = 32;
     const map = [
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1],
-      [1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      "1111111111111111",
+      "1000000000000001",
+      "1001111111111001",
+      "1001000000001001",
+      "1001001111101001",
+      "1001001000101001",
+      "1001001111101001",
+      "1001000000001001",
+      "1001111111111001",
+      "1000000000000001",
+      "1111111111111111",
     ];
 
     const player = {
@@ -43,58 +48,36 @@
       isMouseLocked: false,
     };
 
-    function castRay(rayAngle) {
-      let x = player.x;
-      let y = player.y;
+    function drawMap() {
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      const raySin = Math.sin(rayAngle);
-      const rayCos = Math.cos(rayAngle);
+      // Draw sky
+      ctx.fillStyle = 'deepskyblue';
+      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
-      // Increment by small steps along the ray until a wall is hit
-      while (true) {
-        x += rayCos;
-        y += raySin;
+      // Draw ground
+      ctx.fillStyle = 'saddlebrown';
+      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-        const mapX = Math.floor(x / tileSize);
-        const mapY = Math.floor(y / tileSize);
+      // Draw walls using ROT.js shadow casting
+      const level = new ROT.Map.Arena(map.length, map[0].length);
+      const fov = new ROT.FOV.RecursiveShadowcasting((x, y) => {
+        return level.get(x, y) === " ";
+      });
 
-        // Check if the ray hit a wall
-        if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-
-          // Apply fisheye correction
-          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
-
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * correctedDistance));
-
-          return {
-            x: x,
-            y: y,
-            distance: correctedDistance,
-            height: wallHeight,
-          };
+      fov.compute(player.x, player.y, player.fov, (x, y, r, visibility) => {
+        if (visibility > 0) {
+          ctx.fillStyle = 'gray';
+          ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
         }
-      }
-    }
+      });
 
-    function isVisible(startX, startY, endX, endY) {
-      // Check if there is a clear line of sight between two points
-      const deltaX = endX - startX;
-      const deltaY = endY - startY;
-      const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
-
-      for (let t = 0; t < distance; t++) {
-        const stepX = Math.round(startX + (t / distance) * deltaX);
-        const stepY = Math.round(startY + (t / distance) * deltaY);
-
-        const mapX = Math.floor(stepX / tileSize);
-        const mapY = Math.floor(stepY / tileSize);
-
-        if (map[mapY][mapX] === 1) {
-          return false; // Wall in the line of sight
-        }
-      }
-      return true; // Clear line of sight
+      // Draw player
+      ctx.fillStyle = 'red';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.closePath();
     }
 
     function handleInput() {
@@ -139,14 +122,6 @@
       player.isMouseLocked = !player.isMouseLocked;
     }
 
-    function isWall(x, y) {
-      // Check if the given coordinates are inside a wall
-      const mapX = Math.floor(x / tileSize);
-      const mapY = Math.floor(y / tileSize);
-
-      return map[mapY][mapX] === 1;
-    }
-
     const keys = {};
 
     document.addEventListener('keydown', (event) => {
@@ -164,49 +139,22 @@
       }
     });
 
+    function isWall(x, y) {
+      // Check if the given coordinates are inside a wall
+      const mapX = Math.floor(x / tileSize);
+      const mapY = Math.floor(y / tileSize);
+
+      return map[mapY][mapX] === "1";
+    }
+
     function update() {
       // Update game logic here
       handleInput();
     }
 
-    function draw() {
-      // Draw the raycasting scene here
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
-
-      // Draw sky
-      ctx.fillStyle = 'deepskyblue';
-      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
-
-      // Draw ground
-      ctx.fillStyle = 'saddlebrown';
-      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
-
-      // Draw walls with shadow casting
-      for (let i = 0; i < map.length; i++) {
-        for (let j = 0; j < map[i].length; j++) {
-          if (map[i][j] === 1) {
-            const wallX = j * tileSize;
-            const wallY = i * tileSize;
-            const visible = isVisible(player.x, player.y, wallX, wallY);
-            if (visible) {
-              ctx.fillStyle = 'gray'; // Wall color
-              ctx.fillRect(wallX, wallY, tileSize, tileSize);
-            }
-          }
-        }
-      }
-
-      // Draw player
-      ctx.fillStyle = 'red';
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.closePath();
-    }
-
     function gameLoop() {
       update();
-      draw();
+      drawMap();
       requestAnimationFrame(gameLoop);
     }
 
