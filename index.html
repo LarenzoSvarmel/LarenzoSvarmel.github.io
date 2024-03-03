@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo</title>
+  <title>Raycasting Demo with Lighting</title>
   <style>
     body {
       margin: 0;
@@ -43,6 +43,12 @@
       isMouseLocked: false,
     };
 
+    const lightSource = {
+      x: 400,
+      y: 300,
+      color: { r: 1, g: 1, b: 1 },
+    };
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -63,16 +69,34 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          // Calculate shading based on the angle of the wall and the ray
-          const wallNormalAngle = Math.atan2(y - player.y, x - player.x);
-          const shadingFactor = Math.cos(rayAngle - wallNormalAngle);
+          const surfaceNormal = { x: -rayCos, y: -raySin }; // Inverted ray direction
+          const lightDirection = {
+            x: lightSource.x - x,
+            y: lightSource.y - y,
+          };
+
+          // Normalize the light direction vector
+          const lightDistance = Math.sqrt(lightDirection.x ** 2 + lightDirection.y ** 2);
+          lightDirection.x /= lightDistance;
+          lightDirection.y /= lightDistance;
+
+          // Lambertian reflection model
+          const dotProduct = Math.max(0, surfaceNormal.x * lightDirection.x + surfaceNormal.y * lightDirection.y);
+          const lambertianReflection = dotProduct;
+
+          // Apply lighting to pixel color
+          const wallColor = {
+            r: Math.min(1, lambertianReflection * lightSource.color.r),
+            g: Math.min(1, lambertianReflection * lightSource.color.g),
+            b: Math.min(1, lambertianReflection * lightSource.color.b),
+          };
 
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-            shading: shadingFactor,
+            color: wallColor,
           };
         }
       }
@@ -145,13 +169,6 @@
       }
     });
 
-    function interpolateColor(color1, color2, t) {
-      const r = Math.round(color1[0] + (color2[0] - color1[0]) * t);
-      const g = Math.round(color1[1] + (color2[1] - color1[1]) * t);
-      const b = Math.round(color1[2] + (color2[2] - color1[2]) * t);
-      return `rgb(${r}, ${g}, ${b})`;
-    }
-
     function update() {
       // Update game logic here
       handleInput();
@@ -160,11 +177,8 @@
     function draw() {
       // Draw the raycasting scene here
 
-      // Draw skybox (background gradient)
-      const gradient = ctx.createLinearGradient(0, 0, 0, screenHeight / 2);
-      gradient.addColorStop(0, 'deepskyblue');
-      gradient.addColorStop(1, 'white');
-      ctx.fillStyle = gradient;
+      // Draw skybox (background)
+      ctx.fillStyle = 'deepskyblue';
       ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
       // Draw ground
@@ -184,26 +198,11 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Calculate blending factor based on the wall's distance
-        const blendFactor = Math.min(1, ray.distance / 400); // Adjust 400 based on your preferences
-
-        // Interpolate between wall color and sky color
-        const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor);
-
-        // Apply shading based on the angle of the wall and the ray
-        const shadedColor = applyShading(blendedColor, ray.shading);
-
-        // Draw vertical lines for walls with shading
-        ctx.fillStyle = shadedColor;
+        // Apply lighting to pixel color
+        const wallColor = ray.color;
+        ctx.fillStyle = `rgb(${Math.round(wallColor.r * 255)}, ${Math.round(wallColor.g * 255)}, ${Math.round(wallColor.b * 255)})`;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
-    }
-
-    function applyShading(color, shadingFactor) {
-      // Apply shading to the color
-      const shadingIntensity = 0.5; // Adjust based on your preferences
-      const shadedColor = interpolateColor([0, 0, 0], color.split(',').map(Number), 1 - shadingFactor * shadingIntensity);
-      return shadedColor;
     }
 
     function gameLoop() {
