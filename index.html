@@ -43,8 +43,8 @@
             damage: 20,
             stamina: 100,
             maxStamina: 100,
-            staminaCooldown: 2000, // 2 seconds in milliseconds
-            usingStamina: false,
+            staminaRechargeRate: 5, // per second
+            staminaDepletionRate: 50, // per second
         };
 
         const bullet = {
@@ -99,7 +99,7 @@
             // Draw weapon type text
             ctx.fillText(`Weapon: ${player.weaponType}`, 10, 40);
 
-            // Draw stamina meter
+            // Draw stamina bar
             ctx.fillStyle = 'green';
             ctx.fillRect(10, 60, (player.stamina / player.maxStamina) * 100, 10);
         }
@@ -140,16 +140,16 @@
                 }, player.reloadTime);
             }
 
-            // Update stamina
-            if (player.usingStamina) {
-                player.stamina -= (100 / player.staminaCooldown) * (1 / 60) * 1000; // Decrease stamina over time
+            // Handle stamina
+            if (player.isMoving && player.stamina > 0) {
+                player.stamina -= player.staminaDepletionRate / 60; // assuming 60 fps
+            } else if (player.stamina < player.maxStamina) {
+                player.stamina += player.staminaRechargeRate / 60; // assuming 60 fps
+            }
 
-                if (player.stamina <= 0) {
-                    player.usingStamina = false;
-                    setTimeout(() => {
-                        player.stamina = player.maxStamina;
-                    }, player.staminaCooldown);
-                }
+            // Stop sprinting if stamina is depleted
+            if (player.stamina <= 0) {
+                player.speed = player.baseSpeed;
             }
         }
 
@@ -188,9 +188,8 @@
         function onKeyDown(event) {
             if (event.code === 'Space') {
                 shoot();
-            } else if (event.code === 'ShiftLeft' && !player.usingStamina) {
-                player.speed = player.baseSpeed + 1;
-                player.usingStamina = true;
+            } else if (event.code === 'ShiftLeft' && player.stamina > 0) {
+                player.speed = player.baseSpeed + 2;
             }
         }
 
