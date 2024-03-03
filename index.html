@@ -28,6 +28,7 @@
             size: 20,
             angle: 0,
             speed: 2,
+            baseSpeed: 2,
             isMoving: false,
             targetX: 0,
             targetY: 0,
@@ -38,6 +39,8 @@
             reloadTime: 4000, // in milliseconds
             shootDelay: 1000, // in milliseconds
             lastShotTime: 0,
+            weaponType: 'Pistol',
+            damage: 20,
         };
 
         const bullet = {
@@ -88,6 +91,9 @@
             ctx.fillStyle = 'black';
             ctx.font = '16px Arial';
             ctx.fillText(`Ammo: ${player.ammo}`, 10, 20);
+
+            // Draw weapon type text
+            ctx.fillText(`Weapon: ${player.weaponType}`, 10, 40);
         }
 
         function updatePlayer() {
@@ -162,12 +168,14 @@
         function onKeyDown(event) {
             if (event.code === 'Space') {
                 shoot();
+            } else if (event.code === 'ShiftLeft') {
+                player.speed = player.baseSpeed + 5;
             }
         }
 
         function onKeyUp(event) {
-            if (event.code === 'Space') {
-                player.lastShotTime = 0; // Reset last shot time when releasing the spacebar
+            if (event.code === 'ShiftLeft') {
+                player.speed = player.baseSpeed;
             }
         }
 
