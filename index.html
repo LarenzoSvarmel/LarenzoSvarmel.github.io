@@ -38,47 +38,44 @@
       x: 100,
       y: 100,
       angle: 0,
+      verticalAngle: 0,
       fov: Math.PI / 3,
       speed: 5,
     };
 
-    const lightSource = {
-      x: screenWidth - 50,
-      y: screenHeight / 2,
-    };
-
-    function castRay(rayAngle) {
+    function castRay(rayAngle, verticalAngle) {
       let x = player.x;
       let y = player.y;
+      let z = player.y;
 
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      let hitWall = false;
-      let distance = 0;
+      const raySinVertical = Math.sin(verticalAngle);
+      const rayCosVertical = Math.cos(verticalAngle);
 
       // Increment by small steps along the ray until a wall is hit
-      while (!hitWall && distance < 1000) {
-        x += rayCos;
-        y += raySin;
+      while (true) {
+        x += rayCos * rayCosVertical;
+        y += raySin * rayCosVertical;
+        z += raySinVertical;
 
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
 
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
-          hitWall = true;
-          distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-        }
-        distance++;
-      }
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2 + (z - player.y) ** 2);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-      return {
-        x: x,
-        y: y,
-        distance: distance,
-        hitWall: hitWall,
-      };
+          return {
+            x: x,
+            y: y,
+            distance: distance,
+            height: wallHeight,
+          };
+        }
+      }
     }
 
     function handleInput() {
@@ -131,7 +128,10 @@
 
     document.addEventListener('mousemove', (event) => {
       const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+      const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
       player.angle += deltaX * 0.01;
+      player.verticalAngle = Math.min(Math.PI / 2, Math.max(-Math.PI / 2, player.verticalAngle + deltaY * 0.01));
     });
 
     function update() {
@@ -143,27 +143,24 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls with shadows
+      // Draw walls
+      const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
-
-        const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * ray.distance * Math.cos(rayAngle - player.angle)));
-        const wallTop = (screenHeight - wallHeight) / 2;
-
-        // Calculate shadow intensity based on the distance from the light source
-        const shadowIntensity = 1 - Math.min(ray.distance / 400, 1);
-
-        // Draw walls with shadows
-        ctx.fillStyle = `rgba(0, 0, 0, ${shadowIntensity})`;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
+        const ray = castRay(rayAngle, player.verticalAngle);
+        rays.push(ray);
       }
 
-      // Draw light source
-      ctx.fillStyle = 'yellow';
-      ctx.beginPath();
-      ctx.arc(lightSource.x, lightSource.y, 5, 0, 2 * Math.PI);
-      ctx.fill();
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
+        const wallHeight = ray.height;
+        const wallTop = (screenHeight - wallHeight) / 2;
+
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
+      }
     }
 
     function gameLoop() {
