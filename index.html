@@ -43,17 +43,14 @@
       isMouseLocked: false,
     };
 
-    const rays = new Float32Array(screenWidth);
-    const wallColors = new Uint8Array(screenWidth * 3);
-
-    function castRay(rayIndex) {
-      const rayAngle = player.angle - player.fov / 2 + (rayIndex / screenWidth) * player.fov;
-
+    function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
+
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
+      // Increment by small steps along the ray until a wall is hit
       while (true) {
         x += rayCos;
         y += raySin;
@@ -61,17 +58,23 @@
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
 
+        // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          rays[rayIndex] = { distance, height: wallHeight };
-          return;
+          return {
+            x: x,
+            y: y,
+            distance: distance,
+            height: wallHeight,
+          };
         }
       }
     }
 
     function handleInput() {
+      // Handle player input
       if (keys['ArrowLeft']) {
         player.angle -= 0.05;
       }
@@ -113,8 +116,10 @@
     }
 
     function isWall(x, y) {
+      // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
       const mapY = Math.floor(y / tileSize);
+
       return map[mapY][mapX] === 1;
     }
 
@@ -136,14 +141,20 @@
     });
 
     function update() {
+      // Update game logic here
       handleInput();
     }
 
     function draw() {
+      // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
+      // Draw walls
+      const rays = [];
       for (let i = 0; i < screenWidth; i++) {
-        castRay(i);
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle);
+        rays.push(ray);
       }
 
       for (let i = 0; i < screenWidth; i++) {
@@ -151,13 +162,9 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const wallColor = Math.min(255, 255 - ray.distance * 2);
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
-        wallColors[i * 3] = wallColor;
-        wallColors[i * 3 + 1] = wallColor;
-        wallColors[i * 3 + 2] = wallColor;
-
-        ctx.fillStyle = `rgb(${wallColor}, ${wallColor}, ${wallColor})`;
+        ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
