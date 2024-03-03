@@ -22,13 +22,19 @@
             margin: 10px;
             display: inline-block;
         }
+
+        #doorImg {
+            max-width: 100%;
+            height: auto;
+        }
     </style>
 </head>
 <body>
 
 <div id="scene1" class="scene" onclick="enterRoom()">
-    <h1>Scene 1: Door</h1>
-    <p>Click the door to enter the room.</p>
+    <h1>Scene 1: Click the Picture</h1>
+    <img id="doorImg" src="door.jpg" alt="Accessible Door Image">
+    <p>Click the picture to enter the room.</p>
 </div>
 
 <div id="scene2" class="scene">
