@@ -34,6 +34,23 @@
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
 
+    class Circle {
+      constructor(x, y, radius) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+      }
+
+      intersects(rayX, rayY, rayAngle) {
+        const deltaX = this.x - rayX;
+        const deltaY = this.y - rayY;
+        const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+
+        // Check if the ray intersects with the circle
+        return distance <= this.radius;
+      }
+    }
+
     const player = {
       x: 100,
       y: 100,
@@ -43,12 +60,7 @@
       isMouseLocked: false,
     };
 
-    const circle = {
-      x: 400,
-      y: 300,
-      radius: 50,
-      color: 'yellow',
-    };
+    const circle = new Circle(300, 300, 50); // Example circle at position (300, 300) with radius 50
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -57,7 +69,7 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      // Increment by small steps along the ray until a wall or the circle is hit
+      // Increment by small steps along the ray until a wall or circle is hit
       while (true) {
         x += rayCos;
         y += raySin;
@@ -80,13 +92,16 @@
         }
 
         // Check if the ray hit the circle
-        const distanceToCircle = Math.sqrt((x - circle.x) ** 2 + (y - circle.y) ** 2);
-        if (distanceToCircle <= circle.radius) {
+        if (circle.intersects(x, y, rayAngle)) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
+
           return {
             x: x,
             y: y,
-            distance: distanceToCircle,
-            hitWall: false,
+            distance: distance,
+            height: wallHeight,
+            hitCircle: true,
           };
         }
       }
@@ -178,7 +193,7 @@
       ctx.fillStyle = 'green';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls
+      // Draw walls and circle
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -191,31 +206,26 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Calculate blending factor based on the wall's distance
-        const blendFactor = Math.min(1, ray.distance / 400); // Adjust 400 based on your preferences
+        if (ray.hitWall) {
+          // Calculate blending factor based on the wall's distance
+          const blendFactor = Math.min(1, ray.distance / 400); // Adjust 400 based on your preferences
 
-        // Interpolate between wall color and sky color
-        const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor);
+          // Interpolate between wall color and sky color
+          const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor);
 
-        // Draw vertical lines for walls with blended color
-        ctx.fillStyle = blendedColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
+          // Draw vertical lines for walls with blended color
+          ctx.fillStyle = blendedColor;
+          ctx.fillRect(i, wallTop, 1, wallHeight);
+        }
 
-        // Check if the ray hits the circle and render it
-        if (!ray.hitWall && ray.distance <= circle.radius) {
-          ctx.fillStyle = circle.color;
+        if (ray.hitCircle) {
+          // Draw a yellow circle where the ray intersects the circle
+          ctx.fillStyle = 'yellow';
           ctx.beginPath();
-          ctx.arc(ray.x, ray.y, 2, 0, 2 * Math.PI);
+          ctx.arc(ray.x, ray.y, circle.radius, 0, Math.PI * 2);
           ctx.fill();
         }
       }
-    }
-
-    function interpolateColor(color1, color2, t) {
-      const r = Math.round(color1[0] + (color2[0] - color1[0]) * t);
-      const g = Math.round(color1[1] + (color2[1] - color1[1]) * t);
-      const b = Math.round(color1[2] + (color2[2] - color1[2]) * t);
-      return `rgb(${r}, ${g}, ${b})`;
     }
 
     function gameLoop() {
