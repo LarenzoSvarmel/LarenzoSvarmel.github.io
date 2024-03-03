@@ -18,6 +18,9 @@
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
+
+
+
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -42,6 +45,53 @@
       speed: 5,
       isMouseLocked: false,
     };
+
+function castShadow(startX, startY, endX, endY) {
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.stroke();
+}
+
+function castRaysWithShadow() {
+  // Existing code for casting rays
+  const rays = [];
+  for (let i = 0; i < screenWidth; i++) {
+    const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+    const ray = castRay(rayAngle);
+    rays.push(ray);
+  }
+
+  // Additional code for casting shadows
+  for (let i = 0; i < rays.length; i++) {
+    const ray = rays[i];
+    const angle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+    castShadow(player.x, player.y, ray.x, ray.y);
+    castIndividualShadows(player.x, player.y, angle);
+  }
+}
+
+function castIndividualShadows(startX, startY, angle) {
+  const lightRadius = 200; // Adjust this value based on your scene
+
+  for (let step = 0; step <= lightRadius; step += 5) {
+    const offsetX = Math.cos(angle) * step;
+    const offsetY = Math.sin(angle) * step;
+
+    const endX = startX + offsetX;
+    const endY = startY + offsetY;
+
+    const mapX = Math.floor(endX / tileSize);
+    const mapY = Math.floor(endY / tileSize);
+
+    // Check if the point is inside a wall
+    if (map[mapY][mapX] === 1) {
+      castShadow(startX, startY, endX, endY);
+      break;
+    }
+  }
+}
 
     function castRay(rayAngle) {
       let x = player.x;
