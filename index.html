@@ -208,6 +208,8 @@
 
         // Apply shading
         const shadedColor = applyShading(wallColor, ray.shading);
+
+        // Draw the wall column
         ctx.fillStyle = shadedColor;
         ctx.fillRect(i, (screenHeight - ray.height) / 2, 1, ray.height);
       }
@@ -222,7 +224,7 @@
     function applyShading(color, shading) {
       // Apply shading to the color
       const rgb = color.match(/\d+/g);
-      const shadedColor = `rgb(${rgb[0] * shading}, ${rgb[1] * shading}, ${rgb[2] * shading})`;
+      const shadedColor = `rgb(${Math.floor(rgb[0] * shading)}, ${Math.floor(rgb[1] * shading)}, ${Math.floor(rgb[2] * shading)})`;
       return shadedColor;
     }
 
