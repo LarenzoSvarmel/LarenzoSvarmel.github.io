@@ -3,18 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Raycasting Demo</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      background-color: #222;
     }
     canvas {
       display: block;
       image-rendering: pixelated;
-      border: 2px solid #444;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     }
   </style>
 </head>
@@ -24,11 +21,9 @@
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
-    const screenWidth = canvas.width;
-    const screenHeight = canvas.height;
+    const screenWidth = 800;
+    const screenHeight = 600;
     const tileSize = 32;
-
-    // Improved map with color-coded walls
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -39,83 +34,134 @@
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
 
-    // Improved player object with additional properties
     const player = {
       x: 100,
       y: 100,
-      angle: Math.PI / 4,
-      fov: Math.PI / 2,
+      angle: 0,
+      fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
-      color: 'yellow',
     };
 
-    // Function to cast rays with improved performance
     function castRay(rayAngle) {
-      // Implementation remains unchanged for brevity
+      let x = player.x;
+      let y = player.y;
+
+      const raySin = Math.sin(rayAngle);
+      const rayCos = Math.cos(rayAngle);
+
+      // Increment by small steps along the ray until a wall is hit
+      while (true) {
+        x += rayCos;
+        y += raySin;
+
+        const mapX = Math.floor(x / tileSize);
+        const mapY = Math.floor(y / tileSize);
+
+        // Check if the ray hit a wall
+        if (map[mapY][mapX] === 1) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+
+          // Apply fisheye correction
+          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
+
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * correctedDistance));
+
+          return {
+            x: x,
+            y: y,
+            distance: correctedDistance,
+            height: wallHeight,
+          };
+        }
+      }
     }
 
-    // Handle additional keyboard events for a better user experience
-    document.addEventListener('keypress', (event) => {
-      if (event.code === 'Space') {
-        // Add a jump or special action
-        // Example: player.y -= 20;
-      }
-    });
-
-    // Additional optimizations for smooth movement
-    const keyState = {};
-    document.addEventListener('keydown', (event) => {
-      keyState[event.code] = true;
-    });
-
-    document.addEventListener('keyup', (event) => {
-      keyState[event.code] = false;
-    });
-
     function handleInput() {
-      // Improved input handling for smooth movement
-      if (keyState['ArrowLeft']) {
+      // Handle player input
+      if (keys['ArrowLeft']) {
         player.angle -= 0.05;
       }
-      if (keyState['ArrowRight']) {
+      if (keys['ArrowRight']) {
         player.angle += 0.05;
       }
-      if (keyState['ArrowUp'] || keyState['KeyW']) {
+      if (keys['ArrowUp']) {
         const moveStep = player.speed;
-        player.x += Math.cos(player.angle) * moveStep;
-        player.y += Math.sin(player.angle) * moveStep;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
-      if (keyState['ArrowDown'] || keyState['KeyS']) {
+      if (keys['ArrowDown']) {
         const moveStep = player.speed;
-        player.x -= Math.cos(player.angle) * moveStep;
-        player.y -= Math.sin(player.angle) * moveStep;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
-      if (keyState['KeyL']) {
+      if (keys['KeyL']) {
         toggleMouseLock();
       }
     }
 
-    // Improved color-coded wall rendering
+    function toggleMouseLock() {
+      if (!player.isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
+      }
+      player.isMouseLocked = !player.isMouseLocked;
+    }
+
+    function isWall(x, y) {
+      // Check if the given coordinates are inside a wall
+      const mapX = Math.floor(x / tileSize);
+      const mapY = Math.floor(y / tileSize);
+
+      return map[mapY][mapX] === 1;
+    }
+
+    const keys = {};
+
+    document.addEventListener('keydown', (event) => {
+      keys[event.code] = true;
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keys[event.code] = false;
+    });
+
+    document.addEventListener('mousemove', (event) => {
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        player.angle += deltaX * 0.01;
+      }
+    });
+
+    function update() {
+      // Update game logic here
+      handleInput();
+    }
+
     function draw() {
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw sky gradient
-      const gradient = ctx.createLinearGradient(0, 0, 0, screenHeight / 2);
-      gradient.addColorStop(0, 'deepskyblue');
-      gradient.addColorStop(1, 'skyblue');
-      ctx.fillStyle = gradient;
+      // Draw sky
+      ctx.fillStyle = 'deepskyblue';
       ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
-      // Draw ground gradient
-      const groundGradient = ctx.createLinearGradient(0, screenHeight / 2, 0, screenHeight);
-      groundGradient.addColorStop(0, 'saddlebrown');
-      groundGradient.addColorStop(1, 'peru');
-      ctx.fillStyle = groundGradient;
+      // Draw ground
+      ctx.fillStyle = 'saddlebrown';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls with color-coded shading
+      // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -128,24 +174,16 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Improved shading based on distance
-        const wallColor = `rgb(100, ${150 - ray.distance * 2}, ${200 - ray.distance * 2})`;
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
-        // Draw vertical lines for walls with improved shading
+        // Draw vertical lines for walls
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
-
-      // Draw the player as a simple circle
-      ctx.fillStyle = player.color;
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 5, 0, Math.PI * 2);
-      ctx.fill();
     }
 
-    // Main game loop with improved requestAnimationFrame
     function gameLoop() {
-      handleInput();
+      update();
       draw();
       requestAnimationFrame(gameLoop);
     }
