@@ -77,23 +77,24 @@
       }
     }
 
-    // Recursive Shadowcasting Algorithm
-    function shadowCast(x, y, radius, startAngle, endAngle) {
-      for (let i = 0; i < 360; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / 360) * player.fov;
-        if (rayAngle >= startAngle && rayAngle <= endAngle) {
-          const ray = castRay(rayAngle);
+    function isVisible(startX, startY, endX, endY) {
+      // Check if there is a clear line of sight between two points
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
 
-          // Check if the ray is within the radius
-          if (ray.distance <= radius) {
-            // Draw the ray
-            ctx.beginPath();
-            ctx.moveTo(player.x, player.y);
-            ctx.lineTo(ray.x, ray.y);
-            ctx.stroke();
-          }
+      for (let t = 0; t < distance; t++) {
+        const stepX = Math.round(startX + (t / distance) * deltaX);
+        const stepY = Math.round(startY + (t / distance) * deltaY);
+
+        const mapX = Math.floor(stepX / tileSize);
+        const mapY = Math.floor(stepY / tileSize);
+
+        if (map[mapY][mapX] === 1) {
+          return false; // Wall in the line of sight
         }
       }
+      return true; // Clear line of sight
     }
 
     function handleInput() {
@@ -180,29 +181,27 @@
       ctx.fillStyle = 'saddlebrown';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls
-      const rays = [];
-      for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
-        rays.push(ray);
+      // Draw walls with shadow casting
+      for (let i = 0; i < map.length; i++) {
+        for (let j = 0; j < map[i].length; j++) {
+          if (map[i][j] === 1) {
+            const wallX = j * tileSize;
+            const wallY = i * tileSize;
+            const visible = isVisible(player.x, player.y, wallX, wallY);
+            if (visible) {
+              ctx.fillStyle = 'gray'; // Wall color
+              ctx.fillRect(wallX, wallY, tileSize, tileSize);
+            }
+          }
+        }
       }
 
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
-        const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
-
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
-
-        // Draw vertical lines for walls
-        ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
-      }
-
-      // Shadow casting
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-      shadowCast(player.x, player.y, 200, player.angle - Math.PI / 6, player.angle + Math.PI / 6);
+      // Draw player
+      ctx.fillStyle = 'red';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.closePath();
     }
 
     function gameLoop() {
