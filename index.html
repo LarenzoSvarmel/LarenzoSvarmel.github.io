@@ -13,29 +13,24 @@
       display: block;
       image-rendering: pixelated;
     }
-    #menu {
-      display: none;
+    #colorPickerContainer {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background-color: rgba(255, 255, 255, 0.8);
-      padding: 20px;
-      border-radius: 10px;
+      display: none;
     }
   </style>
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
-  <div id="menu">
-    <label for="colorPicker">Lighting Color:</label>
-    <input type="color" id="colorPicker" value="#ffffff">
+  <div id="colorPickerContainer">
+    <label for="lightColorPicker">Select Lighting Color:</label>
+    <input type="color" id="lightColorPicker">
   </div>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
-    const menu = document.getElementById('menu');
-    const colorPicker = document.getElementById('colorPicker');
 
     const screenWidth = 800;
     const screenHeight = 600;
@@ -59,7 +54,10 @@
       isMouseLocked: false,
     };
 
-    let isPaused = false;
+    let paused = false;
+
+    // Lighting color
+    let lightColor = '#ffffff';
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -141,15 +139,11 @@
     }
 
     function togglePause() {
-      isPaused = !isPaused;
-      menu.style.display = isPaused ? 'block' : 'none';
+      paused = !paused;
 
-      // Pause or resume the game loop
-      if (isPaused) {
-        cancelAnimationFrame(animationFrameId);
-      } else {
-        gameLoop();
-      }
+      // Show/hide the color picker container based on pause state
+      const colorPickerContainer = document.getElementById('colorPickerContainer');
+      colorPickerContainer.style.display = paused ? 'block' : 'none';
     }
 
     function isWall(x, y) {
@@ -159,12 +153,6 @@
 
       return map[mapY][mapX] === 1;
     }
-
-    colorPicker.addEventListener('input', function() {
-      // Handle color change
-      const lightingColor = colorPicker.value;
-      // Use the lightingColor as needed (e.g., for shading walls)
-    });
 
     const keys = {};
 
@@ -183,11 +171,15 @@
       }
     });
 
+    // Color picker event listener
+    const colorPicker = document.getElementById('lightColorPicker');
+    colorPicker.addEventListener('input', (event) => {
+      lightColor = event.target.value;
+    });
+
     function update() {
       // Update game logic here
-      if (!isPaused) {
-        handleInput();
-      }
+      handleInput();
     }
 
     function draw() {
@@ -224,12 +216,14 @@
     }
 
     function gameLoop() {
-      update();
-      draw();
-      animationFrameId = requestAnimationFrame(gameLoop);
+      if (!paused) {
+        update();
+        draw();
+      }
+      requestAnimationFrame(gameLoop);
     }
 
-    let animationFrameId = requestAnimationFrame(gameLoop);
+    gameLoop();
   </script>
 </body>
 </html>
