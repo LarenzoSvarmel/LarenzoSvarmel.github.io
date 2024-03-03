@@ -21,6 +21,9 @@
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
+    // Enable antialiasing for smoother lines
+    ctx.imageSmoothingEnabled = true;
+
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
@@ -49,8 +52,6 @@
       specularPower: 10,
     };
 
-    let isMouseLocked = false;
-
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -58,7 +59,6 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      // Increment by small steps along the ray until a wall is hit
       while (true) {
         x += rayCos;
         y += raySin;
@@ -66,13 +66,11 @@
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
 
-        // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
           const brightness = Math.max(0, Math.min(1, 1 - distance / 300)) * light.brightness;
 
-          // Calculate specular highlight
           const dx = light.x - x;
           const dy = light.y - y;
           const distanceToLight = Math.sqrt(dx * dx + dy * dy);
@@ -92,7 +90,6 @@
     }
 
     function handleInput() {
-      // Handle player input
       if (keys['ArrowLeft']) {
         player.angle -= 0.05;
       }
@@ -119,27 +116,13 @@
           player.y = newY;
         }
       }
-      if (keys['L']) {
-        toggleMouseLock();
-      }
     }
 
     function isWall(x, y) {
-      // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
       const mapY = Math.floor(y / tileSize);
 
       return map[mapY][mapX] === 1;
-    }
-
-    function toggleMouseLock() {
-      isMouseLocked = !isMouseLocked;
-
-      if (isMouseLocked) {
-        canvas.requestPointerLock();
-      } else {
-        document.exitPointerLock();
-      }
     }
 
     const keys = {};
@@ -153,26 +136,17 @@
     });
 
     document.addEventListener('mousemove', (event) => {
-      if (isMouseLocked) {
-        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        player.angle += deltaX * 0.01;
-      }
-    });
-
-    document.addEventListener('pointerlockchange', () => {
-      isMouseLocked = document.pointerLockElement === canvas;
+      const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+      player.angle += deltaX * 0.01;
     });
 
     function update() {
-      // Update game logic here
       handleInput();
     }
 
     function draw() {
-      // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -185,7 +159,6 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Calculate final wall color with specular highlight
         const brightnessAdjusted = Math.floor(255 * ray.brightness);
         const specularAdjusted = Math.floor(255 * ray.specular);
         const wallColor = `rgb(${brightnessAdjusted + specularAdjusted}, ${brightnessAdjusted + specularAdjusted}, ${brightnessAdjusted + specularAdjusted})`;
@@ -194,21 +167,10 @@
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
 
-      // Draw light source
       ctx.fillStyle = 'yellow';
       ctx.beginPath();
       ctx.arc(light.x, light.y, 5, 0, 2 * Math.PI);
       ctx.fill();
-
-      // Draw crosshair
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(screenWidth / 2, screenHeight / 2 - 10);
-      ctx.lineTo(screenWidth / 2, screenHeight / 2 + 10);
-      ctx.moveTo(screenWidth / 2 - 10, screenHeight / 2);
-      ctx.lineTo(screenWidth / 2 + 10, screenHeight / 2);
-      ctx.stroke();
     }
 
     function gameLoop() {
