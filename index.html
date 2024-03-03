@@ -3,81 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Movement</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: #f0f0f0;
         }
 
-        #aiContainer {
-            position: relative;
-            width: 80vmin; /* Adjust the size as needed */
-            height: 80vmin; /* Adjust the size as needed */
-            background-color: #fff;
-            border: 2px solid #000;
-            border-radius: 50%;
-        }
-
-        #aiDot {
-            position: absolute;
-            width: 20px; /* Adjust the size of the AI dot */
-            height: 20px; /* Adjust the size of the AI dot */
-            background-color: blue;
-            border-radius: 50%;
-            transform-origin: 50% 50%;
-        }
-
-        #arrow {
-            position: absolute;
-            width: 0;
-            height: 0;
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-bottom: 20px solid red; /* Adjust the arrow color */
-            transform-origin: 50% 0;
+        canvas {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div id="aiContainer">
-        <div id="aiDot"></div>
-        <div id="arrow"></div>
-    </div>
+    <canvas id="aiCanvas"></canvas>
 
     <script>
-        const aiContainer = document.getElementById('aiContainer');
-        const aiDot = document.getElementById('aiDot');
-        const arrow = document.getElementById('arrow');
+        const canvas = document.getElementById('aiCanvas');
+        const ctx = canvas.getContext('2d');
 
-        let posX = aiContainer.offsetWidth / 2;
-        let posY = aiContainer.offsetHeight / 2;
-        let rotation = 0;
+        const ai = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: 20,
+            angle: 0,
+            speed: 2,
+            isMoving: false,
+            targetX: 0,
+            targetY: 0,
+        };
 
-        function updatePosition() {
-            aiDot.style.transform = `translate(-50%, -50%) translate(${posX}px, ${posY}px)`;
-            arrow.style.transform = `rotate(${rotation}deg) translate(-50%, -100%)`;
+        function drawAI() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw AI dot
+            ctx.fillStyle = 'blue';
+            ctx.beginPath();
+            ctx.arc(ai.x, ai.y, ai.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw arrow indicating AI direction
+            ctx.save();
+            ctx.translate(ai.x, ai.y);
+            ctx.rotate(ai.angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(ai.size * 2, 0);
+            ctx.lineTo(ai.size * 1.8, ai.size * 0.2);
+            ctx.lineTo(ai.size * 1.8, -ai.size * 0.2);
+            ctx.closePath();
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.restore();
+
+            // Draw line if AI is moving
+            if (ai.isMoving) {
+                ctx.beginPath();
+                ctx.moveTo(ai.x, ai.y);
+                ctx.lineTo(ai.targetX, ai.targetY);
+                ctx.strokeStyle = 'gray';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
         }
 
-        function moveAI(event) {
-            const bounds = aiContainer.getBoundingClientRect();
-            const mouseX = event.clientX - bounds.left;
-            const mouseY = event.clientY - bounds.top;
+        function updateAI() {
+            if (ai.isMoving) {
+                const dx = ai.targetX - ai.x;
+                const dy = ai.targetY - ai.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
-            posX = Math.max(0, Math.min(bounds.width, mouseX));
-            posY = Math.max(0, Math.min(bounds.height, mouseY));
+                if (distance > ai.speed) {
+                    ai.x += (dx / distance) * ai.speed;
+                    ai.y += (dy / distance) * ai.speed;
+                } else {
+                    ai.isMoving = false;
+                }
 
-            rotation = Math.atan2(mouseY - bounds.height / 2, mouseX - bounds.width / 2) * (180 / Math.PI);
-
-            updatePosition();
+                ai.angle = Math.atan2(dy, dx);
+            }
         }
 
-        aiContainer.addEventListener('mousemove', moveAI);
-        updatePosition(); // Initial position update
+        function onMouseDown(event) {
+            ai.isMoving = true;
+            ai.targetX = event.clientX - canvas.getBoundingClientRect().left;
+            ai.targetY = event.clientY - canvas.getBoundingClientRect().top;
+        }
+
+        function onMouseUp() {
+            ai.isMoving = false;
+        }
+
+        function onMouseMove(event) {
+            if (ai.isMoving) {
+                ai.targetX = event.clientX - canvas.getBoundingClientRect().left;
+                ai.targetY = event.clientY - canvas.getBoundingClientRect().top;
+            }
+        }
+
+        canvas.addEventListener('mousedown', onMouseDown);
+        canvas.addEventListener('mouseup', onMouseUp);
+        canvas.addEventListener('mousemove', onMouseMove);
+
+        function gameLoop() {
+            updateAI();
+            drawAI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Adjust canvas size based on the window size
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            drawAI();
+        });
+
+        // Initial setup
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gameLoop();
     </script>
 </body>
 </html>
