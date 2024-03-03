@@ -3,26 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Optimized Raycasting Demo</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
+      display: flex;
     }
     canvas {
       display: block;
       image-rendering: pixelated;
     }
+    #miniMapCanvas {
+      margin-left: auto;
+    }
   </style>
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
+  <canvas id="miniMapCanvas" width="200" height="150"></canvas>
   <script>
-    const canvas = document.getElementById('raycastingCanvas');
-    const ctx = canvas.getContext('2d');
+    const raycastingCanvas = document.getElementById('raycastingCanvas');
+    const rayCtx = raycastingCanvas.getContext('2d');
 
-    const screenWidth = canvas.width;
-    const screenHeight = canvas.height;
+    const miniMapCanvas = document.getElementById('miniMapCanvas');
+    const miniMapCtx = miniMapCanvas.getContext('2d');
+
+    const screenWidth = 800;
+    const screenHeight = 600;
+    const miniMapWidth = 200;
+    const miniMapHeight = 150;
     const tileSize = 32;
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -43,33 +53,27 @@
       isMouseLocked: false,
     };
 
-    // Precompute trigonometric values
-    const cosTable = [];
-    const sinTable = [];
-    for (let i = 0; i < screenWidth; i++) {
-      const angle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-      cosTable[i] = Math.cos(angle);
-      sinTable[i] = Math.sin(angle);
-    }
-
-    function castRay(rayAngle, cosAngle, sinAngle) {
+    function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
 
+      const raySin = Math.sin(rayAngle);
+      const rayCos = Math.cos(rayAngle);
+
       // Increment by small steps along the ray until a wall is hit
       while (true) {
-        x += cosAngle;
-        y += sinAngle;
+        x += rayCos;
+        y += raySin;
 
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
 
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
-          const distance = (x - player.x) ** 2 + (y - player.y) ** 2;
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
 
           // Apply fisheye correction
-          const correctedDistance = distance * cosAngle;
+          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
 
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * correctedDistance));
 
@@ -83,6 +87,31 @@
       }
     }
 
+    function drawMiniMap() {
+      miniMapCtx.clearRect(0, 0, miniMapWidth, miniMapHeight);
+
+      // Draw map
+      for (let row = 0; row < map.length; row++) {
+        for (let col = 0; col < map[row].length; col++) {
+          const tileX = col * (miniMapWidth / map[row].length);
+          const tileY = row * (miniMapHeight / map.length);
+          const tileWidth = miniMapWidth / map[row].length;
+          const tileHeight = miniMapHeight / map.length;
+
+          miniMapCtx.fillStyle = map[row][col] === 1 ? 'black' : 'white';
+          miniMapCtx.fillRect(tileX, tileY, tileWidth, tileHeight);
+        }
+      }
+
+      // Draw player position
+      const playerSize = 5;
+      const playerX = (player.x / tileSize) * (miniMapWidth / map[0].length);
+      const playerY = (player.y / tileSize) * (miniMapHeight / map.length);
+
+      miniMapCtx.fillStyle = 'red';
+      miniMapCtx.fillRect(playerX - playerSize / 2, playerY - playerSize / 2, playerSize, playerSize);
+    }
+
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
@@ -93,11 +122,8 @@
       }
       if (keys['ArrowUp']) {
         const moveStep = player.speed;
-        const cosAngle = Math.cos(player.angle) * moveStep;
-        const sinAngle = Math.sin(player.angle) * moveStep;
-
-        const newX = player.x + cosAngle;
-        const newY = player.y + sinAngle;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
 
         if (!isWall(newX, newY)) {
           player.x = newX;
@@ -106,11 +132,8 @@
       }
       if (keys['ArrowDown']) {
         const moveStep = player.speed;
-        const cosAngle = Math.cos(player.angle) * moveStep;
-        const sinAngle = Math.sin(player.angle) * moveStep;
-
-        const newX = player.x - cosAngle;
-        const newY = player.y - sinAngle;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
 
         if (!isWall(newX, newY)) {
           player.x = newX;
@@ -124,7 +147,7 @@
 
     function toggleMouseLock() {
       if (!player.isMouseLocked) {
-        canvas.requestPointerLock();
+        raycastingCanvas.requestPointerLock();
       } else {
         document.exitPointerLock();
       }
@@ -163,44 +186,38 @@
 
     function draw() {
       // Draw the raycasting scene here
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
+      rayCtx.clearRect(0, 0, screenWidth, screenHeight);
 
       // Draw sky
-      ctx.fillStyle = 'deepskyblue';
-      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
+      rayCtx.fillStyle = 'deepskyblue';
+      rayCtx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
       // Draw ground
-      ctx.fillStyle = 'saddlebrown';
-      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
+      rayCtx.fillStyle = 'saddlebrown';
+      rayCtx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
-        const cosAngle = cosTable[i];
-        const sinAngle = sinTable[i];
-        const ray = castRay(player.angle, cosAngle, sinAngle);
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle);
         rays.push(ray);
       }
 
-      // Batch drawing commands
-      const wallColors = [];
-      const wallRects = [];
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
-        wallColors.push(wallColor);
-        wallRects.push({ i, wallTop, wallHeight });
+
+        // Draw vertical lines for walls
+        rayCtx.fillStyle = wallColor;
+        rayCtx.fillRect(i, wallTop, 1, wallHeight);
       }
 
-      // Draw vertical lines for walls
-      wallRects.forEach(rect => {
-        const { i, wallTop, wallHeight } = rect;
-        ctx.fillStyle = wallColors[i];
-        ctx.fillRect(i, wallTop, 1, wallHeight);
-      });
+      // Draw player on the mini-map
+      drawMiniMap();
     }
 
     function gameLoop() {
