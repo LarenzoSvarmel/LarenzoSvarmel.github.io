@@ -37,10 +37,11 @@
     const player = {
       x: 100,
       y: 100,
-      horizontalAngle: 0,
-      verticalAngle: 0,
+      angle: 0,
+      verticalAngle: 0,  // Added for vertical aiming
       fov: Math.PI / 3,
       speed: 5,
+      rotationSpeed: 0.03,  // Added for smoother rotation
       isMouseLocked: false,
     };
 
@@ -50,13 +51,13 @@
 
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
-      const verticalSin = Math.sin(verticalAngle);
-      const verticalCos = Math.cos(verticalAngle);
+      const rayVerticalSin = Math.sin(verticalAngle);
+      const rayVerticalCos = Math.cos(verticalAngle);
 
       // Increment by small steps along the ray until a wall is hit
       while (true) {
-        x += rayCos * verticalCos;
-        y += raySin * verticalCos;
+        x += rayCos;
+        y += raySin;
 
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
@@ -66,7 +67,7 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
 
           // Apply fisheye correction
-          const correctedDistance = distance * Math.cos(rayAngle - player.horizontalAngle);
+          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
 
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * correctedDistance));
 
@@ -83,17 +84,41 @@
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
-        player.horizontalAngle -= 0.05;
+        player.angle -= player.rotationSpeed;
       }
       if (keys['ArrowRight']) {
-        player.horizontalAngle += 0.05;
+        player.angle += player.rotationSpeed;
       }
       if (keys['ArrowUp']) {
-        player.verticalAngle = Math.min(Math.PI / 2, player.verticalAngle + 0.05);
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
       if (keys['ArrowDown']) {
-        player.verticalAngle = Math.max(-Math.PI / 2, player.verticalAngle - 0.05);
+        const moveStep = player.speed;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
+
+      // Vertical aiming with the mouse
+      if (player.isMouseLocked) {
+        const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+        player.verticalAngle -= deltaY * 0.01;
+        
+        // Limit vertical angle to avoid looking too high or too low
+        player.verticalAngle = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.verticalAngle));
+      }
+
       if (keys['KeyL']) {
         toggleMouseLock();
       }
@@ -129,10 +154,7 @@
     document.addEventListener('mousemove', (event) => {
       if (player.isMouseLocked) {
         const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-
-        player.horizontalAngle += deltaX * 0.01;
-        player.verticalAngle = Math.min(Math.PI / 2, Math.max(-Math.PI / 2, player.verticalAngle + deltaY * 0.01));
+        player.angle += deltaX * 0.01;
       }
     });
 
@@ -156,8 +178,8 @@
       // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.horizontalAngle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle, player.verticalAngle);
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle, player.verticalAngle);  // Pass vertical angle
         rays.push(ray);
       }
 
