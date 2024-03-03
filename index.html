@@ -43,6 +43,8 @@
       isMouseLocked: false,
     };
 
+    const lightColor = '#FFD700'; // Light source color
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -182,15 +184,28 @@
         rays.push(ray);
       }
 
+      // Light intensity based on distance
+      const maxDistance = Math.sqrt((screenWidth / 2) ** 2 + (screenHeight / 2) ** 2);
+
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+        // Calculate light intensity based on distance
+        const lightIntensity = 1 - ray.distance / maxDistance;
+
+        // Darken walls and floor, lighten light sources
+        const wallColor = `rgb(${Math.floor(50 + lightIntensity * 205)}, ${Math.floor(50 + lightIntensity * 205)}, ${Math.floor(50 + lightIntensity * 205)})`;
 
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
+
+        // Draw light source
+        if (lightIntensity > 0.8) {
+          ctx.fillStyle = lightColor;
+          ctx.fillRect(i, wallTop, 1, wallHeight);
+        }
       }
     }
 
