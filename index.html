@@ -204,6 +204,9 @@
 
                 // Check for collisions with enemies
                 checkCollisions();
+
+                // Update enemy positions
+                moveEnemies();
             }
         }
 
@@ -260,6 +263,19 @@
                 y: Math.random() * canvas.height,
                 size: 15,
                 health: 100,
+            });
+        }
+
+        function moveEnemies() {
+            enemies.forEach(enemy => {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > enemy.size) {
+                    enemy.x += (dx / distance) * enemy.size * 0.02;
+                    enemy.y += (dy / distance) * enemy.size * 0.02;
+                }
             });
         }
 
