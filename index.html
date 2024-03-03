@@ -81,7 +81,9 @@
       if (keys['ArrowRight']) {
         player.angle += 0.05;
       }
-      if (keys['ArrowUp']) {
+
+      // Move forward and backward without rotating the camera angle
+      if (keys['ArrowUp'] || keys['KeyW']) {
         const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle) * moveStep;
         const newY = player.y + Math.sin(player.angle) * moveStep;
@@ -91,7 +93,7 @@
           player.y = newY;
         }
       }
-      if (keys['ArrowDown']) {
+      if (keys['ArrowDown'] || keys['KeyS']) {
         const moveStep = player.speed;
         const newX = player.x - Math.cos(player.angle) * moveStep;
         const newY = player.y - Math.sin(player.angle) * moveStep;
