@@ -29,6 +29,9 @@
             angle: 0,
             speed: 2,
             baseSpeed: 2,
+            stamina: 100, // Initial stamina value
+            maxStamina: 100, // Maximum stamina value
+            staminaRecoveryRate: 1, // Stamina recovery rate per frame
             isMoving: false,
             targetX: 0,
             targetY: 0,
@@ -94,6 +97,11 @@
 
             // Draw weapon type text
             ctx.fillText(`Weapon: ${player.weaponType}`, 10, 40);
+
+            // Draw stamina meter
+            const staminaWidth = (player.stamina / player.maxStamina) * 100;
+            ctx.fillStyle = 'green';
+            ctx.fillRect(10, 60, staminaWidth, 10);
         }
 
         function updatePlayer() {
@@ -110,6 +118,16 @@
                 }
 
                 player.angle = Math.atan2(dy, dx);
+
+                // Consume stamina when moving
+                if (player.stamina > 0) {
+                    player.stamina -= 0.5;
+                }
+            } else {
+                // Recover stamina when not moving
+                if (player.stamina < player.maxStamina) {
+                    player.stamina += player.staminaRecoveryRate;
+                }
             }
 
             // Update bullet positions
@@ -130,6 +148,13 @@
                     player.ammo += ammoToReload;
                     player.reloading = false;
                 }, player.reloadTime);
+            }
+
+            // Speed adjustment with stamina
+            if (player.isMoving && player.stamina > 0) {
+                player.speed = player.baseSpeed + 5;
+            } else {
+                player.speed = player.baseSpeed;
             }
         }
 
@@ -168,7 +193,7 @@
         function onKeyDown(event) {
             if (event.code === 'Space') {
                 shoot();
-            } else if (event.code === 'ShiftLeft') {
+            } else if (event.code === 'ShiftLeft' && player.stamina > 0) {
                 player.speed = player.baseSpeed + 5;
             }
         }
@@ -178,12 +203,6 @@
                 player.speed = player.baseSpeed;
             }
         }
-
-        canvas.addEventListener('mousedown', onMouseDown);
-        canvas.addEventListener('mouseup', onMouseUp);
-        canvas.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('keyup', onKeyUp);
 
         function gameLoop() {
             updatePlayer();
