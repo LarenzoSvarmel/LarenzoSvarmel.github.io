@@ -37,8 +37,7 @@
     const player = {
       x: 100,
       y: 100,
-      horizontalAngle: 0,
-      verticalAngle: 0,
+      angle: 0,
       fov: Math.PI / 3,
       speed: 5,
     };
@@ -67,7 +66,7 @@
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.horizontalAngle)));
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
           const brightness = Math.max(0, Math.min(1, 1 - distance / 300)) * light.brightness;
 
           return {
@@ -84,16 +83,30 @@
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
-        player.horizontalAngle -= 0.05;
+        player.angle -= 0.05;
       }
       if (keys['ArrowRight']) {
-        player.horizontalAngle += 0.05;
+        player.angle += 0.05;
       }
       if (keys['ArrowUp']) {
-        player.verticalAngle = Math.min(Math.PI / 2, player.verticalAngle + 0.05);
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
       if (keys['ArrowDown']) {
-        player.verticalAngle = Math.max(-Math.PI / 2, player.verticalAngle - 0.05);
+        const moveStep = player.speed;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
     }
 
@@ -117,9 +130,7 @@
 
     document.addEventListener('mousemove', (event) => {
       const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-      const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-      player.horizontalAngle += deltaX * 0.01;
-      player.verticalAngle = Math.min(Math.PI / 2, Math.max(-Math.PI / 2, player.verticalAngle + deltaY * 0.01));
+      player.angle += deltaX * 0.01;
     });
 
     function update() {
@@ -134,7 +145,7 @@
       // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.horizontalAngle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
         rays.push(ray);
       }
