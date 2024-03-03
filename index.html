@@ -21,7 +21,7 @@
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
-  <canvas id="miniMapCanvas" width="500" height="600"></canvas>
+  <canvas id="miniMapCanvas" width="500" height="400"></canvas>
   <script>
     const raycastingCanvas = document.getElementById('raycastingCanvas');
     const rayCtx = raycastingCanvas.getContext('2d');
@@ -32,7 +32,7 @@
     const screenWidth = 800;
     const screenHeight = 600;
     const miniMapWidth = 500;
-    const miniMapHeight = 600;
+    const miniMapHeight = 400;
     const tileSize = 32;
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
