@@ -24,17 +24,14 @@
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
-    const mapWidth = 20;
-    const mapHeight = 15;
-
     const map = [
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
-      [1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1],
-      [1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1],
     ];
 
     const player = {
@@ -44,12 +41,6 @@
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
-    };
-
-    const sprite = {
-      x: 200,
-      y: 150,
-      size: 10,
     };
 
     function castRay(rayAngle) {
@@ -110,8 +101,27 @@
           player.y = newY;
         }
       }
-      if (keys['KeyL']) {
-        toggleMouseLock();
+
+      // Move left and right without rotating the camera angle
+      if (keys['KeyA']) {
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle - Math.PI / 2) * moveStep;
+        const newY = player.y + Math.sin(player.angle - Math.PI / 2) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
+      }
+      if (keys['KeyD']) {
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle + Math.PI / 2) * moveStep;
+        const newY = player.y + Math.sin(player.angle + Math.PI / 2) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
     }
 
@@ -149,28 +159,15 @@
       }
     });
 
+    document.addEventListener('keydown', (event) => {
+      if (event.code === 'KeyL') {
+        toggleMouseLock();
+      }
+    });
+
     function update() {
       // Update game logic here
       handleInput();
-      updateSprite();
-    }
-
-    function updateSprite() {
-      // Update sprite position based on player's position
-      const relativeX = sprite.x - player.x;
-      const relativeY = sprite.y - player.y;
-      const spriteDistance = Math.sqrt(relativeX ** 2 + relativeY ** 2);
-      const spriteAngle = Math.atan2(relativeY, relativeX) - player.angle;
-
-      // Calculate sprite position in screen coordinates
-      const spriteScreenX = Math.tan(spriteAngle) * screenWidth / 2;
-
-      // Draw the sprite
-      const spriteSize = (screenHeight / spriteDistance) * sprite.size;
-      const spriteTop = (screenHeight - spriteSize) / 2;
-
-      ctx.fillStyle = 'red';
-      ctx.fillRect(screenWidth / 2 + spriteScreenX - spriteSize / 2, spriteTop, spriteSize, spriteSize);
     }
 
     function draw() {
