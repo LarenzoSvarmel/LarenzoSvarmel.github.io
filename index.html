@@ -21,7 +21,7 @@
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
-  <canvas id="miniMapCanvas" width="800" height="600"></canvas>
+  <canvas id="miniMapCanvas" width="200" height="150"></canvas>
   <script>
     const raycastingCanvas = document.getElementById('raycastingCanvas');
     const rayCtx = raycastingCanvas.getContext('2d');
@@ -162,23 +162,6 @@
       return map[mapY][mapX] === 1;
     }
 
-    const keys = {};
-
-    document.addEventListener('keydown', (event) => {
-      keys[event.code] = true;
-    });
-
-    document.addEventListener('keyup', (event) => {
-      keys[event.code] = false;
-    });
-
-    document.addEventListener('mousemove', (event) => {
-      if (player.isMouseLocked) {
-        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        player.angle += deltaX * 0.01;
-      }
-    });
-
     function update() {
       // Update game logic here
       handleInput();
@@ -227,6 +210,22 @@
     }
 
     gameLoop();
+
+    miniMapCanvas.addEventListener('click', (event) => {
+      const rect = miniMapCanvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+
+      const mapX = Math.floor((mouseX / miniMapWidth) * map[0].length);
+      const mapY = Math.floor((mouseY / miniMapHeight) * map.length);
+
+      // Toggle wall at the clicked position
+      map[mapY][mapX] = map[mapY][mapX] === 1 ? 0 : 1;
+
+      // Redraw the mini-map and the raycasting scene
+      drawMiniMap();
+      draw();
+    });
   </script>
 </body>
 </html>
