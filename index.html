@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo</title>
+  <title>Raycasting Demo with Skybox</title>
   <style>
     body {
       margin: 0;
@@ -12,6 +12,7 @@
     canvas {
       display: block;
       image-rendering: pixelated;
+      position: absolute;
     }
   </style>
 </head>
@@ -41,7 +42,6 @@
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
-      headbob: 0,
     };
 
     function castRay(rayAngle) {
@@ -92,7 +92,6 @@
         if (!isWall(newX, newY)) {
           player.x = newX;
           player.y = newY;
-          player.headbob = Math.sin(new Date().getTime() / 100) * 2; // Adjust headbob intensity and frequency
         }
       }
       if (keys['ArrowDown'] || keys['KeyS']) {
@@ -103,7 +102,6 @@
         if (!isWall(newX, newY)) {
           player.x = newX;
           player.y = newY;
-          player.headbob = Math.sin(new Date().getTime() / 100) * 2; // Adjust headbob intensity and frequency
         }
       }
 
@@ -175,9 +173,18 @@
       handleInput();
     }
 
+    function drawSkybox() {
+      // Draw the skybox with clouds
+      ctx.fillStyle = '#87CEEB'; // Light blue for the sky
+      ctx.fillRect(0, 0, screenWidth, screenHeight);
+
+      // Draw clouds (assumed you have cloud textures)
+      // Example: ctx.drawImage(cloudTexture, cloudX, cloudY, cloudWidth, cloudHeight);
+    }
+
     function draw() {
-      // Draw the raycasting scene here
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
+      // Draw the skybox with clouds
+      drawSkybox();
 
       // Draw walls
       const rays = [];
@@ -190,7 +197,7 @@
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
         const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2 + player.headbob; // Apply headbob to wallTop
+        const wallTop = (screenHeight - wallHeight) / 2;
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
