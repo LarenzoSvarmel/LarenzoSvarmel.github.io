@@ -23,15 +23,107 @@
     const screenWidth = 800;
     const screenHeight = 600;
 
+    class Vector3 {
+      constructor(x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+      }
+
+      add(vector) {
+        return new Vector3(this.x + vector.x, this.y + vector.y, this.z + vector.z);
+      }
+
+      subtract(vector) {
+        return new Vector3(this.x - vector.x, this.y - vector.y, this.z - vector.z);
+      }
+
+      multiplyScalar(scalar) {
+        return new Vector3(this.x * scalar, this.y * scalar, this.z * scalar);
+      }
+
+      cross(vector) {
+        return new Vector3(
+          this.y * vector.z - this.z * vector.y,
+          this.z * vector.x - this.x * vector.z,
+          this.x * vector.y - this.y * vector.x
+        );
+      }
+    }
+
+    class Matrix4 {
+      constructor() {
+        this.elements = new Array(16).fill(0);
+      }
+
+      set(row, col, value) {
+        this.elements[row * 4 + col] = value;
+      }
+
+      static identity() {
+        const matrix = new Matrix4();
+        for (let i = 0; i < 4; i++) {
+          matrix.set(i, i, 1);
+        }
+        return matrix;
+      }
+
+      static perspective(fov, aspect, near, far) {
+        const matrix = new Matrix4();
+        const tanHalfFov = Math.tan(fov / 2);
+        matrix.set(0, 0, 1 / (tanHalfFov * aspect));
+        matrix.set(1, 1, 1 / tanHalfFov);
+        matrix.set(2, 2, (near + far) / (near - far));
+        matrix.set(2, 3, (2 * near * far) / (near - far));
+        matrix.set(3, 2, -1);
+        return matrix;
+      }
+
+      multiplyVector(vector) {
+        const result = new Vector3(
+          this.elements[0] * vector.x + this.elements[4] * vector.y + this.elements[8] * vector.z + this.elements[12],
+          this.elements[1] * vector.x + this.elements[5] * vector.y + this.elements[9] * vector.z + this.elements[13],
+          this.elements[2] * vector.x + this.elements[6] * vector.y + this.elements[10] * vector.z + this.elements[14]
+        );
+        const w = this.elements[3] * vector.x + this.elements[7] * vector.y + this.elements[11] * vector.z + this.elements[15];
+        return result.multiplyScalar(1 / w);
+      }
+    }
+
+    class Camera {
+      constructor(position, rotation, fov, aspect, near, far) {
+        this.position = position;
+        this.rotation = rotation;
+        this.projectionMatrix = Matrix4.perspective(fov, aspect, near, far);
+      }
+
+      getViewMatrix() {
+        const rotationMatrix = new Matrix4();
+        rotationMatrix.set(0, 0, Math.cos(this.rotation.y));
+        rotationMatrix.set(0, 2, -Math.sin(this.rotation.y));
+        rotationMatrix.set(2, 0, Math.sin(this.rotation.y));
+        rotationMatrix.set(2, 2, Math.cos(this.rotation.y));
+
+        const translationMatrix = new Matrix4();
+        translationMatrix.set(0, 3, -this.position.x);
+        translationMatrix.set(1, 3, -this.position.y);
+        translationMatrix.set(2, 3, -this.position.z);
+
+        return rotationMatrix.multiply(translationMatrix);
+      }
+    }
+
+    const camera = new Camera(new Vector3(0, 0, 5), new Vector3(0, 0, 0), Math.PI / 3, screenWidth / screenHeight, 0.1, 100);
+
     const vertices = [
-      { x: -1, y: -1, z: -1 },
-      { x:  1, y: -1, z: -1 },
-      { x:  1, y:  1, z: -1 },
-      { x: -1, y:  1, z: -1 },
-      { x: -1, y: -1, z:  1 },
-      { x:  1, y: -1, z:  1 },
-      { x:  1, y:  1, z:  1 },
-      { x: -1, y:  1, z:  1 },
+      new Vector3(-1, -1, -1),
+      new Vector3(1, -1, -1),
+      new Vector3(1, 1, -1),
+      new Vector3(-1, 1, -1),
+      new Vector3(-1, -1, 1),
+      new Vector3(1, -1, 1),
+      new Vector3(1, 1, 1),
+      new Vector3(-1, 1, 1),
     ];
 
     const faces = [
@@ -43,107 +135,35 @@
       [0, 1, 5, 4], // Bottom face
     ];
 
-    const camera = {
-      position: { x: 0, y: 0, z: 5 },
-      rotation: { x: 0, y: 0, z: 0 },
-      fov: Math.PI / 3,
-      speed: 0.1,
-    };
-
-    function createPerspectiveMatrix(fov, aspect, near, far) {
-      const tanHalfFov = Math.tan(fov / 2);
-      const range = near - far;
-
-      return [
-        [1 / (tanHalfFov * aspect), 0, 0, 0],
-        [0, 1 / tanHalfFov, 0, 0],
-        [0, 0, (near + far) / range, 2 * near * far / range],
-        [0, 0, -1, 0],
-      ];
-    }
-
-    function multiplyMatrixVector(matrix, vector) {
-      const result = [0, 0, 0, 0];
-
-      for (let i = 0; i < 4; i++) {
-        result[i] = 0;
-        for (let j = 0; j < 4; j++) {
-          result[i] += matrix[i][j] * vector[j];
-        }
-      }
-
-      return result;
-    }
-
-    function createCameraMatrix(position, rotation) {
-      const translationMatrix = [
-        [1, 0, 0, -position.x],
-        [0, 1, 0, -position.y],
-        [0, 0, 1, -position.z],
-        [0, 0, 0, 1],
-      ];
-
-      const rotationMatrix = [
-        [Math.cos(rotation.y), -Math.sin(rotation.y), 0, 0],
-        [Math.sin(rotation.y), Math.cos(rotation.y), 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-      ];
-
-      return multiplyMatrices(rotationMatrix, translationMatrix);
-    }
-
-    function multiplyMatrices(a, b) {
-      const result = [];
-      for (let i = 0; i < a.length; i++) {
-        result[i] = [];
-        for (let j = 0; j < b[0].length; j++) {
-          let sum = 0;
-          for (let k = 0; k < a[0].length; k++) {
-            sum += a[i][k] * b[k][j];
-          }
-          result[i][j] = sum;
-        }
-      }
-      return result;
-    }
-
-    function project(vertex, perspectiveMatrix, cameraMatrix) {
-      const vertex4D = [vertex.x, vertex.y, vertex.z, 1];
-      const transformedVertex = multiplyMatrixVector(cameraMatrix, vertex4D);
-      const projectedVertex = multiplyMatrixVector(perspectiveMatrix, transformedVertex);
-
+    function project(vertex, viewMatrix, projectionMatrix) {
+      const viewProjectionMatrix = projectionMatrix.multiply(viewMatrix);
+      const transformedVertex = viewProjectionMatrix.multiplyVector(vertex);
       return {
-        x: projectedVertex[0] / projectedVertex[3],
-        y: projectedVertex[1] / projectedVertex[3],
+        x: (transformedVertex.x + 1) * screenWidth / 2,
+        y: (1 - transformedVertex.y) * screenHeight / 2,
       };
     }
 
     function draw() {
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      const perspectiveMatrix = createPerspectiveMatrix(camera.fov, screenWidth / screenHeight, 0.1, 100);
-      const cameraMatrix = createCameraMatrix(camera.position, camera.rotation);
+      const viewMatrix = camera.getViewMatrix();
 
-      const rotatedVertices = vertices.map((vertex) => {
-        const x = vertex.x * Math.cos(camera.rotation.y) - vertex.z * Math.sin(camera.rotation.y);
-        const z = vertex.x * Math.sin(camera.rotation.y) + vertex.z * Math.cos(camera.rotation.y);
-        return { x, y: vertex.y, z };
-      });
-
-      faces.forEach((face) => {
-        const screenVertices = face.map((vertexIndex) => project(rotatedVertices[vertexIndex], perspectiveMatrix, cameraMatrix));
-
+      for (const face of faces) {
         ctx.beginPath();
-        ctx.moveTo(screenVertices[0].x * screenWidth, screenVertices[0].y * screenHeight);
+        const vertex = vertices[face[0]];
+        const projectedVertex = project(vertex, viewMatrix, camera.projectionMatrix);
+        ctx.moveTo(projectedVertex.x, projectedVertex.y);
 
-        for (let i = 1; i < screenVertices.length; i++) {
-          ctx.lineTo(screenVertices[i].x * screenWidth, screenVertices[i].y * screenHeight);
+        for (let i = 1; i < face.length; i++) {
+          const vertex = vertices[face[i]];
+          const projectedVertex = project(vertex, viewMatrix, camera.projectionMatrix);
+          ctx.lineTo(projectedVertex.x, projectedVertex.y);
         }
 
         ctx.closePath();
         ctx.stroke();
-      });
+      }
     }
 
     function update() {
