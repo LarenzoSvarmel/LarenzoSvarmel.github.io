@@ -41,6 +41,10 @@
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
+      isJumping: false,
+      jumpHeight: 50, // Adjust as needed
+      jumpDuration: 500, // Jump duration in milliseconds
+      jumpStartTime: 0,
     };
 
     function castRay(rayAngle) {
@@ -80,6 +84,22 @@
       }
       if (keys['ArrowRight']) {
         player.angle += 0.05;
+      }
+
+      // Jumping logic
+      if (keys['Space'] && !player.isJumping) {
+        player.isJumping = true;
+        player.jumpStartTime = Date.now();
+      }
+
+      if (player.isJumping) {
+        const elapsedTime = Date.now() - player.jumpStartTime;
+        if (elapsedTime < player.jumpDuration) {
+          // Simulate jumping by moving the camera up slightly
+          player.y -= player.jumpHeight * (elapsedTime / player.jumpDuration);
+        } else {
+          player.isJumping = false;
+        }
       }
 
       // Move forward and backward without rotating the camera angle
