@@ -13,23 +13,13 @@
       display: block;
       image-rendering: pixelated;
     }
-    #fpsCounter {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      font-family: 'Arial', sans-serif;
-      font-size: 14px;
-      color: white;
-    }
   </style>
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
-  <div id="fpsCounter">FPS: 0</div>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
-    const fpsCounter = document.getElementById('fpsCounter');
 
     const screenWidth = 800;
     const screenHeight = 600;
@@ -51,9 +41,6 @@
       fov: Math.PI / 3,
       speed: 5,
     };
-
-    let lastTimestamp = 0;
-    let fps = 0;
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -138,17 +125,9 @@
       player.angle += deltaX * 0.01;
     });
 
-    function update(timestamp) {
+    function update() {
       // Update game logic here
       handleInput();
-
-      // Calculate FPS
-      const elapsedMilliseconds = timestamp - lastTimestamp;
-      if (elapsedMilliseconds >= 1000) {
-        fps = Math.round(1000 / elapsedMilliseconds);
-        lastTimestamp = timestamp;
-        fpsCounter.textContent = `FPS: ${fps}`;
-      }
     }
 
     function draw() {
@@ -170,13 +149,14 @@
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
+        // Adjust the starting point for drawing the walls to center them
         ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
+        ctx.fillRect(i - (screenWidth - ray.distance * 2) / 2, wallTop, 1, wallHeight);
       }
     }
 
-    function gameLoop(timestamp) {
-      update(timestamp);
+    function gameLoop() {
+      update();
       draw();
       requestAnimationFrame(gameLoop);
     }
