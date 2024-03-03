@@ -57,6 +57,9 @@
       isMouseLocked: false,
     };
 
+    const skyboxImage = new Image();
+    skyboxImage.src = 'your_skybox_image_url.jpg'; // Replace with the URL of your skybox image
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -175,6 +178,9 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Draw skybox
+      ctx.drawImage(skyboxImage, 0, 0, canvas.width, canvas.height);
+
       // Draw walls
       const rays = [];
       for (let i = 0; i < canvas.width; i++) {
@@ -194,11 +200,9 @@
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
 
-      // Draw sky and floor
-      ctx.fillStyle = "#666"; // You can change the color to match your design
-      ctx.fillRect(0, 0, canvas.width, canvas.height / 2 - screenHeight / 2); // Sky
-      ctx.fillStyle = "#333"; // You can change the color to match your design
-      ctx.fillRect(0, canvas.height / 2 + screenHeight / 2, canvas.width, canvas.height / 2); // Floor
+      // Draw floor with a green color
+      ctx.fillStyle = "#008000"; // Green color for the floor
+      ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
     }
 
     function gameLoop() {
@@ -208,7 +212,7 @@
     }
 
     updateCanvasSize(); // Set initial canvas size
-    gameLoop();
+    skyboxImage.onload = gameLoop; // Start the game loop once the skybox image is loaded
   </script>
 </body>
 </html>
