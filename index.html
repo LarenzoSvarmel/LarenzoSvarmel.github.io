@@ -44,32 +44,43 @@
     };
 
     function castRay(rayAngle) {
-      let x = player.x;
-      let y = player.y;
+  let x = player.x;
+  let y = player.y;
 
-      const raySin = Math.sin(rayAngle);
-      const rayCos = Math.cos(rayAngle);
+  const raySin = Math.sin(rayAngle);
+  const rayCos = Math.cos(rayAngle);
 
-      // Increment by small steps along the ray until a wall is hit
-      while (true) {
-        x += rayCos;
-        y += raySin;
+  let distance = 0;
+  let hitWall = false;
 
-        const mapX = Math.floor(x / tileSize);
-        const mapY = Math.floor(y / tileSize);
+  // Increment by small steps along the ray until a wall is hit
+  while (!hitWall && distance < 1000) {
+    x += rayCos * 5;
+    y += raySin * 5;
 
-        // Check if the ray hit a wall
-        if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
+    const mapX = Math.floor(x / tileSize);
+    const mapY = Math.floor(y / tileSize);
 
-          return {
-            x: x,
-            y: y,
-            distance: distance,
-            height: wallHeight,
-          };
-        }
+    // Check if the ray hit a wall
+    if (map[mapY] && map[mapY][mapX] === 1) {
+      hitWall = true;
+    }
+
+    distance += 5;
+  }
+
+  // Apply perspective projection
+  const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (distance * Math.cos(rayAngle - player.angle)));
+
+  return {
+    x: x,
+    y: y,
+    distance: distance,
+    height: wallHeight,
+    hitWall: hitWall,
+  };
+}
+
       }
     }
 
@@ -159,6 +170,16 @@
 
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
+
+if (ray.hitWall) {
+      const wallHeight = ray.height;
+      const wallTop = (screenHeight - wallHeight) / 2;
+
+      const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+
+      ctx.fillStyle = wallColor;
+      ctx.fillRect(i, wallTop, 1, wallHeight);
+
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
