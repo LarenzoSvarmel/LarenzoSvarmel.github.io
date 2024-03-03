@@ -8,15 +8,10 @@
     body {
       margin: 0;
       overflow: hidden;
-      background-color: #111;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
     }
     canvas {
+      display: block;
       image-rendering: pixelated;
-      border: 2px solid #fff;
     }
   </style>
 </head>
@@ -48,11 +43,6 @@
       isMouseLocked: false,
     };
 
- const light = {
-      ambient: 0.2,
-      direction: Math.PI / 4, // Light direction angle
-    };
-
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -73,69 +63,48 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-// Calculate shading based on lighting
-          const shading = calculateShading(rayAngle, distance);
-
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-          shading: shading,
           };
         }
       }
     }
 
-function calculateShading(rayAngle, distance) {
-      // Calculate directional light intensity based on the angle difference
-      const angleDifference = Math.abs(rayAngle - light.direction);
-      const directionalIntensity = Math.cos(angleDifference);
-
-      // Combine ambient and directional light
-      const totalIntensity = light.ambient + (1 - light.ambient) * directionalIntensity;
-
-      // Apply inverse square law for distance attenuation
-      const distanceAttenuation = 1 / (distance * distance);
-
-      // Final shading factor
-      const shading = totalIntensity * distanceAttenuation;
-
-      return shading;
-    }
-
     function handleInput() {
-  // Handle player input
-  if (keys['ArrowLeft']) {
-    player.angle -= player.rotationSpeed; // Adjusted based on rotation speed
-  }
-  if (keys['ArrowRight']) {
-    player.angle += player.rotationSpeed; // Adjusted based on rotation speed
-  }
-  if (keys['ArrowUp']) {
-    const moveStep = player.speed;
-    const newX = player.x + Math.cos(player.angle) * moveStep;
-    const newY = player.y + Math.sin(player.angle) * moveStep;
+      // Handle player input
+      if (keys['ArrowLeft']) {
+        player.angle -= 0.05;
+      }
+      if (keys['ArrowRight']) {
+        player.angle += 0.05;
+      }
+      if (keys['ArrowUp']) {
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
 
-    if (!isWall(newX, newY)) {
-      player.x = newX;
-      player.y = newY;
-    }
-  }
-  if (keys['ArrowDown']) {
-    const moveStep = player.speed;
-    const newX = player.x - Math.cos(player.angle) * moveStep;
-    const newY = player.y - Math.sin(player.angle) * moveStep;
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
+      }
+      if (keys['ArrowDown']) {
+        const moveStep = player.speed;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
 
-    if (!isWall(newX, newY)) {
-      player.x = newX;
-      player.y = newY;
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
+      }
+      if (keys['KeyL']) {
+        toggleMouseLock();
+      }
     }
-  }
-  if (keys['KeyL']) {
-    toggleMouseLock();
-  }
-}
 
     function toggleMouseLock() {
       if (!player.isMouseLocked) {
@@ -180,7 +149,7 @@ function calculateShading(rayAngle, distance) {
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls with gradients
+      // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -193,23 +162,9 @@ function calculateShading(rayAngle, distance) {
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
- // Calculate shading color based on shading factor
-        const shadingColor = Math.floor(255 - ray.shading * 50);
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
-
-        const gradient = ctx.createLinearGradient(i, wallTop, i, wallTop + wallHeight);
-        gradient.addColorStop(0, '#222');
-        gradient.addColorStop(1, '#111');
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
-
-        // Draw shadows
-        const shadowGradient = ctx.createLinearGradient(i, wallTop, i, wallTop + wallHeight);
-        shadowGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
-
-        ctx.fillStyle = shadowGradient;
+        ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
