@@ -27,7 +27,7 @@
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1],
       [1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
       [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -123,21 +123,6 @@
       return map[mapY][mapX] === 1;
     }
 
-    function lerp(start, end, t) {
-      return start + t * (end - start);
-    }
-
-    function calculateShading(rayAngle, hitAngle) {
-      const ambientLight = 0.3;
-      const directionalLight = 0.7;
-
-      // Calculate shading based on dot product
-      const dotProduct = Math.cos(rayAngle - hitAngle);
-      const shading = Math.max(ambientLight + directionalLight * dotProduct, 0);
-
-      return shading;
-    }
-
     const keys = {};
 
     document.addEventListener('keydown', (event) => {
@@ -164,12 +149,12 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw skybox (blue background)
-      ctx.fillStyle = 'rgb(135, 206, 250)'; // Light blue color
+      // Draw sky
+      ctx.fillStyle = 'deepskyblue';
       ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
       // Draw ground
-      ctx.fillStyle = 'rgb(46, 139, 87)'; // Green color
+      ctx.fillStyle = 'saddlebrown';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw walls
@@ -185,11 +170,7 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Linear interpolation for smoother transitions
-        const brightness = lerp(1, 0.5, i / screenWidth);
-        const shading = calculateShading(player.angle, rayAngle);
-
-        const wallColor = `rgb(${brightness * (255 - ray.distance * 2) * shading}, ${brightness * (255 - ray.distance * 2) * shading}, ${brightness * (255 - ray.distance * 2) * shading})`;
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
         // Draw vertical lines for walls
         ctx.fillStyle = wallColor;
