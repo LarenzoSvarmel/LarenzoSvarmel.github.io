@@ -38,17 +38,19 @@
       x: 100,
       y: 100,
       angle: 0,
+      pitch: 0,
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
     };
 
-    function castRay(rayAngle) {
+    function castRay(rayAngle, rayPitch) {
       let x = player.x;
       let y = player.y;
 
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
+      const pitchCos = Math.cos(rayPitch);
 
       // Increment by small steps along the ray until a wall is hit
       while (true) {
@@ -61,7 +63,7 @@
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle) * pitchCos));
 
           return {
             x: x,
@@ -136,7 +138,10 @@
     document.addEventListener('mousemove', (event) => {
       if (player.isMouseLocked) {
         const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
         player.angle += deltaX * 0.01;
+        player.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.pitch - deltaY * 0.01));
       }
     });
 
@@ -153,7 +158,8 @@
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
+        const rayPitch = player.pitch;
+        const ray = castRay(rayAngle, rayPitch);
         rays.push(ray);
       }
 
