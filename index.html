@@ -67,7 +67,7 @@
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
-          const brightness = Math.max(0, Math.min(1, 1 - distance / 300)) * light.brightness;
+          const brightness = calculateAmbientOcclusion(x, y, rayAngle) * light.brightness;
 
           return {
             x: x,
@@ -78,6 +78,26 @@
           };
         }
       }
+    }
+
+    function calculateAmbientOcclusion(x, y, rayAngle) {
+      // Simulate ambient occlusion by checking nearby walls
+      let occlusion = 0;
+
+      for (let i = -Math.PI / 4; i <= Math.PI / 4; i += Math.PI / 8) {
+        const checkAngle = rayAngle + i;
+        const checkX = x + Math.cos(checkAngle);
+        const checkY = y + Math.sin(checkAngle);
+
+        const mapX = Math.floor(checkX / tileSize);
+        const mapY = Math.floor(checkY / tileSize);
+
+        if (map[mapY][mapX] === 1) {
+          occlusion += 0.2; // Increase occlusion if a nearby wall is found
+        }
+      }
+
+      return 1 - occlusion;
     }
 
     function handleInput() {
