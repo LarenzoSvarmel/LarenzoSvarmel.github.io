@@ -34,8 +34,8 @@
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
-    const screenWidth = 800;
-    const screenHeight = 600;
+    let screenWidth = 800;
+    let screenHeight = 600;
     let renderingResolution = 1; // Initial rendering resolution
     const tileSize = 32;
     const map = [
@@ -160,8 +160,10 @@
     });
 
     function updateCanvasSize() {
-      canvas.width = screenWidth * renderingResolution;
-      canvas.height = screenHeight * renderingResolution;
+      screenWidth = 800 * renderingResolution;
+      screenHeight = 600 * renderingResolution;
+      canvas.width = screenWidth;
+      canvas.height = screenHeight;
     }
 
     function update() {
@@ -191,6 +193,12 @@
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
+
+      // Draw sky and floor
+      ctx.fillStyle = "#666"; // You can change the color to match your design
+      ctx.fillRect(0, 0, canvas.width, canvas.height / 2 - screenHeight / 2); // Sky
+      ctx.fillStyle = "#333"; // You can change the color to match your design
+      ctx.fillRect(0, canvas.height / 2 + screenHeight / 2, canvas.width, canvas.height / 2); // Floor
     }
 
     function gameLoop() {
