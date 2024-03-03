@@ -23,36 +23,50 @@
             font-family: Arial, sans-serif;
             font-size: 14px;
             z-index: 1;
-            user-select: none;
-        }
-
-        #debugDropdown {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: rgba(255, 255, 255, 0.2);
-            padding: 10px;
-            border-radius: 5px;
             cursor: move;
         }
 
-        #debugDropdownTitle {
-            cursor: pointer;
-            user-select: none;
+        #debugMenuDropdown {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid white;
+            padding: 5px;
+            cursor: move;
         }
 
-        .debugItem {
+        .dropdownTitle {
+            cursor: pointer;
+            color: white;
             margin-bottom: 5px;
+        }
+
+        .dropdownContent {
+            display: none;
+            flex-direction: column;
+            cursor: default;
+        }
+
+        .dropdownContent button {
+            background-color: transparent;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            margin: 2px 0;
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <div id="debugDropdown">
-        <div id="debugDropdownTitle">DEBUG</div>
-        <div id="debugMenu" style="display: none;">
-            <button class="debugItem" onclick="addEnemy()">Add Enemy</button>
-            <!-- Add more debug items here if needed -->
+    <div id="debugMenu">
+        <div id="debugMenuDropdown">
+            <div class="dropdownTitle" onclick="toggleDropdown()">DEBUG</div>
+            <div class="dropdownContent">
+                <button onclick="addEnemy()">Add Enemy</button>
+            </div>
         </div>
     </div>
 
@@ -84,8 +98,8 @@
             maxStamina: 100,
             isRunning: false,
             health: 100,
-            maxHealth: 100,
-            isDead: false,
+            damageCooldown: 3000,
+            lastDamageTime: 0,
         };
 
         const bullet = {
@@ -97,10 +111,8 @@
         const enemies = [];
 
         let isPaused = false;
-        let debugMenuVisible = true;
-        let isDebugDropdownFolded = false;
-        let debugDropdownTitle = document.getElementById('debugDropdownTitle');
-        let debugMenu = document.getElementById('debugMenu');
+        let isDragging = false;
+        let offsetX, offsetY;
 
         function drawPlayer() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -157,10 +169,9 @@
             ctx.fillStyle = 'green';
             ctx.fillRect(10, 60, staminaWidth, 10);
 
-            // Draw player health bar
-            const healthWidth = (player.health / player.maxHealth) * 100;
+            // Draw health bar
             ctx.fillStyle = 'red';
-            ctx.fillRect(player.x - player.size, player.y - player.size - 20, healthWidth, 10);
+            ctx.fillRect(player.x - player.size, player.y - player.size - 20, (player.health / 100) * (player.size * 2), 5);
 
             // Draw enemies
             enemies.forEach(enemy => {
@@ -183,7 +194,7 @@
         }
 
         function updatePlayer() {
-            if (!isPaused && !player.isDead) {
+            if (!isPaused) {
                 if (player.isMoving) {
                     const dx = player.targetX - player.x;
                     const dy = player.targetY - player.y;
@@ -238,19 +249,32 @@
                     player.stamina += 0.1;
                 }
 
-                // Check for collisions with enemies
+                // Update player health and check for collisions with enemies
+                updatePlayerHealth();
                 checkCollisions();
 
                 // Update enemy positions
                 moveEnemies();
+            }
+        }
 
-                // Check for collisions with player
-                checkPlayerCollision();
+        function updatePlayerHealth() {
+            const currentTime = new Date().getTime();
 
-                // Check player health
-                if (player.health <= 0) {
-                    player.isDead = true;
-                }
+            if (currentTime - player.lastDamageTime > player.damageCooldown) {
+                enemies.forEach(enemy => {
+                    const distance = Math.sqrt((player.x - enemy.x) ** 2 + (player.y - enemy.y) ** 2);
+                    if (distance < player.size + enemy.size) {
+                        // Player touched by enemy
+                        player.health -= 20;
+                        player.lastDamageTime = currentTime;
+
+                        if (player.health <= 0) {
+                            // Player died, reset the game
+                            resetGame();
+                        }
+                    }
+                });
             }
         }
 
@@ -269,16 +293,6 @@
                         }
                     }
                 });
-            });
-        }
-
-        function checkPlayerCollision() {
-            enemies.forEach(enemy => {
-                const distance = Math.sqrt((player.x - enemy.x) ** 2 + (player.y - enemy.y) ** 2);
-                if (distance < player.size + enemy.size) {
-                    // Enemy touched player
-                    player.health -= 20;
-                }
             });
         }
 
@@ -311,6 +325,15 @@
             isPaused = !isPaused;
         }
 
+        function resetGame() {
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.health = 100;
+            player.ammo = player.maxAmmo;
+            player.bullets = [];
+            enemies.length = 0;
+        }
+
         function addEnemy() {
             enemies.push({
                 x: Math.random() * canvas.width,
@@ -318,6 +341,18 @@
                 size: 15,
                 health: 100,
             });
+        }
+
+        function reloadAmmo() {
+            if (!player.reloading) {
+                const ammoToReload = player.maxAmmo - player.ammo;
+                player.reloading = true;
+
+                setTimeout(() => {
+                    player.ammo += ammoToReload;
+                    player.reloading = false;
+                }, player.reloadTime);
+            }
         }
 
         function moveEnemies() {
@@ -333,22 +368,27 @@
             });
         }
 
-        function onMouseDown(event) {
-            player.isMoving = true;
-            player.targetX = event.clientX - canvas.getBoundingClientRect().left;
-            player.targetY = event.clientY - canvas.getBoundingClientRect().top;
+        function toggleDropdown() {
+            const dropdownContent = document.querySelector('.dropdownContent');
+            dropdownContent.style.display = dropdownContent.style.display === 'flex' ? 'none' : 'flex';
         }
 
-        function onMouseUp() {
-            player.isMoving = false;
-        }
+        document.getElementById('debugMenu').addEventListener('mousedown', function(e) {
+            isDragging = true;
+            offsetX = e.clientX - parseInt(window.getComputedStyle(document.getElementById('debugMenu')).left);
+            offsetY = e.clientY - parseInt(window.getComputedStyle(document.getElementById('debugMenu')).top);
+        });
 
-        function onMouseMove(event) {
-            if (player.isMoving) {
-                player.targetX = event.clientX - canvas.getBoundingClientRect().left;
-                player.targetY = event.clientY - canvas.getBoundingClientRect().top;
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                document.getElementById('debugMenu').style.left = (e.clientX - offsetX) + 'px';
+                document.getElementById('debugMenu').style.top = (e.clientY - offsetY) + 'px';
             }
-        }
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
 
         function onKeyDown(event) {
             if (event.code === 'Space') {
@@ -357,6 +397,10 @@
                 startRunning();
             } else if (event.code === 'KeyP') {
                 togglePause();
+            } else if (event.code === 'Digit0') {
+                resetGame();
+            } else if (event.code === 'KeyR') {
+                reloadAmmo();
             }
         }
 
@@ -371,35 +415,6 @@
         canvas.addEventListener('mousemove', onMouseMove);
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('keyup', onKeyUp);
-
-        // Make the debug dropdown movable
-        let offsetX, offsetY;
-
-        debugDropdownTitle.addEventListener('mousedown', (e) => {
-            if (!isDebugDropdownFolded) {
-                offsetX = e.clientX - debugMenu.offsetLeft;
-                offsetY = e.clientY - debugMenu.offsetTop;
-                window.addEventListener('mousemove', handleMove);
-                window.addEventListener('mouseup', () => {
-                    window.removeEventListener('mousemove', handleMove);
-                });
-            }
-        });
-
-        function handleMove(e) {
-            debugMenu.style.left = e.clientX - offsetX + 'px';
-            debugMenu.style.top = e.clientY - offsetY + 'px';
-        }
-
-        // Make the debug dropdown foldable
-        debugDropdownTitle.addEventListener('click', () => {
-            if (isDebugDropdownFolded) {
-                debugMenu.style.display = 'block';
-            } else {
-                debugMenu.style.display = 'none';
-            }
-            isDebugDropdownFolded = !isDebugDropdownFolded;
-        });
 
         function gameLoop() {
             updatePlayer();
