@@ -43,15 +43,6 @@
       isMouseLocked: false,
     };
 
-    const wallTextures = [];
-    const textureCount = 4; // You can adjust this based on the number of textures you have
-
-    for (let i = 1; i <= textureCount; i++) {
-      const texture = new Image();
-      texture.src = `texture${i}.png`; // Assuming your texture files are named texture1.png, texture2.png, etc.
-      wallTextures.push(texture);
-    }
-
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -72,14 +63,11 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          const textureIndex = map[mapY][mapX] - 1; // Assuming your map values correspond to texture indices
-
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-            textureIndex: textureIndex,
           };
         }
       }
@@ -159,7 +147,14 @@
 
     function draw() {
       // Draw the raycasting scene here
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      // Draw skybox (background)
+      ctx.fillStyle = 'deepskyblue';
+      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
+
+      // Draw ground
+      ctx.fillStyle = 'green';
+      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw walls
       const rays = [];
@@ -174,10 +169,11 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const texture = wallTextures[ray.textureIndex];
-        
-        // Draw textured walls
-        ctx.drawImage(texture, i, wallTop, 1, wallHeight);
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+
+        // Draw vertical lines for walls
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
 
