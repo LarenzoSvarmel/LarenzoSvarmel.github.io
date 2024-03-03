@@ -8,6 +8,7 @@
     body {
       margin: 0;
       overflow: hidden;
+      background: linear-gradient(to bottom, #87CEEB, #4682B4); /* Skybox gradient */
     }
     canvas {
       display: block;
@@ -148,6 +149,10 @@
     function draw() {
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      // Draw floor
+      ctx.fillStyle = '#808080'; // Gray color for floor
+      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw walls
       const rays = [];
