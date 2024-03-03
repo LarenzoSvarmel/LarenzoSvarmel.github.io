@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo</title>
+  <title>Demo</title>
   <style>
     body {
       margin: 0;
@@ -39,8 +39,14 @@
       y: 100,
       angle: 0,
       fov: Math.PI / 3,
-      speed: 3, // Decreased player speed by 10
+      speed: 3,
       isMouseLocked: false,
+    };
+
+    const flashlight = {
+      angle: 0,
+      radius: 150,
+      intensity: 0.8,
     };
 
     function castRay(rayAngle) {
@@ -145,17 +151,8 @@
     function handleMouseMove(event) {
       const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
       player.angle += deltaX * 0.01;
+      flashlight.angle = player.angle; // Update flashlight direction with player's angle
     }
-
-    const keys = {};
-
-    document.addEventListener('keydown', (event) => {
-      keys[event.code] = true;
-    });
-
-    document.addEventListener('keyup', (event) => {
-      keys[event.code] = false;
-    });
 
     function update() {
       // Update game logic here
@@ -184,6 +181,12 @@
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
+
+      // Draw flashlight effect
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, flashlight.radius, 0, 2 * Math.PI);
+      ctx.fillStyle = `rgba(255, 255, 255, ${flashlight.intensity})`;
+      ctx.fill();
     }
 
     function gameLoop() {
