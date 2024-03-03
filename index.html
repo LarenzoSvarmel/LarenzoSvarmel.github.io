@@ -16,14 +16,10 @@
   </style>
 </head>
 <body>
-  <input type="color" id="skyColorPicker" value="#87CEEB"> <!-- Sky color picker -->
-  <input type="color" id="floorColorPicker" value="#808080"> <!-- Floor color picker -->
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
-    const skyColorPicker = document.getElementById('skyColorPicker');
-    const floorColorPicker = document.getElementById('floorColorPicker');
 
     const screenWidth = 800;
     const screenHeight = 600;
@@ -144,15 +140,6 @@
       }
     });
 
-    skyColorPicker.addEventListener('input', (event) => {
-      document.body.style.background = `linear-gradient(to bottom, ${event.target.value}, #4682B4)`;
-    });
-
-    floorColorPicker.addEventListener('input', (event) => {
-      ctx.fillStyle = event.target.value;
-      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
-    });
-
     function update() {
       // Update game logic here
       handleInput();
@@ -161,10 +148,6 @@
     function draw() {
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
-
-      // Draw floor
-      ctx.fillStyle = floorColorPicker.value;
-      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw walls
       const rays = [];
