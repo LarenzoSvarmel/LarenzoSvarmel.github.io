@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Rendering Pipeline</title>
+  <title>3D Rendering Engine</title>
   <style>
     body {
       margin: 0;
@@ -23,7 +23,6 @@
     const screenWidth = 800;
     const screenHeight = 600;
 
-    // Define a simple 3D object (a cube)
     const vertices = [
       { x: -1, y: -1, z: -1 },
       { x:  1, y: -1, z: -1 },
@@ -44,14 +43,21 @@
       [0, 1, 5, 4], // Bottom face
     ];
 
-    // Camera properties
     const camera = {
       position: { x: 0, y: 0, z: 5 },
       rotation: { x: 0, y: 0, z: 0 },
       fov: Math.PI / 3,
+      speed: 0.1,
     };
 
-    // Function to project 3D coordinates to 2D screen coordinates
+    document.addEventListener('keydown', (event) => {
+      // Basic camera movement
+      if (event.key === 'ArrowUp') camera.position.z -= camera.speed;
+      if (event.key === 'ArrowDown') camera.position.z += camera.speed;
+      if (event.key === 'ArrowLeft') camera.position.x -= camera.speed;
+      if (event.key === 'ArrowRight') camera.position.x += camera.speed;
+    });
+
     function project(vertex) {
       const scale = camera.fov / (camera.position.z - vertex.z);
       const x = (vertex.x - camera.position.x) * scale + screenWidth / 2;
@@ -59,18 +65,15 @@
       return { x, y };
     }
 
-    // Function to draw the 3D object
     function draw() {
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Apply camera rotation to the vertices
       const rotatedVertices = vertices.map((vertex) => {
         const x = vertex.x * Math.cos(camera.rotation.y) - vertex.z * Math.sin(camera.rotation.y);
         const z = vertex.x * Math.sin(camera.rotation.y) + vertex.z * Math.cos(camera.rotation.y);
         return { x, y: vertex.y, z };
       });
 
-      // Project and draw each face
       faces.forEach((face) => {
         const screenVertices = face.map((vertexIndex) => project(rotatedVertices[vertexIndex]));
 
@@ -86,22 +89,11 @@
       });
     }
 
-    // Update function for animations or interactions
     function update() {
-      // Example: Rotate the object
-      camera.rotation.y += 0.01;
-
-      // Example: Move the camera
-      // camera.position.x += 0.1;
-
       draw();
       requestAnimationFrame(update);
     }
 
-    // Initial draw
-    draw();
-
-    // Start the animation loop
     update();
   </script>
 </body>
