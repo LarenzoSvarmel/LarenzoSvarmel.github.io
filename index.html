@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo with Focused Light</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -24,6 +24,9 @@
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
+    const wallTexture = new Image();
+    wallTexture.src = 'wall_texture.jpg'; // Replace with your wall texture image
+
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -43,13 +46,7 @@
       isMouseLocked: false,
     };
 
-    const lightSource = {
-      x: screenWidth / 2,
-      y: screenHeight / 2,
-      color: { r: 1, g: 1, b: 1 },
-    };
-
-    function castRay(rayAngle) {
+    function castRay(rayAngle, cameraX) {
       let x = player.x;
       let y = player.y;
 
@@ -69,35 +66,15 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          const surfaceNormal = { x: -rayCos, y: -raySin }; // Inverted ray direction
-          const lightDirection = {
-            x: lightSource.x - x,
-            y: lightSource.y - y,
-          };
-
-          // Normalize the light direction vector
-          const lightDistance = Math.sqrt(lightDirection.x ** 2 + lightDirection.y ** 2);
-          lightDirection.x /= lightDistance;
-          lightDirection.y /= lightDistance;
-
-          // Lambertian reflection model with attenuation
-          const dotProduct = Math.max(0, surfaceNormal.x * lightDirection.x + surfaceNormal.y * lightDirection.y);
-          const distanceAttenuation = 1 / (distance * distance); // Adjust this factor for intensity decrease
-          const lambertianReflection = dotProduct * distanceAttenuation;
-
-          // Apply lighting to pixel color
-          const wallColor = {
-            r: Math.min(1, lambertianReflection * lightSource.color.r),
-            g: Math.min(1, lambertianReflection * lightSource.color.g),
-            b: Math.min(1, lambertianReflection * lightSource.color.b),
-          };
+          // Calculate the texture coordinates
+          const textureX = Math.floor((cameraX % tileSize) / tileSize * wallTexture.width);
 
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-            color: wallColor,
+            textureX: textureX,
           };
         }
       }
@@ -190,7 +167,8 @@
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
+        const cameraX = i / screenWidth; // Camera space coordinate for texture mapping
+        const ray = castRay(rayAngle, cameraX);
         rays.push(ray);
       }
 
@@ -199,10 +177,8 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Apply lighting to pixel color
-        const wallColor = ray.color;
-        ctx.fillStyle = `rgb(${Math.round(wallColor.r * 255)}, ${Math.round(wallColor.g * 255)}, ${Math.round(wallColor.b * 255)})`;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
+        // Draw textured walls
+        ctx.drawImage(wallTexture, ray.textureX, 0, 1, wallTexture.height, i, wallTop, 1, wallHeight);
       }
     }
 
