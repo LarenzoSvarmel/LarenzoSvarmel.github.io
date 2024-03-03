@@ -43,6 +43,10 @@
       isMouseLocked: false,
     };
 
+    // Load texture image
+    const textureImage = new Image();
+    textureImage.src = 'Tea.png';
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -149,7 +153,7 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls
+      // Draw walls with textures
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -162,11 +166,9 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
-
-        // Draw vertical lines for walls
-        ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
+        // Draw vertical lines for walls with textures
+        const textureX = Math.floor((i / screenWidth) * textureImage.width);
+        ctx.drawImage(textureImage, textureX, 0, 1, textureImage.height, i, wallTop, 1, wallHeight);
       }
     }
 
@@ -176,7 +178,10 @@
       requestAnimationFrame(gameLoop);
     }
 
-    gameLoop();
+    // Wait for the texture image to load before starting the game loop
+    textureImage.onload = () => {
+      gameLoop();
+    };
   </script>
 </body>
 </html>
