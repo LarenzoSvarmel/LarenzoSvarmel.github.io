@@ -36,7 +36,7 @@ function update() {
 }
 
 function castRay(ray) {
-    let stepSize = 5; // Adjust this based on your preference
+    let stepSize = 5;
     let currentX = ray.x;
     let currentY = ray.y;
 
@@ -44,21 +44,27 @@ function castRay(ray) {
         currentX += Math.cos(ray.angle) * stepSize;
         currentY += Math.sin(ray.angle) * stepSize;
 
-        // Check for wall collision (you need to implement your own wall collision logic)
-        if (currentX < 0 || currentX >= screenWidth ||
-            currentY < 0 || currentY >= screenHeight) {
+        // Check if the current position is within the bounds of your game environment
+        if (
+            currentX < 0 || currentX >= screenWidth ||
+            currentY < 0 || currentY >= screenHeight
+        ) {
+            return {
+                distance: Infinity,
+                hit: false,
+            };
+        }
+
+        // Check if the current position is a wall in your game map
+        const tileX = Math.floor(currentX / tileSize);
+        const tileY = Math.floor(currentY / tileSize);
+
+        if (gameMap[tileY] && gameMap[tileY][tileX] === 1) {
             return {
                 distance: Math.sqrt((ray.x - currentX) ** 2 + (ray.y - currentY) ** 2),
                 hit: true,
             };
         }
-const tileX = Math.floor(currentX / tileSize);
-        const tileY = Math.floor(currentY / tileSize);
-
-if (/* Check if (tileX, tileY) is a wall in your game map */) {
-            return {
-                distance: Math.sqrt((ray.x - currentX) ** 2 + (ray.y - currentY) ** 2),
-                hit: true
     }
 }
 
