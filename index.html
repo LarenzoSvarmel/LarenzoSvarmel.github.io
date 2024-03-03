@@ -46,8 +46,10 @@
       x: 400,
       y: 300,
       brightness: 0.8,
-      specularPower: 10, // Adjust the specular highlight intensity
+      specularPower: 10,
     };
+
+    let isMouseLocked = false;
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -117,6 +119,9 @@
           player.y = newY;
         }
       }
+      if (keys['L']) {
+        toggleMouseLock();
+      }
     }
 
     function isWall(x, y) {
@@ -125,6 +130,16 @@
       const mapY = Math.floor(y / tileSize);
 
       return map[mapY][mapX] === 1;
+    }
+
+    function toggleMouseLock() {
+      isMouseLocked = !isMouseLocked;
+
+      if (isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
+      }
     }
 
     const keys = {};
@@ -138,8 +153,14 @@
     });
 
     document.addEventListener('mousemove', (event) => {
-      const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-      player.angle += deltaX * 0.01;
+      if (isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        player.angle += deltaX * 0.01;
+      }
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+      isMouseLocked = document.pointerLockElement === canvas;
     });
 
     function update() {
@@ -178,6 +199,16 @@
       ctx.beginPath();
       ctx.arc(light.x, light.y, 5, 0, 2 * Math.PI);
       ctx.fill();
+
+      // Draw crosshair
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(screenWidth / 2, screenHeight / 2 - 10);
+      ctx.lineTo(screenWidth / 2, screenHeight / 2 + 10);
+      ctx.moveTo(screenWidth / 2 - 10, screenHeight / 2);
+      ctx.lineTo(screenWidth / 2 + 10, screenHeight / 2);
+      ctx.stroke();
     }
 
     function gameLoop() {
