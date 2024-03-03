@@ -34,23 +34,6 @@
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
 
-    class Circle {
-      constructor(x, y, radius) {
-        this.x = x;
-        this.y = y;
-        this.radius = radius;
-      }
-
-      intersects(rayX, rayY, rayAngle) {
-        const deltaX = this.x - rayX;
-        const deltaY = this.y - rayY;
-        const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
-
-        // Check if the ray intersects with the circle
-        return distance <= this.radius;
-      }
-    }
-
     const player = {
       x: 100,
       y: 100,
@@ -60,8 +43,6 @@
       isMouseLocked: false,
     };
 
-    const circle = new Circle(300, 300, 50); // Example circle at position (300, 300) with radius 50
-
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -69,7 +50,7 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      // Increment by small steps along the ray until a wall or circle is hit
+      // Increment by small steps along the ray until a wall is hit
       while (true) {
         x += rayCos;
         y += raySin;
@@ -82,26 +63,18 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          return {
-            x: x,
-            y: y,
-            distance: distance,
-            height: wallHeight,
-            hitWall: true,
+          // Calculate the normal vector for Phong shading
+          const wallNormal = {
+            x: x - mapX * tileSize,
+            y: y - mapY * tileSize,
           };
-        }
-
-        // Check if the ray hit the circle
-        if (circle.intersects(x, y, rayAngle)) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-            hitCircle: true,
+            normal: wallNormal,
           };
         }
       }
@@ -174,6 +147,19 @@
       }
     });
 
+    function interpolateColor(color1, color2, t) {
+      const r = Math.round(color1[0] + (color2[0] - color1[0]) * t);
+      const g = Math.round(color1[1] + (color2[1] - color1[1]) * t);
+      const b = Math.round(color1[2] + (color2[2] - color1[2]) * t);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    function calculateLighting(normal, lightDirection) {
+      const dotProduct = normal.x * lightDirection.x + normal.y * lightDirection.y;
+      const intensity = Math.max(0, dotProduct);
+      return intensity;
+    }
+
     function update() {
       // Update game logic here
       handleInput();
@@ -193,7 +179,7 @@
       ctx.fillStyle = 'green';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls and circle
+      // Draw walls with Phong shading
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -201,30 +187,29 @@
         rays.push(ray);
       }
 
+      // Light direction vector (adjust as needed)
+      const lightDirection = { x: 1, y: -1 };
+
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        if (ray.hitWall) {
-          // Calculate blending factor based on the wall's distance
-          const blendFactor = Math.min(1, ray.distance / 400); // Adjust 400 based on your preferences
+        // Calculate blending factor based on the wall's distance
+        const blendFactor = Math.min(1, ray.distance / 400); // Adjust 400 based on your preferences
 
-          // Interpolate between wall color and sky color
-          const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor);
+        // Interpolate between wall color and sky color
+        const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor);
 
-          // Draw vertical lines for walls with blended color
-          ctx.fillStyle = blendedColor;
-          ctx.fillRect(i, wallTop, 1, wallHeight);
-        }
+        // Phong shading: calculate lighting intensity based on wall normal
+        const lightingIntensity = calculateLighting(ray.normal, lightDirection);
 
-        if (ray.hitCircle) {
-          // Draw a yellow circle where the ray intersects the circle
-          ctx.fillStyle = 'yellow';
-          ctx.beginPath();
-          ctx.arc(ray.x, ray.y, circle.radius, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        // Adjust the intensity to control the shading effect
+        const shadedColor = `rgb(${lightingIntensity * 255}, ${lightingIntensity * 255}, ${lightingIntensity * 255})`;
+
+        // Draw vertical lines for walls with shaded color
+        ctx.fillStyle = shadedColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
 
