@@ -13,15 +13,22 @@
       justify-content: center;
       height: 100vh;
       background-color: #222;
+      position: relative;
     }
     canvas {
       display: block;
       image-rendering: pixelated;
       border: 1px solid #fff; /* Add a border for better visibility */
     }
+    #resolutionSlider {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
   </style>
 </head>
 <body>
+  <input type="range" id="resolutionSlider" min="1" max="4" step="1" value="1">
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
@@ -29,6 +36,7 @@
 
     const screenWidth = 800;
     const screenHeight = 600;
+    let renderingResolution = 1; // Initial rendering resolution
     const tileSize = 32;
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1],
@@ -146,6 +154,16 @@
       }
     });
 
+    document.getElementById('resolutionSlider').addEventListener('input', (event) => {
+      renderingResolution = parseInt(event.target.value);
+      updateCanvasSize();
+    });
+
+    function updateCanvasSize() {
+      canvas.width = screenWidth * renderingResolution;
+      canvas.height = screenHeight * renderingResolution;
+    }
+
     function update() {
       // Update game logic here
       handleInput();
@@ -153,20 +171,20 @@
 
     function draw() {
       // Draw the raycasting scene here
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Draw walls
       const rays = [];
-      for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+      for (let i = 0; i < canvas.width; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / canvas.width) * player.fov;
         const ray = castRay(rayAngle);
         rays.push(ray);
       }
 
-      for (let i = 0; i < screenWidth; i++) {
+      for (let i = 0; i < canvas.width; i++) {
         const ray = rays[i];
         const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
+        const wallTop = (canvas.height - wallHeight) / 2;
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
@@ -181,6 +199,7 @@
       requestAnimationFrame(gameLoop);
     }
 
+    updateCanvasSize(); // Set initial canvas size
     gameLoop();
   </script>
 </body>
