@@ -140,7 +140,7 @@
       keys[event.code] = false;
     });
 
-    document.addEventListener('mousemove', (event) => {
+    canvas.addEventListener('mousemove', (event) => {
       if (player.isMouseLocked) {
         const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
         player.angle += deltaX * 0.01;
