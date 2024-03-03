@@ -37,8 +37,8 @@
     const player = {
       x: 100,
       y: 100,
-      pitch: 0, // Up and down movement
-      yaw: 0,   // Left and right movement
+      pitch: 0,
+      yaw: 0,
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
@@ -74,7 +74,7 @@
       }
     }
 
-    function handleInput() {
+    function handleInput(event) {
       // Handle player input
       if (keys['ArrowLeft']) {
         player.yaw -= 0.05;
@@ -149,21 +149,12 @@
     });
 
     document.addEventListener('mousemove', (event) => {
-      if (player.isMouseLocked) {
-        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-
-        player.yaw += deltaX * 0.01;
-        player.pitch -= deltaY * 0.01;
-
-        // Clamp pitch to avoid flipping the view
-        player.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.pitch));
-      }
+      handleInput(event);
     });
 
     function update() {
       // Update game logic here
-      handleInput();
+      // handleInput() should not be called here
     }
 
     function draw() {
