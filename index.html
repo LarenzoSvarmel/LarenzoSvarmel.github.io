@@ -29,6 +29,7 @@
             angle: 0,
             speed: 2,
             baseSpeed: 2,
+            runningSpeed: 5,
             isMoving: false,
             targetX: 0,
             targetY: 0,
@@ -51,6 +52,8 @@
             speed: 5,
             color: 'yellow',
         };
+
+        let isPaused = false;
 
         function drawPlayer() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -102,60 +105,77 @@
             const staminaWidth = (player.stamina / player.maxStamina) * 100;
             ctx.fillStyle = 'green';
             ctx.fillRect(10, 60, staminaWidth, 10);
+
+            // Draw pause text
+            if (isPaused) {
+                ctx.fillStyle = 'white';
+                ctx.font = '36px Arial';
+                ctx.fillText('PAUSED', canvas.width / 2 - 80, canvas.height / 2);
+            }
         }
 
         function updatePlayer() {
-            if (player.isMoving) {
-                const dx = player.targetX - player.x;
-                const dy = player.targetY - player.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+            if (!isPaused) {
+                if (player.isMoving) {
+                    const dx = player.targetX - player.x;
+                    const dy = player.targetY - player.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
 
-                if (distance > player.speed) {
-                    player.x += (dx / distance) * player.speed;
-                    player.y += (dy / distance) * player.speed;
-                } else {
-                    player.isMoving = false;
+                    if (player.isRunning && player.stamina > 0) {
+                        player.speed = player.runningSpeed;
+                        player.stamina -= 0.2;
+                    } else {
+                        player.speed = player.baseSpeed;
+                    }
+
+                    if (distance > player.speed) {
+                        player.x += (dx / distance) * player.speed;
+                        player.y += (dy / distance) * player.speed;
+                    } else {
+                        player.isMoving = false;
+                    }
+
+                    player.angle = Math.atan2(dy, dx);
                 }
 
-                player.angle = Math.atan2(dy, dx);
-            }
+                // Update bullet positions
+                player.bullets.forEach(b => {
+                    b.x += Math.cos(b.angle) * bullet.speed;
+                    b.y += Math.sin(b.angle) * bullet.speed;
+                });
 
-            // Update bullet positions
-            player.bullets.forEach(b => {
-                b.x += Math.cos(b.angle) * bullet.speed;
-                b.y += Math.sin(b.angle) * bullet.speed;
-            });
+                // Remove bullets that are out of bounds
+                player.bullets = player.bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
 
-            // Remove bullets that are out of bounds
-            player.bullets = player.bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
+                // Handle reloading
+                if (player.ammo === 0 && !player.reloading) {
+                    const ammoToReload = player.maxAmmo - player.ammo;
+                    player.reloading = true;
 
-            // Handle reloading
-            if (player.ammo === 0 && !player.reloading) {
-                const ammoToReload = player.maxAmmo - player.ammo;
-                player.reloading = true;
-
-                setTimeout(() => {
-                    player.ammo += ammoToReload;
-                    player.reloading = false;
-                }, player.reloadTime);
-            }
-
-            // Update stamina
-            if (player.isRunning) {
-                player.stamina -= 0.2;
-                if (player.stamina <= 0) {
-                    player.stamina = 0;
-                    player.isRunning = false;
+                    setTimeout(() => {
+                        player.ammo += ammoToReload;
+                        player.reloading = false;
+                    }, player.reloadTime);
                 }
-            } else if (player.stamina < player.maxStamina) {
-                player.stamina += 0.1;
+
+                // Update stamina
+                if (player.isRunning) {
+                    if (player.stamina > 0) {
+                        player.stamina -= 0.2;
+                    } else {
+                        player.stamina = 0;
+                        player.isRunning = false;
+                    }
+                } else if (player.stamina < player.maxStamina) {
+                    player.stamina += 0.1;
+                }
             }
         }
 
         function shoot() {
             const currentTime = new Date().getTime();
 
-            if (player.ammo > 0 && !player.reloading && currentTime - player.lastShotTime > player.shootDelay) {
+            if (!isPaused && player.ammo > 0 && !player.reloading && currentTime - player.lastShotTime > player.shootDelay) {
                 player.bullets.push({
                     x: player.x,
                     y: player.y,
@@ -168,13 +188,17 @@
         }
 
         function startRunning() {
-            if (!player.isRunning && player.stamina > 0) {
+            if (!isPaused && !player.isRunning && player.stamina > 0) {
                 player.isRunning = true;
             }
         }
 
         function stopRunning() {
             player.isRunning = false;
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
         }
 
         function onMouseDown(event) {
@@ -199,6 +223,8 @@
                 shoot();
             } else if (event.code === 'ShiftLeft') {
                 startRunning();
+            } else if (event.code === 'KeyP') {
+                togglePause();
             }
         }
 
