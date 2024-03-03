@@ -15,16 +15,6 @@
             display: block;
         }
 
-        #debugMenu {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            color: white;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            z-index: 1;
-        }
-
         #debugDropdown {
             position: absolute;
             top: 10px;
@@ -321,7 +311,12 @@
                 if (distance < player.size + enemy.size) {
                     // Player touched enemy
                     if (player.health > 0) {
-                        player.health -= 20;
+                        // Reduce player health every 5 seconds when enemy touches player
+                        setInterval(() => {
+                            if (player.health > 0) {
+                                player.health -= 20;
+                            }
+                        }, 5000);
                     }
                 }
             });
