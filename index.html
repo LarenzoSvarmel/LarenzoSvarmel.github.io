@@ -38,34 +38,29 @@
       x: 100,
       y: 100,
       angle: 0,
-      verticalAngle: 0,
       fov: Math.PI / 3,
       speed: 5,
+      isMouseLocked: false,
     };
 
-    function castRay(rayAngle, verticalAngle) {
+    function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
-      let z = player.y;
 
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      const raySinVertical = Math.sin(verticalAngle);
-      const rayCosVertical = Math.cos(verticalAngle);
-
       // Increment by small steps along the ray until a wall is hit
       while (true) {
-        x += rayCos * rayCosVertical;
-        y += raySin * rayCosVertical;
-        z += raySinVertical;
+        x += rayCos;
+        y += raySin;
 
         const mapX = Math.floor(x / tileSize);
         const mapY = Math.floor(y / tileSize);
 
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2 + (z - player.y) ** 2);
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
           return {
@@ -106,6 +101,18 @@
           player.y = newY;
         }
       }
+      if (keys['KeyL']) {
+        toggleMouseLock();
+      }
+    }
+
+    function toggleMouseLock() {
+      if (!player.isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
+      }
+      player.isMouseLocked = !player.isMouseLocked;
     }
 
     function isWall(x, y) {
@@ -119,19 +126,18 @@
     const keys = {};
 
     document.addEventListener('keydown', (event) => {
-      keys[event.key] = true;
+      keys[event.code] = true;
     });
 
     document.addEventListener('keyup', (event) => {
-      keys[event.key] = false;
+      keys[event.code] = false;
     });
 
     document.addEventListener('mousemove', (event) => {
-      const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-      const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-
-      player.angle += deltaX * 0.01;
-      player.verticalAngle = Math.min(Math.PI / 2, Math.max(-Math.PI / 2, player.verticalAngle + deltaY * 0.01));
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        player.angle += deltaX * 0.01;
+      }
     });
 
     function update() {
@@ -147,7 +153,7 @@
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle, player.verticalAngle);
+        const ray = castRay(rayAngle);
         rays.push(ray);
       }
 
