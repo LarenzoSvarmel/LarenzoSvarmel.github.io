@@ -65,8 +65,6 @@ function castRay(ray) {
                 hit: true,
             };
         }
-    }
-}
 
 function draw() {
     ctx.clearRect(0, 0, screenWidth, screenHeight);
@@ -107,6 +105,8 @@ function gameLoop() {
     update();
     draw();
     requestAnimationFrame(gameLoop);
+        }
+    }
 }
 
 gameLoop();
