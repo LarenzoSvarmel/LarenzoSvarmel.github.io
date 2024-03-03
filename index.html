@@ -46,6 +46,7 @@
       x: 300,
       y: 300,
       speed: 1,
+      size: 10,
     };
 
     function castRay(rayAngle) {
@@ -78,19 +79,6 @@
       }
     }
 
-    function moveEnemy() {
-      // Move the enemy towards the player
-      const deltaX = player.x - enemy.x;
-      const deltaY = player.y - enemy.y;
-      const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
-
-      const directionX = deltaX / distance;
-      const directionY = deltaY / distance;
-
-      enemy.x += directionX * enemy.speed;
-      enemy.y += directionY * enemy.speed;
-    }
-
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
@@ -119,6 +107,25 @@
           player.y = newY;
         }
       }
+      if (keys['KeyL']) {
+        toggleMouseLock();
+      }
+    }
+
+    function toggleMouseLock() {
+      if (!player.isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
+      }
+      player.isMouseLocked = !player.isMouseLocked;
+    }
+
+    function moveEnemy() {
+      // Move the enemy towards the player slowly
+      const angleToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+      enemy.x += Math.cos(angleToPlayer) * enemy.speed;
+      enemy.y += Math.sin(angleToPlayer) * enemy.speed;
     }
 
     function isWall(x, y) {
@@ -176,12 +183,11 @@
       }
 
       // Draw enemy
-      const enemySize = 10;
       ctx.fillStyle = 'blue';
-      ctx.fillRect(enemy.x - enemySize / 2, enemy.y - enemySize / 2, enemySize, enemySize);
+      ctx.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
 
       // Draw player
-      ctx.fillStyle = 'red';
+      ctx.fillStyle = '#f00';
       ctx.beginPath();
       ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
       ctx.fill();
