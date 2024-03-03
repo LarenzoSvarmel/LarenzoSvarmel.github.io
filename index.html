@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo with Skybox</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -12,7 +12,6 @@
     canvas {
       display: block;
       image-rendering: pixelated;
-      position: absolute;
     }
   </style>
 </head>
@@ -83,9 +82,10 @@
         player.angle += 0.05;
       }
 
-      // Move forward and backward without rotating the camera angle
+      // Synchronize left/right and forward/backward speed, decrease by 20%
+      const moveStep = player.speed * 0.8;
+
       if (keys['ArrowUp'] || keys['KeyW']) {
-        const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle) * moveStep;
         const newY = player.y + Math.sin(player.angle) * moveStep;
 
@@ -95,7 +95,6 @@
         }
       }
       if (keys['ArrowDown'] || keys['KeyS']) {
-        const moveStep = player.speed;
         const newX = player.x - Math.cos(player.angle) * moveStep;
         const newY = player.y - Math.sin(player.angle) * moveStep;
 
@@ -107,7 +106,6 @@
 
       // Move left and right without rotating the camera angle
       if (keys['KeyA']) {
-        const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle - Math.PI / 2) * moveStep;
         const newY = player.y + Math.sin(player.angle - Math.PI / 2) * moveStep;
 
@@ -117,7 +115,6 @@
         }
       }
       if (keys['KeyD']) {
-        const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle + Math.PI / 2) * moveStep;
         const newY = player.y + Math.sin(player.angle + Math.PI / 2) * moveStep;
 
@@ -173,18 +170,9 @@
       handleInput();
     }
 
-    function drawSkybox() {
-      // Draw the skybox with clouds
-      ctx.fillStyle = '#87CEEB'; // Light blue for the sky
-      ctx.fillRect(0, 0, screenWidth, screenHeight);
-
-      // Draw clouds (assumed you have cloud textures)
-      // Example: ctx.drawImage(cloudTexture, cloudX, cloudY, cloudWidth, cloudHeight);
-    }
-
     function draw() {
-      // Draw the skybox with clouds
-      drawSkybox();
+      // Draw the raycasting scene here
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
 
       // Draw walls
       const rays = [];
