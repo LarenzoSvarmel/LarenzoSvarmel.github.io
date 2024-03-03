@@ -32,6 +32,7 @@
             targetX: 0,
             targetY: 0,
             ammo: 20,
+            maxAmmo: 20, // Maximum magazine size
             bullets: [],
             reloading: false,
             reloadTime: 4000, // in milliseconds
@@ -84,7 +85,7 @@
             // Draw ammo counter
             ctx.fillStyle = 'black';
             ctx.font = '16px Arial';
-            ctx.fillText(`Ammo: ${player.ammo} / 20`, 10, 20);
+            ctx.fillText(`Ammo: ${player.ammo} / ${player.maxAmmo}`, 10, 20);
         }
 
         function updatePlayer() {
@@ -112,14 +113,17 @@
             // Remove bullets that are out of bounds
             player.bullets = player.bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
 
-             if (player.ammo === 0 && !player.reloading) {
-        player.reloading = true;
-        const bulletsToReload = 20 - player.ammo; // Calculate the number of bullets needed to reach the full magazine
-        setTimeout(() => {
-            player.ammo += bulletsToReload; // Reload by adding the needed bullets
-            player.reloading = false;
-        }, player.reloadTime);
-    }
+            // Handle reloading
+            if (player.ammo === 0 && !player.reloading) {
+                const ammoToReload = player.maxAmmo - player.ammo;
+                player.reloading = true;
+
+                setTimeout(() => {
+                    player.ammo += ammoToReload;
+                    player.reloading = false;
+                }, player.reloadTime);
+            }
+        }
 
         function shoot() {
             if (player.ammo > 0 && !player.reloading) {
