@@ -156,11 +156,12 @@
       for (const ray of rays) {
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
+        const columnWidth = screenWidth / rays.length;
 
         ctx.strokeStyle = '#00f';
         ctx.beginPath();
-        ctx.moveTo(ray.x, wallTop);
-        ctx.lineTo(ray.x, wallTop + wallHeight);
+        ctx.moveTo(rays.indexOf(ray) * columnWidth, wallTop);
+        ctx.lineTo(rays.indexOf(ray) * columnWidth, wallTop + wallHeight);
         ctx.stroke();
       }
     }
