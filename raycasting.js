@@ -72,6 +72,22 @@ function castRay(ray) {
     }
 }
 
+function drawMap() {
+    for (let row = 0; row < gameMap.length; row++) {
+        for (let col = 0; col < gameMap[row].length; col++) {
+            if (gameMap[row][col] === 1) {
+                // Draw a wall (you can choose a specific color or character)
+                ctx.fillStyle = "#555";
+                ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+            } else {
+                // Draw open space (you can choose a specific color or character)
+                ctx.fillStyle = "#222";
+                ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+            }
+        }
+    }
+}
+
 function draw() {
     ctx.clearRect(0, 0, screenWidth, screenHeight);
 
