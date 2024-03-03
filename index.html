@@ -38,17 +38,19 @@
       x: 100,
       y: 100,
       angle: 0,
+      verticalAngle: 0,
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
     };
 
-    function castRay(rayAngle) {
+    function castRay(rayAngle, verticalAngle) {
       let x = player.x;
       let y = player.y;
 
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
+      const rayTan = Math.tan(verticalAngle);
 
       // Increment by small steps along the ray until a wall is hit
       while (true) {
@@ -66,12 +68,14 @@
           const correctedDistance = distance * Math.cos(rayAngle - player.angle);
 
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * correctedDistance));
+          const verticalCorrection = tileSize / (2 * correctedDistance) * screenHeight * rayTan;
 
           return {
             x: x,
             y: y,
             distance: correctedDistance,
             height: wallHeight,
+            verticalCorrection: verticalCorrection,
           };
         }
       }
@@ -104,6 +108,18 @@
           player.x = newX;
           player.y = newY;
         }
+      }
+      if (keys['KeyW']) {
+        player.verticalAngle += 0.05;
+      }
+      if (keys['KeyS']) {
+        player.verticalAngle -= 0.05;
+      }
+      if (keys['KeyA']) {
+        player.verticalAngle = 0;
+      }
+      if (keys['KeyD']) {
+        player.verticalAngle = Math.PI / 4; // Example vertical angle (45 degrees)
       }
       if (keys['KeyL']) {
         toggleMouseLock();
@@ -165,14 +181,14 @@
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
+        const ray = castRay(rayAngle, player.verticalAngle);
         rays.push(ray);
       }
 
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
         const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
+        const wallTop = (screenHeight - wallHeight) / 2 + ray.verticalCorrection;
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
