@@ -10,14 +10,6 @@ const player = {
     angle: Math.PI / 4, // Initial player angle (45 degrees)
 };
 
-const gameMap = [
-    [1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1],
-    [1, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1]
-];
-
 function update() {
     const rays = [];
 
@@ -33,6 +25,8 @@ function update() {
 
         rays.push(castRay(ray));
     }
+
+    // Other update logic can go here if needed
 }
 
 function castRay(ray) {
@@ -55,7 +49,7 @@ function castRay(ray) {
             };
         }
 
-        // Check if the current position is a wall in your game map
+        // Check if the current position is a wall in your game map (placeholder condition)
         const tileX = Math.floor(currentX / tileSize);
         const tileY = Math.floor(currentY / tileSize);
 
@@ -65,6 +59,8 @@ function castRay(ray) {
                 hit: true,
             };
         }
+    }
+}
 
 function draw() {
     ctx.clearRect(0, 0, screenWidth, screenHeight);
@@ -105,8 +101,6 @@ function gameLoop() {
     update();
     draw();
     requestAnimationFrame(gameLoop);
-        }
-    }
 }
 
 gameLoop();
