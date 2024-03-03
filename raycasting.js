@@ -1,6 +1,8 @@
 const canvas = document.getElementById('raycastingCanvas');
 const ctx = canvas.getContext('2d');
 
+
+
 const screenWidth = canvas.width;
 const screenHeight = canvas.height;
 const tileSize = 50; // Adjust this based on your preference
@@ -28,6 +30,14 @@ function update() {
 
     // Other update logic can go here if needed
 }
+
+const gameMap = [
+    [1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1],
+    [1, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1]
+];
 
 function castRay(ray) {
     let stepSize = 5;
