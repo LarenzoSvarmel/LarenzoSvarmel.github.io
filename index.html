@@ -20,91 +20,162 @@
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
-    let gl;
 
-    document.addEventListener('DOMContentLoaded', initWebGL);
+    const screenWidth = 800;
+    const screenHeight = 600;
+    const tileSize = 32;
+    const map = [
+      [1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1],
+    ];
 
-    function initWebGL() {
-      gl = canvas.getContext('webgl');
+    const player = {
+      x: 100,
+      y: 100,
+      angle: 0,
+      fov: Math.PI / 3,
+      speed: 5,
+      isMouseLocked: false,
+    };
 
-      if (!gl) {
-        console.error('Unable to initialize WebGL. Your browser may not support it.');
-        return;
-      }
+    function castRay(rayAngle) {
+      let x = player.x;
+      let y = player.y;
 
-      const vertexShaderSource = `
-        attribute vec2 a_position;
-        varying vec2 v_texCoord;
-        
-        void main() {
-          gl_Position = vec4(a_position, 0, 1);
-          v_texCoord = (a_position + 1.0) / 2.0;
+      const raySin = Math.sin(rayAngle);
+      const rayCos = Math.cos(rayAngle);
+
+      // Increment by small steps along the ray until a wall is hit
+      while (true) {
+        x += rayCos;
+        y += raySin;
+
+        const mapX = Math.floor(x / tileSize);
+        const mapY = Math.floor(y / tileSize);
+
+        // Check if the ray hit a wall
+        if (map[mapY][mapX] === 1) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
+
+          return {
+            x: x,
+            y: y,
+            distance: distance,
+            height: wallHeight,
+          };
         }
-      `;
+      }
+    }
 
-      const fragmentShaderSource = `
-        precision mediump float;
-        varying vec2 v_texCoord;
-        
-        uniform sampler2D u_image;
-        uniform float u_flashlightRadius;
-        uniform vec2 u_flashlightPosition;
+    function handleInput() {
+      // Handle player input
+      if (keys['ArrowLeft']) {
+        player.angle -= 0.05;
+      }
+      if (keys['ArrowRight']) {
+        player.angle += 0.05;
+      }
+      if (keys['ArrowUp']) {
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
 
-        void main() {
-          vec4 color = texture2D(u_image, v_texCoord);
-
-          // Calculate distance to flashlight position
-          float distance = distance(v_texCoord, u_flashlightPosition);
-
-          // Apply circular gradient for the flashlight effect
-          float gradient = smoothstep(u_flashlightRadius, u_flashlightRadius + 0.01, u_flashlightRadius - distance);
-
-          // Mix the original color with black based on the gradient
-          gl_FragColor = mix(color, vec4(0.0, 0.0, 0.0, 1.0), gradient);
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
         }
-      `;
+      }
+      if (keys['ArrowDown']) {
+        const moveStep = player.speed;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
 
-      const shaderProgram = createShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
-
-      // ... (rest of the code remains unchanged)
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
+      }
+      if (keys['KeyL']) {
+        toggleMouseLock();
+      }
     }
 
-    function createShaderProgram(gl, vertexShaderSource, fragmentShaderSource) {
-      const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-      const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-
-      if (!vertexShader || !fragmentShader) {
-        return null;
+    function toggleMouseLock() {
+      if (!player.isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
       }
-
-      const program = gl.createProgram();
-      gl.attachShader(program, vertexShader);
-      gl.attachShader(program, fragmentShader);
-      gl.linkProgram(program);
-
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(program));
-        return null;
-      }
-
-      return program;
+      player.isMouseLocked = !player.isMouseLocked;
     }
 
-    function compileShader(gl, type, source) {
-      const shader = gl.createShader(type);
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
+    function isWall(x, y) {
+      // Check if the given coordinates are inside a wall
+      const mapX = Math.floor(x / tileSize);
+      const mapY = Math.floor(y / tileSize);
 
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-      }
-
-      return shader;
+      return map[mapY][mapX] === 1;
     }
 
-    // ... (rest of the code remains unchanged)
+    const keys = {};
+
+    document.addEventListener('keydown', (event) => {
+      keys[event.code] = true;
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keys[event.code] = false;
+    });
+
+    document.addEventListener('mousemove', (event) => {
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        player.angle += deltaX * 0.01;
+      }
+    });
+
+    function update() {
+      // Update game logic here
+      handleInput();
+    }
+
+    function draw() {
+      // Draw the raycasting scene here
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      // Draw walls
+      const rays = [];
+      for (let i = 0; i < screenWidth; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle);
+        rays.push(ray);
+      }
+
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
+        const wallHeight = ray.height;
+        const wallTop = (screenHeight - wallHeight) / 2;
+
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
   </script>
 </body>
 </html>
