@@ -38,17 +38,19 @@
       x: 100,
       y: 100,
       angle: 0,
+      verticalAngle: 0,
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
     };
 
-    function castRay(rayAngle) {
+    function castRay(rayAngle, verticalAngle) {
       let x = player.x;
       let y = player.y;
 
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
+      const rayTan = Math.tan(verticalAngle);
 
       // Increment by small steps along the ray until a wall is hit
       while (true) {
@@ -63,13 +65,20 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
+          // Adjust the wall height based on vertical angle
+          const verticalScale = Math.cos(verticalAngle - player.verticalAngle);
+          const adjustedWallHeight = wallHeight / verticalScale;
+
           return {
             x: x,
             y: y,
             distance: distance,
-            height: wallHeight,
+            height: adjustedWallHeight,
           };
         }
+
+        // Adjust y for vertical look
+        y += rayTan;
       }
     }
 
@@ -104,6 +113,9 @@
       if (keys['KeyL']) {
         toggleMouseLock();
       }
+      // Look up and down
+      player.verticalAngle += (keys['KeyW'] ? 0.02 : 0) + (keys['KeyS'] ? -0.02 : 0);
+      player.verticalAngle = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.verticalAngle));
     }
 
     function toggleMouseLock() {
@@ -137,6 +149,10 @@
       if (player.isMouseLocked) {
         const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
         player.angle += deltaX * 0.01;
+
+        const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+        player.verticalAngle -= deltaY * 0.01;
+        player.verticalAngle = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.verticalAngle));
       }
     });
 
@@ -153,7 +169,7 @@
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
+        const ray = castRay(rayAngle, player.verticalAngle);
         rays.push(ray);
       }
 
