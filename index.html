@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Rendering Engine</title>
+  <title>Advanced 3D Rendering</title>
   <style>
     body {
       margin: 0;
@@ -50,23 +50,80 @@
       speed: 0.1,
     };
 
-    document.addEventListener('keydown', (event) => {
-      // Basic camera movement
-      if (event.key === 'ArrowUp') camera.position.z -= camera.speed;
-      if (event.key === 'ArrowDown') camera.position.z += camera.speed;
-      if (event.key === 'ArrowLeft') camera.position.x -= camera.speed;
-      if (event.key === 'ArrowRight') camera.position.x += camera.speed;
-    });
+    function createPerspectiveMatrix(fov, aspect, near, far) {
+      const tanHalfFov = Math.tan(fov / 2);
+      const range = near - far;
 
-    function project(vertex) {
-      const scale = camera.fov / (camera.position.z - vertex.z);
-      const x = (vertex.x - camera.position.x) * scale + screenWidth / 2;
-      const y = (vertex.y - camera.position.y) * scale + screenHeight / 2;
-      return { x, y };
+      return [
+        [1 / (tanHalfFov * aspect), 0, 0, 0],
+        [0, 1 / tanHalfFov, 0, 0],
+        [0, 0, (near + far) / range, 2 * near * far / range],
+        [0, 0, -1, 0],
+      ];
+    }
+
+    function multiplyMatrixVector(matrix, vector) {
+      const result = [0, 0, 0, 0];
+
+      for (let i = 0; i < 4; i++) {
+        result[i] = 0;
+        for (let j = 0; j < 4; j++) {
+          result[i] += matrix[i][j] * vector[j];
+        }
+      }
+
+      return result;
+    }
+
+    function createCameraMatrix(position, rotation) {
+      const translationMatrix = [
+        [1, 0, 0, -position.x],
+        [0, 1, 0, -position.y],
+        [0, 0, 1, -position.z],
+        [0, 0, 0, 1],
+      ];
+
+      const rotationMatrix = [
+        [Math.cos(rotation.y), -Math.sin(rotation.y), 0, 0],
+        [Math.sin(rotation.y), Math.cos(rotation.y), 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1],
+      ];
+
+      return multiplyMatrices(rotationMatrix, translationMatrix);
+    }
+
+    function multiplyMatrices(a, b) {
+      const result = [];
+      for (let i = 0; i < a.length; i++) {
+        result[i] = [];
+        for (let j = 0; j < b[0].length; j++) {
+          let sum = 0;
+          for (let k = 0; k < a[0].length; k++) {
+            sum += a[i][k] * b[k][j];
+          }
+          result[i][j] = sum;
+        }
+      }
+      return result;
+    }
+
+    function project(vertex, perspectiveMatrix, cameraMatrix) {
+      const vertex4D = [vertex.x, vertex.y, vertex.z, 1];
+      const transformedVertex = multiplyMatrixVector(cameraMatrix, vertex4D);
+      const projectedVertex = multiplyMatrixVector(perspectiveMatrix, transformedVertex);
+
+      return {
+        x: projectedVertex[0] / projectedVertex[3],
+        y: projectedVertex[1] / projectedVertex[3],
+      };
     }
 
     function draw() {
       ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      const perspectiveMatrix = createPerspectiveMatrix(camera.fov, screenWidth / screenHeight, 0.1, 100);
+      const cameraMatrix = createCameraMatrix(camera.position, camera.rotation);
 
       const rotatedVertices = vertices.map((vertex) => {
         const x = vertex.x * Math.cos(camera.rotation.y) - vertex.z * Math.sin(camera.rotation.y);
@@ -75,13 +132,13 @@
       });
 
       faces.forEach((face) => {
-        const screenVertices = face.map((vertexIndex) => project(rotatedVertices[vertexIndex]));
+        const screenVertices = face.map((vertexIndex) => project(rotatedVertices[vertexIndex], perspectiveMatrix, cameraMatrix));
 
         ctx.beginPath();
-        ctx.moveTo(screenVertices[0].x, screenVertices[0].y);
+        ctx.moveTo(screenVertices[0].x * screenWidth, screenVertices[0].y * screenHeight);
 
         for (let i = 1; i < screenVertices.length; i++) {
-          ctx.lineTo(screenVertices[i].x, screenVertices[i].y);
+          ctx.lineTo(screenVertices[i].x * screenWidth, screenVertices[i].y * screenHeight);
         }
 
         ctx.closePath();
@@ -90,6 +147,9 @@
     }
 
     function update() {
+      // Example: Rotate the object
+      camera.rotation.y += 0.01;
+
       draw();
       requestAnimationFrame(update);
     }
