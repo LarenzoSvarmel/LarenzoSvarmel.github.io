@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Engine</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -11,229 +11,180 @@
     }
     canvas {
       display: block;
-      margin: auto;
-      background-color: #f0f0f0;
+      image-rendering: pixelated;
     }
   </style>
 </head>
 <body>
-  <canvas id="renderCanvas" width="800" height="600"></canvas>
+  <canvas id="raycastingCanvas" width="800" height="600"></canvas>
   <script>
-    const canvas = document.getElementById('renderCanvas');
+    const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
+    const screenWidth = 800;
+    const screenHeight = 600;
+    const tileSize = 32;
+    const map = [
+      [1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1],
+    ];
 
-    canvas.width = screenWidth;
-    canvas.height = screenHeight;
+    const player = {
+      x: 100,
+      y: 100,
+      angle: 0,
+      fov: Math.PI / 3,
+      speed: 5,
+    };
 
-    class Vector3 {
-      constructor(x, y, z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-      }
+    const enemy = {
+      x: 300,
+      y: 300,
+      speed: 2,
+    };
 
-      add(vector) {
-        return new Vector3(this.x + vector.x, this.y + vector.y, this.z + vector.z);
-      }
+    function castRay(rayAngle) {
+      let x = player.x;
+      let y = player.y;
 
-      subtract(vector) {
-        return new Vector3(this.x - vector.x, this.y - vector.y, this.z - vector.z);
-      }
+      const raySin = Math.sin(rayAngle);
+      const rayCos = Math.cos(rayAngle);
 
-      multiplyScalar(scalar) {
-        return new Vector3(this.x * scalar, this.y * scalar, this.z * scalar);
-      }
+      // Increment by small steps along the ray until a wall is hit
+      while (true) {
+        x += rayCos;
+        y += raySin;
 
-      cross(vector) {
-        return new Vector3(
-          this.y * vector.z - this.z * vector.y,
-          this.z * vector.x - this.x * vector.z,
-          this.x * vector.y - this.y * vector.x
-        );
-      }
-    }
+        const mapX = Math.floor(x / tileSize);
+        const mapY = Math.floor(y / tileSize);
 
-    class Matrix4 {
-      constructor() {
-        this.elements = new Array(16).fill(0);
-      }
+        // Check if the ray hit a wall
+        if (map[mapY][mapX] === 1) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-      set(row, col, value) {
-        this.elements[row * 4 + col] = value;
-      }
-
-      static identity() {
-        const matrix = new Matrix4();
-        for (let i = 0; i < 4; i++) {
-          matrix.set(i, i, 1);
-        }
-        return matrix;
-      }
-
-      static perspective(fov, aspect, near, far) {
-        const matrix = new Matrix4();
-        const tanHalfFov = Math.tan(fov / 2);
-        matrix.set(0, 0, 1 / (tanHalfFov * aspect));
-        matrix.set(1, 1, 1 / tanHalfFov);
-        matrix.set(2, 2, (near + far) / (near - far));
-        matrix.set(2, 3, (2 * near * far) / (near - far));
-        matrix.set(3, 2, -1);
-        return matrix;
-      }
-
-      multiply(vector) {
-        const result = new Vector3(
-          this.elements[0] * vector.x + this.elements[4] * vector.y + this.elements[8] * vector.z + this.elements[12],
-          this.elements[1] * vector.x + this.elements[5] * vector.y + this.elements[9] * vector.z + this.elements[13],
-          this.elements[2] * vector.x + this.elements[6] * vector.y + this.elements[10] * vector.z + this.elements[14]
-        );
-        const w = this.elements[3] * vector.x + this.elements[7] * vector.y + this.elements[11] * vector.z + this.elements[15];
-        return result.multiplyScalar(1 / w);
-      }
-    }
-
-    class Camera {
-      constructor(position, rotation, fov, aspect, near, far) {
-        this.position = position;
-        this.rotation = rotation;
-        this.projectionMatrix = Matrix4.perspective(fov, aspect, near, far);
-      }
-
-      getViewMatrix() {
-        const rotationMatrix = new Matrix4();
-        rotationMatrix.set(0, 0, Math.cos(this.rotation.y));
-        rotationMatrix.set(0, 2, -Math.sin(this.rotation.y));
-        rotationMatrix.set(2, 0, Math.sin(this.rotation.y));
-        rotationMatrix.set(2, 2, Math.cos(this.rotation.y));
-
-        const translationMatrix = new Matrix4();
-        translationMatrix.set(0, 3, -this.position.x);
-        translationMatrix.set(1, 3, -this.position.y);
-        translationMatrix.set(2, 3, -this.position.z);
-
-        return rotationMatrix.multiply(translationMatrix);
-      }
-    }
-
-    const camera = new Camera(new Vector3(2, 1, 5), new Vector3(0, 0, 0), Math.PI / 3, screenWidth / screenHeight, 0.1, 100);
-
-    const gridSize = 10;
-    const tileSize = 1;
-    const map = new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0));
-
-    // Populate the map with a simple grid
-    for (let i = 0; i < gridSize; i++) {
-      for (let j = 0; j < gridSize; j++) {
-        map[i][j] = Math.random() < 0.8 ? 0 : 1;
-      }
-    }
-
-    function drawMap() {
-      ctx.strokeStyle = 'gray';
-      for (let i = 0; i < gridSize; i++) {
-        for (let j = 0; j < gridSize; j++) {
-          if (map[i][j] === 1) {
-            ctx.strokeRect(i * tileSize * 2, j * tileSize * 2, tileSize * 2, tileSize * 2);
-          }
+          return {
+            x: x,
+            y: y,
+            distance: distance,
+            height: wallHeight,
+          };
         }
       }
     }
 
-    function project(vertex, viewMatrix, projectionMatrix) {
-      const viewProjectionMatrix = projectionMatrix.multiply(viewMatrix);
-      const transformedVertex = viewProjectionMatrix.multiply(vertex);
-      return {
-        x: (transformedVertex.x + 1) * screenWidth / 2,
-        y: (1 - transformedVertex.y) * screenHeight / 2,
-      };
-    }
+    function handleInput() {
+      // Handle player input
+      if (keys['ArrowLeft']) {
+        player.angle -= 0.05;
+      }
+      if (keys['ArrowRight']) {
+        player.angle += 0.05;
+      }
+      if (keys['ArrowUp']) {
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
 
-    function castRay(mouseX, mouseY) {
-      const normalizedX = (mouseX / screenWidth) * 2 - 1;
-      const normalizedY = 1 - (mouseY / screenHeight) * 2;
-
-      const rayClip = new Vector3(normalizedX, normalizedY, -1);
-      const rayEye = camera.projectionMatrix.multiply(rayClip);
-
-      rayEye.z = -1;
-      rayEye.w = 0;
-
-      const rayWorld = camera.getViewMatrix().multiply(rayEye);
-      rayWorld.normalize();
-
-      return rayWorld;
-    }
-
-    function findWallHit(ray) {
-      const stepSize = 0.1;
-
-      let position = new Vector3(camera.position.x, camera.position.y, camera.position.z);
-
-      for (let step = 0; step < 30; step++) {
-        position = position.add(ray.multiplyScalar(stepSize));
-
-        const gridX = Math.floor(position.x / (tileSize * 2));
-        const gridY = Math.floor(position.z / (tileSize * 2));
-
-        if (gridX >= 0 && gridX < gridSize && gridY >= 0 && gridY < gridSize && map[gridX][gridY] === 1) {
-          return { x: gridX, y: gridY };
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
         }
       }
+      if (keys['ArrowDown']) {
+        const moveStep = player.speed;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
 
-      return null;
-    }
-
-    function drawHighlightedWall(hit) {
-      if (hit) {
-        ctx.fillStyle = 'red';
-        ctx.fillRect(hit.x * tileSize * 2, hit.y * tileSize * 2, tileSize * 2, tileSize * 2);
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
       }
     }
-
-    function handleMouseMove(event) {
-      const ray = castRay(event.clientX, event.clientY);
-      const hit = findWallHit(ray);
-
-      draw();
-      drawHighlightedWall(hit);
-    }
-
-    document.addEventListener('mousemove', handleMouseMove);
-
-    function handleKeyPress(event) {
-      const speed = 0.1;
-      switch (event.key) {
-        case 'ArrowUp':
-          camera.position.z -= speed;
-          break;
-        case 'ArrowDown':
-          camera.position.z += speed;
-          break;
-        case 'ArrowLeft':
-          camera.position.x -= speed;
-          break;
-        case 'ArrowRight':
-          camera.position.x += speed;
-          break;
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyPress);
 
     function update() {
-      draw();
-      requestAnimationFrame(update);
+      // Update game logic here
+      handleInput();
+
+      // Move the enemy towards the player
+      const deltaX = player.x - enemy.x;
+      const deltaY = player.y - enemy.y;
+      const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+
+      const directionX = deltaX / distance;
+      const directionY = deltaY / distance;
+
+      enemy.x += directionX * enemy.speed;
+      enemy.y += directionY * enemy.speed;
     }
+
+    function isWall(x, y) {
+      // Check if the given coordinates are inside a wall
+      const mapX = Math.floor(x / tileSize);
+      const mapY = Math.floor(y / tileSize);
+
+      return map[mapY][mapX] === 1;
+    }
+
+    const keys = {};
+
+    document.addEventListener('keydown', (event) => {
+      keys[event.code] = true;
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keys[event.code] = false;
+    });
 
     function draw() {
+      // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
-      drawMap();
+
+      // Draw walls
+      const rays = [];
+      for (let i = 0; i < screenWidth; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle);
+        rays.push(ray);
+      }
+
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
+        const wallHeight = ray.height;
+        const wallTop = (screenHeight - wallHeight) / 2;
+
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
+      }
+
+      // Draw player
+      ctx.fillStyle = '#f00';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Draw enemy
+      ctx.fillStyle = '#00f';
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
     }
 
-    update();
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
   </script>
 </body>
 </html>
