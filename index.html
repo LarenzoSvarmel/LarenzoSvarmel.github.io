@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting WebGL Demo</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -11,193 +11,225 @@
     }
     canvas {
       display: block;
+      image-rendering: pixelated;
+    }
+    #menu {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
+  <div id="menu">
+    <label for="colorPicker">Lighting Color:</label>
+    <input type="color" id="colorPicker" value="#ffffff">
+  </div>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
-    const gl = canvas.getContext('webgl');
+    const ctx = canvas.getContext('2d');
+    const menu = document.getElementById('menu');
+    const colorPicker = document.getElementById('colorPicker');
 
-    if (!gl) {
-      console.error('Unable to initialize WebGL. Your browser may not support it.');
-    }
+    const screenWidth = 800;
+    const screenHeight = 600;
+    const tileSize = 32;
+    const map = [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ];
 
-    // Vertex shader program
-    const vsSource = `
-      attribute vec2 aVertexPosition;
-      varying vec2 vTextureCoord;
-
-      void main(void) {
-        gl_Position = vec4(aVertexPosition, 0.0, 1.0);
-        vTextureCoord = (aVertexPosition + 1.0) / 2.0;
-      }
-    `;
-
-    // Fragment shader program
-    const fsSource = `
-      precision mediump float;
-
-      uniform sampler2D uTexture;
-      varying vec2 vTextureCoord;
-
-      const int mapWidth = 16;
-      const int mapHeight = 7;
-      const int map[mapHeight][mapWidth] = int[7](int[16](1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-                                                   int[16](1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-                                                   int[16](1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1),
-                                                   int[16](1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1),
-                                                   int[16](1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
-                                                   int[16](1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-                                                   int[16](1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1));
-
-      void main(void) {
-        vec3 rayColor = vec3(0.0, 0.0, 0.0);
-
-        // Calculate map coordinates based on the texture coordinates
-        int mapX = int(vTextureCoord.x * float(mapWidth));
-        int mapY = int(vTextureCoord.y * float(mapHeight));
-
-        // Sample the texture (framebuffer) at the current pixel
-        vec4 framebufferColor = texture2D(uTexture, vTextureCoord);
-
-        // Raycasting calculations based on the map
-        if (framebufferColor.r > 0.9 && framebufferColor.g > 0.9 && framebufferColor.b > 0.9) {
-          // Wall color
-          rayColor = vec3(1.0, 0.0, 0.0);
-        } else if (map[mapY][mapX] == 1) {
-          // Map space color
-          rayColor = vec3(0.0, 0.0, 1.0);
-        } else {
-          // Open space color
-          rayColor = vec3(0.0, 1.0, 0.0);
-        }
-
-        gl_FragColor = vec4(rayColor, 1.0);
-      }
-    `;
-
-    // Initialize shaders
-    function initShaderProgram(gl, vsSource, fsSource) {
-      const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
-      const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
-
-      const shaderProgram = gl.createProgram();
-      gl.attachShader(shaderProgram, vertexShader);
-      gl.attachShader(shaderProgram, fragmentShader);
-      gl.linkProgram(shaderProgram);
-
-      if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-        console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(shaderProgram));
-      }
-
-      return shaderProgram;
-    }
-
-    // Load shader
-    function loadShader(gl, type, source) {
-      const shader = gl.createShader(type);
-
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-      }
-
-      return shader;
-    }
-
-    const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
-
-    const programInfo = {
-      program: shaderProgram,
-      attribLocations: {
-        vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-      },
-      uniformLocations: {
-        texture: gl.getUniformLocation(shaderProgram, 'uTexture'),
-      },
+    const player = {
+      x: 100,
+      y: 100,
+      angle: 0,
+      fov: Math.PI / 3,
+      speed: 5,
+      isMouseLocked: false,
     };
 
-    // Create a texture
-    const texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    let isPaused = false;
 
-    // Create a framebuffer
-    const framebuffer = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    function castRay(rayAngle) {
+      let x = player.x;
+      let y = player.y;
 
-    // Buffer for a square
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    const positions = [
-       1.0,  1.0,
-      -1.0,  1.0,
-       1.0, -1.0,
-      -1.0, -1.0,
-    ];
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+      const raySin = Math.sin(rayAngle);
+      const rayCos = Math.cos(rayAngle);
 
-    // Draw the scene
-    function drawScene() {
-      // Render to the framebuffer
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-      gl.viewport(0, 0, canvas.width, canvas.height);
+      // Increment by small steps along the ray until a wall is hit
+      while (true) {
+        x += rayCos;
+        y += raySin;
 
-      gl.clearColor(1.0, 1.0, 1.0, 1.0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+        const mapX = Math.floor(x / tileSize);
+        const mapY = Math.floor(y / tileSize);
 
-      gl.useProgram(programInfo.program);
+        // Check if the ray hit a wall
+        if (map[mapY][mapX] === 1) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-      gl.vertexAttribPointer(
-        programInfo.attribLocations.vertexPosition,
-        2,         // size
-        gl.FLOAT,  // type
-        false,     // normalize
-        0,         // stride
-        0          // offset
-      );
-      gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+          // Apply fisheye correction
+          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
 
-      gl.uniform1i(programInfo.uniformLocations.texture, 0);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * correctedDistance));
 
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-      // Render to the canvas
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.viewport(0, 0, canvas.width, canvas.height);
-
-      gl.clearColor(0.0, 0.0, 0.0, 1.0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-
-      gl.useProgram(programInfo.program);
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-      gl.vertexAttribPointer(
-        programInfo.attribLocations.vertexPosition,
-        2,         // size
-        gl.FLOAT,  // type
-        false,     // normalize
-        0,         // stride
-        0          // offset
-      );
-      gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
-
-      gl.uniform1i(programInfo.uniformLocations.texture, 0);
-
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          return {
+            x: x,
+            y: y,
+            distance: correctedDistance,
+            height: wallHeight,
+          };
+        }
+      }
     }
 
-    drawScene();
+    function handleInput() {
+      // Handle player input
+      if (keys['ArrowLeft']) {
+        player.angle -= 0.05;
+      }
+      if (keys['ArrowRight']) {
+        player.angle += 0.05;
+      }
+      if (keys['ArrowUp']) {
+        const moveStep = player.speed;
+        const newX = player.x + Math.cos(player.angle) * moveStep;
+        const newY = player.y + Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
+      }
+      if (keys['ArrowDown']) {
+        const moveStep = player.speed;
+        const newX = player.x - Math.cos(player.angle) * moveStep;
+        const newY = player.y - Math.sin(player.angle) * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.x = newX;
+          player.y = newY;
+        }
+      }
+      if (keys['KeyL']) {
+        toggleMouseLock();
+      }
+      if (keys['KeyP']) {
+        togglePause();
+      }
+    }
+
+    function toggleMouseLock() {
+      if (!player.isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
+      }
+      player.isMouseLocked = !player.isMouseLocked;
+    }
+
+    function togglePause() {
+      isPaused = !isPaused;
+      menu.style.display = isPaused ? 'block' : 'none';
+
+      // Pause or resume the game loop
+      if (isPaused) {
+        cancelAnimationFrame(animationFrameId);
+      } else {
+        gameLoop();
+      }
+    }
+
+    function isWall(x, y) {
+      // Check if the given coordinates are inside a wall
+      const mapX = Math.floor(x / tileSize);
+      const mapY = Math.floor(y / tileSize);
+
+      return map[mapY][mapX] === 1;
+    }
+
+    colorPicker.addEventListener('input', function() {
+      // Handle color change
+      const lightingColor = colorPicker.value;
+      // Use the lightingColor as needed (e.g., for shading walls)
+    });
+
+    const keys = {};
+
+    document.addEventListener('keydown', (event) => {
+      keys[event.code] = true;
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keys[event.code] = false;
+    });
+
+    document.addEventListener('mousemove', (event) => {
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        player.angle += deltaX * 0.01;
+      }
+    });
+
+    function update() {
+      // Update game logic here
+      if (!isPaused) {
+        handleInput();
+      }
+    }
+
+    function draw() {
+      // Draw the raycasting scene here
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      // Draw sky
+      ctx.fillStyle = 'deepskyblue';
+      ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
+
+      // Draw ground
+      ctx.fillStyle = 'saddlebrown';
+      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
+
+      // Draw walls
+      const rays = [];
+      for (let i = 0; i < screenWidth; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle);
+        rays.push(ray);
+      }
+
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
+        const wallHeight = ray.height;
+        const wallTop = (screenHeight - wallHeight) / 2;
+
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+
+        // Draw vertical lines for walls
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    let animationFrameId = requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>
