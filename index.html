@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demo</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -20,6 +20,11 @@
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
+    const gl = canvas.getContext('webgl');
+
+    if (!gl) {
+      alert('Unable to initialize WebGL. Your browser may not support it.');
+    }
 
     const screenWidth = 800;
     const screenHeight = 600;
@@ -39,15 +44,90 @@
       y: 100,
       angle: 0,
       fov: Math.PI / 3,
-      speed: 3,
+      speed: 5,
       isMouseLocked: false,
+      flashlightOn: false,
     };
 
-    const flashlight = {
-      angle: 0,
-      radius: 150,
-      intensity: 0.8,
-    };
+    // Shader program
+    const vertexShaderSource = `
+      attribute vec2 a_position;
+      varying vec2 v_texCoord;
+      
+      void main() {
+        gl_Position = vec4(a_position, 0, 1);
+        v_texCoord = (a_position + 1.0) / 2.0;
+      }
+    `;
+
+    const fragmentShaderSource = `
+      precision mediump float;
+      varying vec2 v_texCoord;
+      
+      uniform sampler2D u_image;
+      uniform float u_flashlightRadius;
+      uniform vec2 u_flashlightPosition;
+
+      void main() {
+        vec4 color = texture2D(u_image, v_texCoord);
+
+        // Calculate distance to flashlight position
+        float distance = distance(v_texCoord, u_flashlightPosition);
+
+        // Apply circular gradient for the flashlight effect
+        float gradient = smoothstep(u_flashlightRadius, u_flashlightRadius + 0.01, u_flashlightRadius - distance);
+
+        // Mix the original color with black based on the gradient
+        gl_FragColor = mix(color, vec4(0.0, 0.0, 0.0, 1.0), gradient);
+      }
+    `;
+
+    const shaderProgram = createShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
+
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+    const positionLocation = gl.getAttribLocation(shaderProgram, 'a_position');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    function createShaderProgram(gl, vertexShaderSource, fragmentShaderSource) {
+      const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+      const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+      const program = gl.createProgram();
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      gl.linkProgram(program);
+
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(program));
+        return null;
+      }
+
+      return program;
+    }
+
+    function compileShader(gl, type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+
+      return shader;
+    }
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -113,21 +193,18 @@
       if (keys['KeyF']) {
         toggleFullScreen();
       }
+      if (keys['KeyC']) {
+        toggleFlashlight();
+      }
     }
 
     function toggleMouseLock() {
       if (!player.isMouseLocked) {
-        canvas.requestPointerLock().then(() => {
-          player.isMouseLocked = true;
-          canvas.addEventListener('mousemove', handleMouseMove);
-        }).catch((err) => {
-          console.error('Error locking the mouse:', err);
-        });
+        canvas.requestPointerLock();
       } else {
         document.exitPointerLock();
-        player.isMouseLocked = false;
-        canvas.removeEventListener('mousemove', handleMouseMove);
       }
+      player.isMouseLocked = !player.isMouseLocked;
     }
 
     function toggleFullScreen() {
@@ -140,6 +217,10 @@
       }
     }
 
+    function toggleFlashlight() {
+      player.flashlightOn = !player.flashlightOn;
+    }
+
     function isWall(x, y) {
       // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
@@ -148,11 +229,22 @@
       return map[mapY][mapX] === 1;
     }
 
-    function handleMouseMove(event) {
-      const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-      player.angle += deltaX * 0.01;
-      flashlight.angle = player.angle; // Update flashlight direction with player's angle
-    }
+    const keys = {};
+
+    document.addEventListener('keydown', (event) => {
+      keys[event.code] = true;
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keys[event.code] = false;
+    });
+
+    document.addEventListener('mousemove', (event) => {
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        player.angle += deltaX * 0.01;
+      }
+    });
 
     function update() {
       // Update game logic here
@@ -182,11 +274,26 @@
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
 
-      // Draw flashlight effect
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, flashlight.radius, 0, 2 * Math.PI);
-      ctx.fillStyle = `rgba(255, 255, 255, ${flashlight.intensity})`;
-      ctx.fill();
+      // Apply flashlight effect using shaders
+      gl.viewport(0, 0, screenWidth, screenHeight);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      gl.useProgram(shaderProgram);
+
+      const imageLocation = gl.getUniformLocation(shaderProgram, 'u_image');
+      gl.uniform1i(imageLocation, 0);
+
+      const flashlightRadiusLocation = gl.getUniformLocation(shaderProgram, 'u_flashlightRadius');
+      gl.uniform1f(flashlightRadiusLocation, player.flashlightOn ? 0.2 : 0.0);
+
+      const flashlightPositionLocation = gl.getUniformLocation(shaderProgram, 'u_flashlightPosition');
+      gl.uniform2f(flashlightPositionLocation, 0.5, 0.5);
+
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
     function gameLoop() {
