@@ -153,9 +153,13 @@
       ctx.fillStyle = 'deepskyblue';
       ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
-      // Draw ground
-      ctx.fillStyle = 'saddlebrown';
-      ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
+      // Draw ground with darkness effect
+      for (let y = screenHeight / 2; y < screenHeight; y++) {
+        const darknessFactor = (y - screenHeight / 2) / (screenHeight / 2);
+        const darknessColor = Math.floor(255 - darknessFactor * 50);
+        ctx.fillStyle = `rgb(${darknessColor}, ${darknessColor}, ${darknessColor})`;
+        ctx.fillRect(0, y, screenWidth, 1);
+      }
 
       // Draw walls
       for (let i = 0; i < screenWidth; i++) {
