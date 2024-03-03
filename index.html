@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Movement with Shooting</title>
+    <title>3D Raycasting Game</title>
     <style>
         body {
             margin: 0;
@@ -14,34 +14,10 @@
         canvas {
             display: block;
         }
-
-        #debugDropdown {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            z-index: 1;
-            cursor: move;
-        }
-
-        #debugList {
-            display: none;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            border-radius: 5px;
-        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <div id="debugDropdown" draggable="true">
-        <div id="debugList">
-            <button onclick="addEnemy()">Add Enemy</button>
-        </div>
-        <span onclick="toggleDebugList()">DEBUG &#9660;</span>
-    </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -50,367 +26,166 @@
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
-            size: 20,
-            angle: 0,
-            speed: 2,
-            baseSpeed: 2,
-            runningSpeed: 5,
-            isMoving: false,
-            targetX: 0,
-            targetY: 0,
-            ammo: 20,
-            maxAmmo: 20,
-            bullets: [],
-            reloading: false,
-            reloadTime: 4000,
-            shootDelay: 1000,
-            lastShotTime: 0,
-            weaponType: 'Pistol',
-            damage: 20,
-            stamina: 100,
-            maxStamina: 100,
-            isRunning: false,
-            health: 100,
-            maxHealth: 100,
+            size: 5,
+            fov: Math.PI / 2,
+            viewDist: 300,
+            angle: Math.PI / 4,
+            speed: 3,
         };
 
-        const bullet = {
-            size: 5,
-            speed: 5,
-            color: 'yellow',
+        const wall = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            width: 10,
+            height: 200,
         };
 
         const enemies = [];
 
-        let isPaused = false;
-        let debugListVisible = true;
-
         function drawPlayer() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw background
-            ctx.fillStyle = 'darkgreen';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw bullets
-            player.bullets.forEach(b => {
-                ctx.fillStyle = bullet.color;
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, bullet.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
             // Draw player
             ctx.fillStyle = 'blue';
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
             ctx.fill();
 
-            // Draw arrow indicating player direction
-            ctx.save();
-            ctx.translate(player.x, player.y);
-            ctx.rotate(player.angle);
+            // Draw player view
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(player.size * 2, 0);
-            ctx.lineTo(player.size * 1.8, player.size * 0.2);
-            ctx.lineTo(player.size * 1.8, -player.size * 0.2);
-            ctx.closePath();
-            ctx.fillStyle = 'white';
-            ctx.fill();
-            ctx.restore();
+            ctx.moveTo(player.x, player.y);
+            const endX = player.x + Math.cos(player.angle) * player.viewDist;
+            const endY = player.y + Math.sin(player.angle) * player.viewDist;
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
 
-            // Draw reloading text
-            if (player.reloading) {
-                ctx.fillStyle = 'red';
-                ctx.font = '16px Arial';
-                ctx.fillText('Reloading...', player.x - 30, player.y + player.size + 20);
-            }
+        function drawWall() {
+            // Draw wall
+            ctx.fillStyle = 'gray';
+            ctx.fillRect(wall.x - wall.width / 2, wall.y - wall.height / 2, wall.width, wall.height);
+        }
 
-            // Draw ammo counter
-            ctx.fillStyle = 'black';
-            ctx.font = '16px Arial';
-            ctx.fillText(`Ammo: ${player.ammo}`, 10, 20);
-
-            // Draw weapon type text
-            ctx.fillText(`Weapon: ${player.weaponType}`, 10, 40);
-
-            // Draw stamina meter
-            const staminaWidth = (player.stamina / player.maxStamina) * 100;
-            ctx.fillStyle = 'green';
-            ctx.fillRect(10, 60, staminaWidth, 10);
-
-            // Draw health bar
-            const healthWidth = (player.health / player.maxHealth) * 100;
-            ctx.fillStyle = 'red';
-            ctx.fillRect(player.x - player.size, player.y - player.size - 20, healthWidth, 10);
-
+        function drawEnemies() {
             // Draw enemies
+            ctx.fillStyle = 'red';
             enemies.forEach(enemy => {
-                ctx.fillStyle = 'lightgreen';
                 ctx.beginPath();
-                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                ctx.arc(enemy.x, enemy.y, player.size, 0, Math.PI * 2);
                 ctx.fill();
-
-                // Draw enemy health bar
-                ctx.fillStyle = 'green';
-                ctx.fillRect(enemy.x - enemy.size, enemy.y - enemy.size - 10, (enemy.health / 100) * (enemy.size * 2), 5);
             });
+        }
 
-            // Draw pause text
-            if (isPaused) {
-                ctx.fillStyle = 'white';
-                ctx.font = '36px Arial';
-                ctx.fillText('PAUSED', canvas.width / 2 - 80, canvas.height / 2);
+        function castRays() {
+            for (let i = 0; i < canvas.width; i++) {
+                const rayAngle = player.angle - player.fov / 2 + (i / canvas.width) * player.fov;
+                const rayEndX = player.x + Math.cos(rayAngle) * player.viewDist;
+                const rayEndY = player.y + Math.sin(rayAngle) * player.viewDist;
+
+                const intersection = raycast(player.x, player.y, rayEndX, rayEndY);
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.moveTo(player.x, player.y);
+                ctx.lineTo(intersection.x, intersection.y);
+                ctx.stroke();
             }
+        }
+
+        function raycast(startX, startY, endX, endY) {
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            const stepX = dx / dist;
+            const stepY = dy / dist;
+
+            let x = startX;
+            let y = startY;
+
+            while (getDistance(x, y, wall.x, wall.y) > player.size) {
+                x += stepX;
+                y += stepY;
+            }
+
+            return { x, y };
+        }
+
+        function getDistance(x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            return Math.sqrt(dx * dx + dy * dy);
         }
 
         function updatePlayer() {
-            if (!isPaused) {
-                if (player.isMoving) {
-                    const dx = player.targetX - player.x;
-                    const dy = player.targetY - player.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (player.isRunning && player.stamina > 0) {
-                        player.speed = player.runningSpeed;
-                        player.stamina -= 0.2;
-                    } else {
-                        player.speed = player.baseSpeed;
-                    }
-
-                    if (distance > player.speed) {
-                        player.x += (dx / distance) * player.speed;
-                        player.y += (dy / distance) * player.speed;
-                    } else {
-                        player.isMoving = false;
-                    }
-
-                    player.angle = Math.atan2(dy, dx);
+            if (keys['ArrowLeft']) {
+                player.angle -= 0.1;
+            }
+            if (keys['ArrowRight']) {
+                player.angle += 0.1;
+            }
+            if (keys['ArrowUp']) {
+                const newX = player.x + Math.cos(player.angle) * player.speed;
+                const newY = player.y + Math.sin(player.angle) * player.speed;
+                if (!checkWallCollision(newX, newY)) {
+                    player.x = newX;
+                    player.y = newY;
                 }
-
-                // Update bullet positions
-                player.bullets.forEach(b => {
-                    b.x += Math.cos(b.angle) * bullet.speed;
-                    b.y += Math.sin(b.angle) * bullet.speed;
-                });
-
-                // Remove bullets that are out of bounds
-                player.bullets = player.bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
-
-                // Handle reloading
-                if (player.ammo === 0 && !player.reloading) {
-                    const ammoToReload = player.maxAmmo - player.ammo;
-                    player.reloading = true;
-
-                    setTimeout(() => {
-                        player.ammo += ammoToReload;
-                        player.reloading = false;
-                    }, player.reloadTime);
+            }
+            if (keys['ArrowDown']) {
+                const newX = player.x - Math.cos(player.angle) * player.speed;
+                const newY = player.y - Math.sin(player.angle) * player.speed;
+                if (!checkWallCollision(newX, newY)) {
+                    player.x = newX;
+                    player.y = newY;
                 }
-
-                // Update stamina
-                if (player.isRunning) {
-                    if (player.stamina > 0) {
-                        player.stamina -= 0.2;
-                    } else {
-                        player.stamina = 0;
-                        player.isRunning = false;
-                    }
-                } else if (player.stamina < player.maxStamina) {
-                    player.stamina += 0.1;
-                }
-
-                // Check for collisions with enemies
-                checkCollisions();
-
-                // Update enemy positions
-                moveEnemies();
-
-                // Check for player-enemy collisions
-                checkPlayerEnemyCollisions();
-
-                // Check for player death
-                checkPlayerDeath();
             }
         }
 
-        function checkCollisions() {
-            player.bullets.forEach((bullet, bulletIndex) => {
-                enemies.forEach((enemy, enemyIndex) => {
-                    const distance = Math.sqrt((bullet.x - enemy.x) ** 2 + (bullet.y - enemy.y) ** 2);
-                    if (distance < player.size + enemy.size) {
-                        // Bullet hit enemy
-                        enemies[enemyIndex].health -= player.damage;
-                        player.bullets.splice(bulletIndex, 1);
-
-                        if (enemies[enemyIndex].health <= 0) {
-                            // Enemy defeated
-                            enemies.splice(enemyIndex, 1);
-                        }
-                    }
-                });
-            });
+        function checkWallCollision(x, y) {
+            return (
+                x - player.size < wall.x + wall.width / 2 &&
+                x + player.size > wall.x - wall.width / 2 &&
+                y - player.size < wall.y + wall.height / 2 &&
+                y + player.size > wall.y - wall.height / 2
+            );
         }
-
-        function shoot() {
-            const currentTime = new Date().getTime();
-
-            if (!isPaused && player.ammo > 0 && !player.reloading && currentTime - player.lastShotTime > player.shootDelay) {
-                player.bullets.push({
-                    x: player.x,
-                    y: player.y,
-                    angle: player.angle,
-                });
-
-                player.ammo--;
-                player.lastShotTime = currentTime;
-            }
-        }
-
-        function startRunning() {
-            if (!isPaused && !player.isRunning && player.stamina > 0) {
-                player.isRunning = true;
-            }
-        }
-
-        function stopRunning() {
-            player.isRunning = false;
-        }
-
-        function togglePause() {
-            isPaused = !isPaused;
-        }
-
-        function addEnemy() {
-            enemies.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                size: 15,
-                health: 100,
-            });
-        }
-
-        function moveEnemies() {
-            enemies.forEach(enemy => {
-                const dx = player.x - enemy.x;
-                const dy = player.y - enemy.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance > enemy.size) {
-                    enemy.x += (dx / distance) * enemy.size * 0.02;
-                    enemy.y += (dy / distance) * enemy.size * 0.02;
-                }
-            });
-        }
-
-        function checkPlayerEnemyCollisions() {
-            enemies.forEach(enemy => {
-                const distance = Math.sqrt((player.x - enemy.x) ** 2 + (player.y - enemy.y) ** 2);
-
-                if (distance < player.size + enemy.size) {
-                    // Player touched enemy
-                    if (player.health > 0) {
-                        // Reduce player health every 5 seconds when enemy touches player
-                        setInterval(() => {
-                            if (player.health > 0) {
-                                player.health -= 20;
-                            }
-                        }, 5000);
-                    }
-                }
-            });
-        }
-
-        function checkPlayerDeath() {
-            if (player.health <= 0) {
-                resetGame();
-            }
-        }
-
-        function resetGame() {
-            player.x = canvas.width / 2;
-            player.y = canvas.height / 2;
-            player.ammo = player.maxAmmo;
-            player.health = player.maxHealth;
-            enemies.length = 0; // Clear enemies
-        }
-
-        function reloadAmmo() {
-            if (!player.reloading) {
-                player.reloading = true;
-                setTimeout(() => {
-                    player.ammo = player.maxAmmo;
-                    player.reloading = false;
-                }, player.reloadTime);
-            }
-        }
-
-        function toggleDebugList() {
-            const debugList = document.getElementById('debugList');
-            debugList.style.display = debugListVisible ? 'none' : 'block';
-            debugListVisible = !debugListVisible;
-        }
-
-        function onMouseDown(event) {
-            player.isMoving = true;
-            player.targetX = event.clientX - canvas.getBoundingClientRect().left;
-            player.targetY = event.clientY - canvas.getBoundingClientRect().top;
-        }
-
-        function onMouseUp() {
-            player.isMoving = false;
-        }
-
-        function onMouseMove(event) {
-            if (player.isMoving) {
-                player.targetX = event.clientX - canvas.getBoundingClientRect().left;
-                player.targetY = event.clientY - canvas.getBoundingClientRect().top;
-            }
-        }
-
-        function onKeyDown(event) {
-            if (event.code === 'Space') {
-                shoot();
-            } else if (event.code === 'ShiftLeft') {
-                startRunning();
-            } else if (event.code === 'KeyP') {
-                togglePause();
-            } else if (event.code === 'Digit0') {
-                resetGame();
-            } else if (event.code === 'KeyR') {
-                reloadAmmo();
-            }
-        }
-
-        function onKeyUp(event) {
-            if (event.code === 'ShiftLeft') {
-                stopRunning();
-            }
-        }
-
-        canvas.addEventListener('mousedown', onMouseDown);
-        canvas.addEventListener('mouseup', onMouseUp);
-        canvas.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('keyup', onKeyUp);
 
         function gameLoop() {
             updatePlayer();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            castRays();
+            drawWall();
+            drawEnemies();
             drawPlayer();
+
             requestAnimationFrame(gameLoop);
         }
 
-        // Adjust canvas size based on the window size
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            drawPlayer();
+        const keys = {};
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
         });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        // Initialize enemies
+        for (let i = 0; i < 5; i++) {
+            enemies.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+            });
+        }
 
         // Initial setup
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+
         gameLoop();
     </script>
 </body>
