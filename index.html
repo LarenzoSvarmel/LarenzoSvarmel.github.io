@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Swamp's Engine</title>
+  <title>Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -24,9 +24,6 @@
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
-    const wallTexture = new Image();
-    wallTexture.src = 'wall_texture.jpg'; // Replace with your wall texture image
-
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -46,7 +43,10 @@
       isMouseLocked: false,
     };
 
-    function castRay(rayAngle, cameraX) {
+    const wallTexture = new Image();
+    wallTexture.src = 'wall_texture.jpg';
+
+    function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
 
@@ -66,15 +66,11 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          // Calculate the texture coordinates
-          const textureX = Math.floor((cameraX % tileSize) / tileSize * wallTexture.width);
-
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-            textureX: textureX,
           };
         }
       }
@@ -163,12 +159,11 @@
       ctx.fillStyle = 'green';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw walls
+      // Draw walls with texture mapping
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const cameraX = i / screenWidth; // Camera space coordinate for texture mapping
-        const ray = castRay(rayAngle, cameraX);
+        const ray = castRay(rayAngle);
         rays.push(ray);
       }
 
@@ -177,8 +172,8 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Draw textured walls
-        ctx.drawImage(wallTexture, ray.textureX, 0, 1, wallTexture.height, i, wallTop, 1, wallHeight);
+        // Draw textured wall
+        ctx.drawImage(wallTexture, i, wallTop, 1, wallHeight, i, wallTop, 1, wallHeight);
       }
     }
 
