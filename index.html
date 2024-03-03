@@ -77,6 +77,25 @@
       }
     }
 
+    // Recursive Shadowcasting Algorithm
+    function shadowCast(x, y, radius, startAngle, endAngle) {
+      for (let i = 0; i < 360; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / 360) * player.fov;
+        if (rayAngle >= startAngle && rayAngle <= endAngle) {
+          const ray = castRay(rayAngle);
+
+          // Check if the ray is within the radius
+          if (ray.distance <= radius) {
+            // Draw the ray
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            ctx.lineTo(ray.x, ray.y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
@@ -180,6 +199,10 @@
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
+
+      // Shadow casting
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+      shadowCast(player.x, player.y, 200, player.angle - Math.PI / 6, player.angle + Math.PI / 6);
     }
 
     function gameLoop() {
@@ -192,4 +215,3 @@
   </script>
 </body>
 </html>
-
