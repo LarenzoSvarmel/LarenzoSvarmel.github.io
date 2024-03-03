@@ -20,7 +20,11 @@
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
-    const gl = canvas.getContext('webgl');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+    if (!gl) {
+      alert('Unable to initialize WebGL. Your browser may not support it.');
+    }
 
     const screenWidth = 800;
     const screenHeight = 600;
