@@ -45,7 +45,7 @@
     const enemy = {
       x: 300,
       y: 300,
-      speed: 2,
+      speed: 1,
     };
 
     function castRay(rayAngle) {
@@ -78,6 +78,19 @@
       }
     }
 
+    function moveEnemy() {
+      // Move the enemy towards the player
+      const deltaX = player.x - enemy.x;
+      const deltaY = player.y - enemy.y;
+      const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+
+      const directionX = deltaX / distance;
+      const directionY = deltaY / distance;
+
+      enemy.x += directionX * enemy.speed;
+      enemy.y += directionY * enemy.speed;
+    }
+
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
@@ -108,22 +121,6 @@
       }
     }
 
-    function update() {
-      // Update game logic here
-      handleInput();
-
-      // Move the enemy towards the player
-      const deltaX = player.x - enemy.x;
-      const deltaY = player.y - enemy.y;
-      const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
-
-      const directionX = deltaX / distance;
-      const directionY = deltaY / distance;
-
-      enemy.x += directionX * enemy.speed;
-      enemy.y += directionY * enemy.speed;
-    }
-
     function isWall(x, y) {
       // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
@@ -141,6 +138,19 @@
     document.addEventListener('keyup', (event) => {
       keys[event.code] = false;
     });
+
+    document.addEventListener('mousemove', (event) => {
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        player.angle += deltaX * 0.01;
+      }
+    });
+
+    function update() {
+      // Update game logic here
+      handleInput();
+      moveEnemy();
+    }
 
     function draw() {
       // Draw the raycasting scene here
@@ -165,16 +175,15 @@
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
 
+      // Draw enemy
+      const enemySize = 10;
+      ctx.fillStyle = 'blue';
+      ctx.fillRect(enemy.x - enemySize / 2, enemy.y - enemySize / 2, enemySize, enemySize);
+
       // Draw player
-      ctx.fillStyle = '#f00';
+      ctx.fillStyle = 'red';
       ctx.beginPath();
       ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
-      ctx.fill();
-
-      // Draw enemy
-      ctx.fillStyle = '#00f';
-      ctx.beginPath();
-      ctx.arc(enemy.x, enemy.y, 5, 0, 2 * Math.PI);
       ctx.fill();
     }
 
