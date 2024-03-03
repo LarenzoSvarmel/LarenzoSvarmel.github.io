@@ -25,20 +25,19 @@
     const screenHeight = 600;
     const tileSize = 32;
     const map = [
-      [1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 1, 0, 1],
-      [1, 0, 1, 0, 0, 1, 0, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
 
     const player = {
       x: 100,
       y: 100,
       angle: 0,
-      pitch: 0, // New pitch property
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
@@ -51,9 +50,6 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      const pitchCos = Math.cos(player.pitch);
-      const pitchSin = Math.sin(player.pitch);
-
       // Increment by small steps along the ray until a wall is hit
       while (true) {
         x += rayCos;
@@ -65,17 +61,12 @@
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
-
-          // Calculate the vertical scaling factor based on pitch
-          const verticalScale = Math.cos(player.pitch) / correctedDistance;
-
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight * verticalScale);
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
           return {
             x: x,
             y: y,
-            distance: correctedDistance,
+            distance: distance,
             height: wallHeight,
           };
         }
@@ -112,12 +103,6 @@
       }
       if (keys['KeyL']) {
         toggleMouseLock();
-      }
-      if (keys['KeyW']) { // Adjust pitch on 'W' key press
-        player.pitch = Math.min(player.pitch + 0.02, Math.PI / 2);
-      }
-      if (keys['KeyS']) { // Adjust pitch on 'S' key press
-        player.pitch = Math.max(player.pitch - 0.02, -Math.PI / 2);
       }
     }
 
@@ -179,8 +164,8 @@
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
+        // Draw vertical lines for walls
         ctx.fillStyle = wallColor;
-        // Draw vertical lines for columns
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
