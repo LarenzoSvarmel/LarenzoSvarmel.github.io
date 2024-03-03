@@ -1,61 +1,6 @@
 const canvas = document.getElementById('raycastingCanvas');
 const ctx = canvas.getContext('2d');
 
-// Add these lines at the beginning of your raycasting.js file
-
-let keys = {}; // Object to store the state of pressed keys
-
-// Add this function to handle keydown and keyup events
-function handleKeyDown(event) {
-    keys[event.key] = true;
-}
-
-function handleKeyUp(event) {
-    keys[event.key] = false;
-}
-
-// Add event listeners to capture key presses
-document.addEventListener('keydown', handleKeyDown);
-document.addEventListener('keyup', handleKeyUp);
-
-// Modify your update function to handle player movement based on key presses
-function update() {
-    // Handle player movement
-    if (keys['ArrowUp']) {
-        player.x += Math.cos(player.angle) * 5; // Move forward
-        player.y += Math.sin(player.angle) * 5;
-    }
-    if (keys['ArrowDown']) {
-        player.x -= Math.cos(player.angle) * 5; // Move backward
-        player.y -= Math.sin(player.angle) * 5;
-    }
-
-    // Handle player rotation
-    if (keys['ArrowLeft']) {
-        player.angle -= 0.1; // Rotate left
-    }
-    if (keys['ArrowRight']) {
-        player.angle += 0.1; // Rotate right
-    }
-
-    const rays = [];
-
-    // Cast rays from the player's position
-    for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - Math.PI / 6 + (i / screenWidth) * Math.PI / 3;
-
-        const ray = {
-            x: player.x,
-            y: player.y,
-            angle: rayAngle,
-        };
-
-        rays.push(castRay(ray));
-    }
-
-    // Other update logic can go here if needed
-}
-
 const screenWidth = canvas.width;
 const screenHeight = canvas.height;
 const tileSize = 50; // Adjust this based on your preference
@@ -172,6 +117,58 @@ function draw() {
     ctx.arc(player.x, player.y, 5, 0, Math.PI * 2);
     ctx.fill();
 }
+
+// Add these lines at the beginning of your raycasting.js file
+
+let keys = {}; // Object to store the state of pressed keys
+
+// Add this function to handle keydown and keyup events
+function handleKeyDown(event) {
+    keys[event.key] = true;
+}
+
+function handleKeyUp(event) {
+    keys[event.key] = false;
+}
+
+// Add event listeners to capture key presses
+document.addEventListener('keydown', handleKeyDown);
+document.addEventListener('keyup', handleKeyUp);
+
+// Modify your update function to handle player movement based on key presses
+function update() {
+    // Handle player movement
+    if (keys['ArrowUp']) {
+        player.x += Math.cos(player.angle) * 5; // Move forward
+        player.y += Math.sin(player.angle) * 5;
+    }
+    if (keys['ArrowDown']) {
+        player.x -= Math.cos(player.angle) * 5; // Move backward
+        player.y -= Math.sin(player.angle) * 5;
+    }
+
+    // Handle player rotation
+    if (keys['ArrowLeft']) {
+        player.angle -= 0.1; // Rotate left
+    }
+    if (keys['ArrowRight']) {
+        player.angle += 0.1; // Rotate right
+    }
+
+    const rays = [];
+
+    // Cast rays from the player's position
+    for (let i = 0; i < screenWidth; i++) {
+        const rayAngle = player.angle - Math.PI / 6 + (i / screenWidth) * Math.PI / 3;
+
+        const ray = {
+            x: player.x,
+            y: player.y,
+            angle: rayAngle,
+        };
+
+        rays.push(castRay(ray));
+    }
 
 function gameLoop() {
     update();
