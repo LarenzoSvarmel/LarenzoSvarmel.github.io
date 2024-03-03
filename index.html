@@ -198,10 +198,14 @@ function castIndividualShadows(startX, startY, angle) {
       // Update game logic here
       handleInput();
     }
-
+function drawWithLightmap() {
     function draw() {
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+        updateLightmap();
+  drawWithLightmap();
+
 
       // Draw sky
       ctx.fillStyle = 'deepskyblue';
@@ -212,11 +216,16 @@ function castIndividualShadows(startX, startY, angle) {
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
       // Draw walls
-      const rays = [];
-      for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
-        rays.push(ray);
+       for (let i = 0; i < screenWidth; i++) {
+    for (let j = 0; j < screenHeight; j++) {
+      const wallHeight = lightmap[i][j];
+      const wallTop = (screenHeight - wallHeight) / 2;
+
+      const wallColor = `rgba(0, 0, 0, ${wallHeight / 10})`;
+
+      // Draw vertical lines for walls
+      ctx.fillStyle = wallColor;
+      ctx.fillRect(i, wallTop, 1, wallHeight);
       }
 
       for (let i = 0; i < screenWidth; i++) {
@@ -236,6 +245,7 @@ function castIndividualShadows(startX, startY, angle) {
       update();
       draw();
       requestAnimationFrame(gameLoop);
+    }
     }
 
     gameLoop();
