@@ -41,10 +41,7 @@
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
-      isJumping: false,
-      jumpHeight: 50, // Adjust as needed
-      jumpDuration: 500, // Jump duration in milliseconds
-      jumpStartTime: 0,
+      headbob: 0,
     };
 
     function castRay(rayAngle) {
@@ -86,22 +83,6 @@
         player.angle += 0.05;
       }
 
-      // Jumping logic
-      if (keys['Space'] && !player.isJumping) {
-        player.isJumping = true;
-        player.jumpStartTime = Date.now();
-      }
-
-      if (player.isJumping) {
-        const elapsedTime = Date.now() - player.jumpStartTime;
-        if (elapsedTime < player.jumpDuration) {
-          // Simulate jumping by moving the camera up slightly
-          player.y -= player.jumpHeight * (elapsedTime / player.jumpDuration);
-        } else {
-          player.isJumping = false;
-        }
-      }
-
       // Move forward and backward without rotating the camera angle
       if (keys['ArrowUp'] || keys['KeyW']) {
         const moveStep = player.speed;
@@ -111,6 +92,7 @@
         if (!isWall(newX, newY)) {
           player.x = newX;
           player.y = newY;
+          player.headbob = Math.sin(new Date().getTime() / 100) * 2; // Adjust headbob intensity and frequency
         }
       }
       if (keys['ArrowDown'] || keys['KeyS']) {
@@ -121,6 +103,7 @@
         if (!isWall(newX, newY)) {
           player.x = newX;
           player.y = newY;
+          player.headbob = Math.sin(new Date().getTime() / 100) * 2; // Adjust headbob intensity and frequency
         }
       }
 
@@ -207,7 +190,7 @@
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
         const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
+        const wallTop = (screenHeight - wallHeight) / 2 + player.headbob; // Apply headbob to wallTop
 
         const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
