@@ -43,13 +43,6 @@
       isMouseLocked: false,
     };
 
-    const sun = {
-      x: 500,
-      y: 100,
-      radius: 20,
-      brightness: 0.8,
-    };
-
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -70,15 +63,11 @@
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
 
-          // Simulate basic lighting effects based on the distance from the sun
-          const lightIntensity = Math.max(0, sun.brightness - distance / 800);
-
           return {
             x: x,
             y: y,
             distance: distance,
             height: wallHeight,
-            lightIntensity: lightIntensity,
           };
         }
       }
@@ -151,6 +140,13 @@
       }
     });
 
+    function interpolateColor(color1, color2, t) {
+      const r = Math.round(color1[0] + (color2[0] - color1[0]) * t);
+      const g = Math.round(color1[1] + (color2[1] - color1[1]) * t);
+      const b = Math.round(color1[2] + (color2[2] - color1[2]) * t);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
     function update() {
       // Update game logic here
       handleInput();
@@ -159,21 +155,18 @@
     function draw() {
       // Draw the raycasting scene here
 
-      // Draw skybox (background)
-      ctx.fillStyle = 'deepskyblue';
+      // Draw skybox (background gradient)
+      const gradient = ctx.createLinearGradient(0, 0, 0, screenHeight / 2);
+      gradient.addColorStop(0, 'deepskyblue');
+      gradient.addColorStop(1, 'white');
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
 
       // Draw ground
       ctx.fillStyle = 'green';
       ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
 
-      // Draw sun
-      ctx.beginPath();
-      ctx.arc(sun.x, sun.y, sun.radius, 0, 2 * Math.PI);
-      ctx.fillStyle = 'yellow';
-      ctx.fill();
-
-      // Draw walls with lighting effects
+      // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -186,11 +179,14 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Apply lighting effects
-        const wallColor = `rgb(${255 - ray.distance * 2 * ray.lightIntensity}, ${255 - ray.distance * 2 * ray.lightIntensity}, ${255 - ray.distance * 2 * ray.lightIntensity})`;
+        // Calculate blending factor based on the wall's distance
+        const blendFactor = Math.min(1, ray.distance / 400); // Adjust 400 based on your preferences
 
-        // Draw vertical lines for walls
-        ctx.fillStyle = wallColor;
+        // Interpolate between wall color and sky color
+        const blendedColor = interpolateColor([255, 255, 255], [255, 255, 255], blendFactor);
+
+        // Draw vertical lines for walls with blended color
+        ctx.fillStyle = blendedColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
