@@ -111,11 +111,17 @@
 
     function toggleMouseLock() {
       if (!player.isMouseLocked) {
-        canvas.requestPointerLock();
+        canvas.requestPointerLock().then(() => {
+          player.isMouseLocked = true;
+          canvas.addEventListener('mousemove', handleMouseMove);
+        }).catch((err) => {
+          console.error('Error locking the mouse:', err);
+        });
       } else {
         document.exitPointerLock();
+        player.isMouseLocked = false;
+        canvas.removeEventListener('mousemove', handleMouseMove);
       }
-      player.isMouseLocked = !player.isMouseLocked;
     }
 
     function toggleFullScreen() {
@@ -136,6 +142,11 @@
       return map[mapY][mapX] === 1;
     }
 
+    function handleMouseMove(event) {
+      const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+      player.angle += deltaX * 0.01;
+    }
+
     const keys = {};
 
     document.addEventListener('keydown', (event) => {
@@ -144,13 +155,6 @@
 
     document.addEventListener('keyup', (event) => {
       keys[event.code] = false;
-    });
-
-    document.addEventListener('mousemove', (event) => {
-      if (player.isMouseLocked) {
-        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        player.angle += deltaX * 0.01;
-      }
     });
 
     function update() {
