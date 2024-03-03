@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting with Lighting</title>
+  <title>Raycasting with Advanced Lighting</title>
   <style>
     body {
       margin: 0;
@@ -50,7 +50,11 @@
       intensity: 1.5,
     };
 
-    function castRay(rayAngle) {
+    function castRay(rayAngle, recursionDepth = 0) {
+      if (recursionDepth > 3) {
+        return { shading: 0, distance: Infinity };
+      }
+
       let x = player.x;
       let y = player.y;
 
@@ -77,58 +81,46 @@
             height: wallHeight,
           };
 
-          // Calculate shading
-          const angleToLight = Math.atan2(lightSource.y - hitPoint.y, lightSource.x - hitPoint.x);
-          const normalAngle = (rayAngle - player.angle + Math.PI) % (2 * Math.PI);
-          const shading = Math.max(0, Math.cos(angleToLight - normalAngle));
+          // Calculate shading using Phong reflection model
+          const ambientShading = 0.2; // Ambient reflection coefficient
+          const diffuseShading = Math.max(0, Math.cos(angleToLight(hitPoint) - normalAngle(hitPoint)));
+          const specularShading = Math.pow(Math.max(0, -reflect(rayAngle, normalAngle(hitPoint)).x * rayCos + reflect(rayAngle, normalAngle(hitPoint)).y * raySin), 10);
+          const phongShading = ambientShading + (diffuseShading + specularShading) * lightSource.intensity;
 
           // Adjust shading based on distance from the light source
           const distanceToLight = Math.sqrt((lightSource.x - hitPoint.x) ** 2 + (lightSource.y - hitPoint.y) ** 2);
           const attenuation = 1 / (1 + 0.1 * distanceToLight + 0.01 * distanceToLight ** 2);
 
-          // Shadow casting: Check for shadows using the more efficient algorithm
-          const isShadowed = checkForShadows(hitPoint, lightSource);
+          // Reflection effect
+          const reflectionRayAngle = 2 * angleToLight(hitPoint) - rayAngle;
+          const reflectionRay = castRay(reflectionRayAngle, recursionDepth + 1);
 
-          // Apply shading, attenuation, and shadows
-          const finalShading = isShadowed ? 0 : shading * attenuation * lightSource.intensity;
+          // Apply shading, attenuation, and reflection
+          const finalShading = phongShading * attenuation * (1 + reflectionRay.shading);
 
           return {
             ...hitPoint,
             shading: finalShading,
+            distance: distance,
           };
         }
       }
     }
 
-    function checkForShadows(hitPoint, lightSource) {
-      // Shadow casting: Cast additional rays towards the light source
+    function angleToLight(hitPoint) {
+      return Math.atan2(lightSource.y - hitPoint.y, lightSource.x - hitPoint.x);
+    }
 
-      const lightToHitPoint = {
-        x: hitPoint.x - lightSource.x,
-        y: hitPoint.y - lightSource.y,
+    function normalAngle(hitPoint) {
+      return (Math.atan2(hitPoint.y - player.y, hitPoint.x - player.x) - player.angle + Math.PI) % (2 * Math.PI);
+    }
+
+    function reflect(incidentAngle, normalAngle) {
+      const reflectAngle = normalAngle * 2 - incidentAngle;
+      return {
+        x: Math.cos(reflectAngle),
+        y: Math.sin(reflectAngle),
       };
-
-      const distanceToLight = Math.sqrt(lightToHitPoint.x ** 2 + lightToHitPoint.y ** 2);
-      const normalizedLightVector = {
-        x: lightToHitPoint.x / distanceToLight,
-        y: lightToHitPoint.y / distanceToLight,
-      };
-
-      const numSteps = Math.ceil(distanceToLight / tileSize);
-
-      for (let step = 1; step <= numSteps; step++) {
-        const stepX = lightSource.x + step * normalizedLightVector.x * tileSize;
-        const stepY = lightSource.y + step * normalizedLightVector.y * tileSize;
-
-        const mapX = Math.floor(stepX / tileSize);
-        const mapY = Math.floor(stepY / tileSize);
-
-        if (map[mapY][mapX] === 1) {
-          return true; // Hit an obstacle, point is in shadow
-        }
-      }
-
-      return false; // No obstacles found, point is lit
     }
 
     function handleInput() {
@@ -207,7 +199,7 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls and apply shading
+      // Draw walls and apply advanced shading
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
