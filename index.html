@@ -46,6 +46,7 @@
       x: 400,
       y: 300,
       brightness: 0.8,
+      specularPower: 10, // Adjust the specular highlight intensity
     };
 
     function castRay(rayAngle) {
@@ -67,7 +68,14 @@
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
-          const brightness = calculateAmbientOcclusion(x, y, rayAngle) * light.brightness;
+          const brightness = Math.max(0, Math.min(1, 1 - distance / 300)) * light.brightness;
+
+          // Calculate specular highlight
+          const dx = light.x - x;
+          const dy = light.y - y;
+          const distanceToLight = Math.sqrt(dx * dx + dy * dy);
+          const dotProduct = (rayCos * dx + raySin * dy) / (distanceToLight * distance);
+          const specularIntensity = Math.pow(Math.max(0, dotProduct), light.specularPower);
 
           return {
             x: x,
@@ -75,29 +83,10 @@
             distance: distance,
             height: wallHeight,
             brightness: brightness,
+            specular: specularIntensity,
           };
         }
       }
-    }
-
-    function calculateAmbientOcclusion(x, y, rayAngle) {
-      // Simulate ambient occlusion by checking nearby walls
-      let occlusion = 0;
-
-      for (let i = -Math.PI / 4; i <= Math.PI / 4; i += Math.PI / 8) {
-        const checkAngle = rayAngle + i;
-        const checkX = x + Math.cos(checkAngle);
-        const checkY = y + Math.sin(checkAngle);
-
-        const mapX = Math.floor(checkX / tileSize);
-        const mapY = Math.floor(checkY / tileSize);
-
-        if (map[mapY][mapX] === 1) {
-          occlusion += 0.2; // Increase occlusion if a nearby wall is found
-        }
-      }
-
-      return 1 - occlusion;
     }
 
     function handleInput() {
@@ -175,8 +164,10 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
+        // Calculate final wall color with specular highlight
         const brightnessAdjusted = Math.floor(255 * ray.brightness);
-        const wallColor = `rgb(${brightnessAdjusted}, ${brightnessAdjusted}, ${brightnessAdjusted})`;
+        const specularAdjusted = Math.floor(255 * ray.specular);
+        const wallColor = `rgb(${brightnessAdjusted + specularAdjusted}, ${brightnessAdjusted + specularAdjusted}, ${brightnessAdjusted + specularAdjusted})`;
 
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
