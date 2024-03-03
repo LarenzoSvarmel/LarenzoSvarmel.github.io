@@ -104,6 +104,9 @@
       if (keys['KeyL']) {
         toggleMouseLock();
       }
+      if (keys['KeyF']) {
+        toggleFullScreen();
+      }
     }
 
     function toggleMouseLock() {
@@ -113,6 +116,16 @@
         document.exitPointerLock();
       }
       player.isMouseLocked = !player.isMouseLocked;
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        canvas.requestFullscreen().catch((err) => {
+          console.error('Error attempting to enable fullscreen:', err);
+        });
+      } else {
+        document.exitFullscreen();
+      }
     }
 
     function isWall(x, y) {
