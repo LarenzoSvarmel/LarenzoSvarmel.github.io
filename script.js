@@ -1,132 +1,95 @@
-document.addEventListener('DOMContentLoaded', () => {
-const player = document.getElementById('player');
-const bullet = document.getElementById('bullet');
-const gameContainer = document.getElementById('game-container');
-const enemies = document.querySelectorAll('.enemy');
+document.addEventListener("DOMContentLoaded", function () {
+    // Get the WebGL context
+    const canvas = document.getElementById("webgl-canvas");
+    const gl = canvas.getContext("webgl");
 
-let isShooting = false;
-let ammoCount = 30;
-
-setInterval(moveEnemies, 1000);
-
-document.addEventListener('keydown', (event) => {
-   if (event.key === 'ArrowUp' && player.offsetTop > 0) {
-        player.style.top = `${player.offsetTop - 10}px`;
-        player.classList.add('up');
-        player.classList.remove('down', 'left', 'right');
-    } else if (event.key === 'ArrowDown' && player.offsetTop < gameContainer.clientHeight - player.clientHeight) {
-        player.style.top = `${player.offsetTop + 10}px`;
-        player.classList.add('down');
-        player.classList.remove('up', 'left', 'right');
-    } else if (event.key === 'ArrowLeft' && player.offsetLeft > 0) {
-        player.style.left = `${player.offsetLeft - 10}px`;
-        player.classList.add('left');
-        player.classList.remove('up', 'down', 'right');
-    } else if (event.key === 'ArrowRight' && player.offsetLeft < gameContainer.clientWidth - player.clientWidth) {
-        player.style.left = `${player.offsetLeft + 10}px`;
-        player.classList.add('right');
-        player.classList.remove('up', 'down', 'left');
-    // Add an else-if condition to handle spacebar and ammo count
-   } else if (event.key === ' ' && !isShooting && ammoCount > 0) {
-        shoot();
+    if (!gl) {
+        console.error("Unable to initialize WebGL. Your browser may not support it.");
+        return;
     }
+
+    // Define the vertex shader source code
+    const vertexShaderSource = `
+        attribute vec4 a_position;
+        void main() {
+            gl_Position = a_position;
+        }
+    `;
+
+    // Define the fragment shader source code
+    const fragmentShaderSource = `
+        precision mediump float;
+        void main() {
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+    `;
+
+    // Create shader objects
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+    // Create a shader program and link shaders
+    const shaderProgram = createProgram(gl, vertexShader, fragmentShader);
+
+    // Get the attribute location and enable it
+    const positionAttributeLocation = gl.getAttribLocation(shaderProgram, "a_position");
+    gl.enableVertexAttribArray(positionAttributeLocation);
+
+    // Create a buffer and bind it to ARRAY_BUFFER
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+    // Define the vertices of the triangle
+    const vertices = new Float32Array([
+        0.0,  1.0,
+       -1.0, -1.0,
+        1.0, -1.0,
+    ]);
+
+    // Upload the vertices data to the buffer
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+    // Set up the position attribute to read from the buffer
+    gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+
+    // Set the clear color and clear the canvas
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Use the shader program
+    gl.useProgram(shaderProgram);
+
+    // Draw the triangle
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
 });
 
-function moveEnemies() {
-    enemies.forEach((enemy) => {
-        const randomDirection = Math.floor(Math.random() * 4);
+// Function to create and compile a shader
+function createShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
 
-        switch (randomDirection) {
-            case 0: // Move up
-                if (enemy.offsetTop > 0) {
-                    enemy.style.top = `${enemy.offsetTop - 10}px`;
-                }
-                break;
-            case 1: // Move down
-                if (enemy.offsetTop < gameContainer.clientHeight - enemy.clientHeight) {
-                    enemy.style.top = `${enemy.offsetTop + 10}px`;
-                }
-                break;
-            case 2: // Move left
-                if (enemy.offsetLeft > 0) {
-                    enemy.style.left = `${enemy.offsetLeft - 10}px`;
-                }
-                break;
-            case 3: // Move right
-                if (enemy.offsetLeft < gameContainer.clientWidth - enemy.clientWidth) {
-                    enemy.style.left = `${enemy.offsetLeft + 10}px`;
-                }
-                break;
-            default:
-                break;
-        }
-    });
-
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowUp' && player.offsetTop > 0) {
-        player.style.top = `${player.offsetTop - 10}px`;
-    } else if (event.key === 'ArrowDown' && player.offsetTop < gameContainer.clientHeight - player.clientHeight) {
-        player.style.top = `${player.offsetTop + 10}px`;
-    } else if (event.key === 'ArrowLeft' && player.offsetLeft > 0) {
-        player.style.left = `${player.offsetLeft - 10}px`;
-    } else if (event.key === 'ArrowRight' && player.offsetLeft < gameContainer.clientWidth - player.clientWidth) {
-        player.style.left = `${player.offsetLeft + 10}px`;
-    } else if (event.key === ' ' && !isShooting && ammoCount > 0) {
-        shoot();
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error("Shader compilation error:", gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
     }
-});
 
-function shoot() {
-    isShooting = true;
-    ammoCount--;
-
-    const bulletDirection = getBulletDirection();
-    bullet.style.top = `${player.offsetTop + 5}px`;
-    bullet.style.left = `${player.offsetLeft + 5}px`;
-    bullet.style.transform = `rotate(${bulletDirection}deg)`;
-    bullet.style.display = 'block';
-
-    const bulletInterval = setInterval(() => {
-        const radians = (bulletDirection * Math.PI) / 180;
-        const deltaX = Math.cos(radians) * 10;
-        const deltaY = Math.sin(radians) * 10;
-
-        bullet.style.left = `${bullet.offsetLeft + deltaX}px`;
-        bullet.style.top = `${bullet.offsetTop - deltaY}px`;
-
-        // Check for collision with enemies
-        enemies.forEach((enemy) => {
-            if (checkCollision(bullet, enemy)) {
-                enemy.style.display = 'none';
-            }
-        });
-
-        // Check if the bullet is out of the game container
-        if (
-            bullet.offsetLeft > gameContainer.clientWidth ||
-            bullet.offsetTop < 0 ||
-            bullet.offsetTop > gameContainer.clientHeight
-        ) {
-            clearInterval(bulletInterval);
-            bullet.style.display = 'none';
-            isShooting = false;
-        }
-    }, 20);
+    return shader;
 }
 
-function getBulletDirection() {
-    if (player.classList.contains('up')) return 0;
-    if (player.classList.contains('down')) return 180;
-    if (player.classList.contains('left')) return -90;
-    if (player.classList.contains('right')) return 90;
-    return 0;
-}
+// Function to create and link a program
+function createProgram(gl, vertexShader, fragmentShader) {
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
 
-function checkCollision(element1, element2) {
-    return (
-        element1.offsetTop < element2.offsetTop + element2.clientHeight &&
-        element1.offsetTop + element1.clientHeight > element2.offsetTop &&
-        element1.offsetLeft < element2.offsetLeft + element2.clientWidth &&
-        element1.offsetLeft + element1.clientWidth > element2.offsetLeft
-    );
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error("Program linking error:", gl.getProgramInfoLog(program));
+        gl.deleteProgram(program);
+        return null;
+    }
+
+    return program;
 }
