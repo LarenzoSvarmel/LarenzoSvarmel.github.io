@@ -29,9 +29,6 @@
             angle: 0,
             speed: 2,
             baseSpeed: 2,
-            stamina: 100, // Initial stamina value (percent)
-            maxStamina: 100, // Maximum stamina value (percent)
-            staminaRegenRate: 0.5, // Stamina regeneration rate per millisecond
             isMoving: false,
             targetX: 0,
             targetY: 0,
@@ -44,6 +41,10 @@
             lastShotTime: 0,
             weaponType: 'Pistol',
             damage: 20,
+            stamina: 100,
+            maxStamina: 100,
+            staminaCooldown: 2000, // 2 seconds in milliseconds
+            usingStamina: false,
         };
 
         const bullet = {
@@ -99,9 +100,8 @@
             ctx.fillText(`Weapon: ${player.weaponType}`, 10, 40);
 
             // Draw stamina meter
-            const staminaBarWidth = (player.stamina / player.maxStamina) * 100;
             ctx.fillStyle = 'green';
-            ctx.fillRect(10, 60, staminaBarWidth, 10);
+            ctx.fillRect(10, 60, (player.stamina / player.maxStamina) * 100, 10);
         }
 
         function updatePlayer() {
@@ -118,12 +118,6 @@
                 }
 
                 player.angle = Math.atan2(dy, dx);
-
-                // Decrease stamina while moving
-                player.stamina = Math.max(player.stamina - player.staminaRegenRate, 0);
-            } else {
-                // Regenerate stamina when not moving
-                player.stamina = Math.min(player.stamina + player.staminaRegenRate, player.maxStamina);
             }
 
             // Update bullet positions
@@ -144,6 +138,18 @@
                     player.ammo += ammoToReload;
                     player.reloading = false;
                 }, player.reloadTime);
+            }
+
+            // Update stamina
+            if (player.usingStamina) {
+                player.stamina -= (100 / player.staminaCooldown) * (1 / 60) * 1000; // Decrease stamina over time
+
+                if (player.stamina <= 0) {
+                    player.usingStamina = false;
+                    setTimeout(() => {
+                        player.stamina = player.maxStamina;
+                    }, player.staminaCooldown);
+                }
             }
         }
 
@@ -182,8 +188,9 @@
         function onKeyDown(event) {
             if (event.code === 'Space') {
                 shoot();
-            } else if (event.code === 'ShiftLeft') {
+            } else if (event.code === 'ShiftLeft' && !player.usingStamina) {
                 player.speed = player.baseSpeed + 5;
+                player.usingStamina = true;
             }
         }
 
