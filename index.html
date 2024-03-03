@@ -37,20 +37,19 @@
     const player = {
       x: 100,
       y: 100,
-      angle: 0,
-      pitch: 0,
+      pitch: 0, // Up and down movement
+      yaw: 0,   // Left and right movement
       fov: Math.PI / 3,
       speed: 5,
       isMouseLocked: false,
     };
 
-    function castRay(rayAngle, rayPitch) {
+    function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
 
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
-      const pitchCos = Math.cos(rayPitch);
 
       // Increment by small steps along the ray until a wall is hit
       while (true) {
@@ -63,7 +62,7 @@
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle) * pitchCos));
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.yaw)));
 
           return {
             x: x,
@@ -78,15 +77,15 @@
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
-        player.angle -= 0.05;
+        player.yaw -= 0.05;
       }
       if (keys['ArrowRight']) {
-        player.angle += 0.05;
+        player.yaw += 0.05;
       }
       if (keys['ArrowUp']) {
         const moveStep = player.speed;
-        const newX = player.x + Math.cos(player.angle) * moveStep;
-        const newY = player.y + Math.sin(player.angle) * moveStep;
+        const newX = player.x + Math.cos(player.yaw) * moveStep;
+        const newY = player.y + Math.sin(player.yaw) * moveStep;
 
         if (!isWall(newX, newY)) {
           player.x = newX;
@@ -95,14 +94,28 @@
       }
       if (keys['ArrowDown']) {
         const moveStep = player.speed;
-        const newX = player.x - Math.cos(player.angle) * moveStep;
-        const newY = player.y - Math.sin(player.angle) * moveStep;
+        const newX = player.x - Math.cos(player.yaw) * moveStep;
+        const newY = player.y - Math.sin(player.yaw) * moveStep;
 
         if (!isWall(newX, newY)) {
           player.x = newX;
           player.y = newY;
         }
       }
+
+      // Handle mouse movement
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+        player.yaw += deltaX * 0.01;
+        player.pitch -= deltaY * 0.01;
+
+        // Clamp pitch to avoid flipping the view
+        player.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.pitch));
+      }
+
+      // Toggle mouse lock
       if (keys['KeyL']) {
         toggleMouseLock();
       }
@@ -140,8 +153,11 @@
         const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
         const deltaY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
 
-        player.angle += deltaX * 0.01;
-        player.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.pitch - deltaY * 0.01));
+        player.yaw += deltaX * 0.01;
+        player.pitch -= deltaY * 0.01;
+
+        // Clamp pitch to avoid flipping the view
+        player.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, player.pitch));
       }
     });
 
@@ -157,9 +173,8 @@
       // Draw walls
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const rayPitch = player.pitch;
-        const ray = castRay(rayAngle, rayPitch);
+        const rayAngle = player.yaw - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle);
         rays.push(ray);
       }
 
