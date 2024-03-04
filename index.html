@@ -206,11 +206,9 @@ function importMap(file) {
         const content = e.target.result;
         const mapData = JSON.parse(content);
 
-        if (mapData.map && mapData.player) {
+        if (mapData.map) {
           map = mapData.map;
-          player.x = mapData.player.x;
-          player.y = mapData.player.y;
-          player.angle = mapData.player.angle;
+          draw(); // Redraw the scene after importing the map
         } else {
           alert('Invalid map data format');
         }
@@ -227,6 +225,7 @@ function importMap(file) {
         importMap(file);
       }
     });
+
 document.getElementById('importInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (mapData.map) {
