@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Editor</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="mapEditorCanvas" width="800" height="600"></canvas>
+  <button id="exportMapEditorButton">Export Map</button>
+  <input type="file" id="importMapEditorInput" accept=".json">
+  <button id="importMapEditorButton">Import Map</button>
+  <script>
+    const canvas = document.getElementById('mapEditorCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const screenWidth = 800;
+    const screenHeight = 600;
+    const tileSize = 32;
+
+    let map = [];
+
+    function draw() {
+      // ... (draw map editor logic)
+    }
+
+    function exportMapEditor() {
+      const mapData = {
+        map: map,
+      };
+
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(mapData));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = 'mapEditor.json';
+      a.click();
+    }
+
+    function importMapEditor(file) {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const content = e.target.result;
+        const mapData = JSON.parse(content);
+
+        if (mapData.map) {
+          map = mapData.map;
+        } else {
+          alert('Invalid map data format');
+        }
+      };
+
+      reader.readAsText(file);
+    }
+
+    document.getElementById('exportMapEditorButton').addEventListener('click', exportMapEditor);
+
+    document.getElementById('importMapEditorInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        importMapEditor(file);
+      }
+    });
+
+    document.getElementById('importMapEditorButton').addEventListener('click', () => {
+      document.getElementById('importMapEditorInput').click();
+    });
+
+    function gameLoop() {
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
