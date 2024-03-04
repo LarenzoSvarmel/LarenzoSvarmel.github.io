@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Raycasting Demo with Light Maps</title>
+  <title>Advanced Raycasting Demo with Lighting</title>
   <style>
     body {
       margin: 0;
@@ -57,36 +57,6 @@
       isMouseLocked: false,
     };
 
-    const light = {
-      x: mapWidth * tileSize / 2,
-      y: mapHeight * tileSize / 2,
-      color: {
-        r: 1,
-        g: 1,
-        b: 1,
-      },
-      intensity: 1, // Light intensity
-      fallOff: 0.01, // Light fall-off
-    };
-
-    // Light map
-    const lightMap = [];
-    const lightMapResolution = 10; // Adjust light map resolution
-
-    function generateLightMap() {
-      for (let y = 0; y < mapHeight * lightMapResolution; y++) {
-        lightMap[y] = [];
-        for (let x = 0; x < mapWidth * lightMapResolution; x++) {
-          const lightX = x / lightMapResolution;
-          const lightY = y / lightMapResolution;
-
-          const distanceToLight = Math.sqrt((lightX * tileSize - light.x) ** 2 + (lightY * tileSize - light.y) ** 2);
-          const shading = Math.max(0, 1 - light.fallOff * distanceToLight); // Apply light fall-off
-          lightMap[y][x] = shading;
-        }
-      }
-    }
-
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -94,72 +64,51 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
-      // Increment by small steps along the ray until a wall is hit
-      while (true) {
-        x += rayCos;
-        y += raySin;
+      let distanceToWall = 0;
+      let hitWall = false;
+      let hitBoundary = false;
 
-        const mapX = Math.floor(x / tileSize);
-        const mapY = Math.floor(y / tileSize);
+      while (!hitWall && distanceToWall < 100) {
+        distanceToWall += 0.1;
 
-        // Check if the ray hit a wall
-        if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
+        const testX = Math.floor(x + rayCos * distanceToWall);
+        const testY = Math.floor(y + raySin * distanceToWall);
 
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (correctedDistance));
+        // Check if ray is out of bounds
+        if (testX < 0 || testX >= mapWidth || testY < 0 || testY >= mapHeight) {
+          hitWall = true;
+          distanceToWall = 100; // Set to maximum distance
+        } else {
+          // Check if ray hits a wall
+          if (map[testY][testX] === 1) {
+            hitWall = true;
 
-          const normalVector = {
-            x: x - player.x,
-            y: y - player.y,
-          };
+            const wallX = x + rayCos * distanceToWall;
+            const wallY = y + raySin * distanceToWall;
 
-          const reflectionVector = reflectVector(normalVector, { x: x - light.x, y: y - light.y });
-
-          const viewVector = {
-            x: player.x - x,
-            y: player.y - y,
-          };
-
-          const cosAngle = dotProduct(reflectionVector, viewVector) /
-            (vectorLength(reflectionVector) * vectorLength(viewVector));
-
-          const specularIntensity = Math.pow(cosAngle, 10); // Adjust the shininess/exponent value
-
-          const ambient = 0.1; // Ambient lighting
-          const diffuse = Math.max(0, dotProduct(normalVector, { x: light.x - x, y: light.y - y })) /
-            (vectorLength(normalVector) * vectorLength({ x: light.x - x, y: light.y - y }));
-          const specular = specularIntensity;
-
-          const shading = ambient + diffuse + specular;
-
-          return {
-            x: x,
-            y: y,
-            distance: correctedDistance,
-            height: wallHeight,
-            shading: shading * lightMap[Math.floor(y * lightMapResolution)][Math.floor(x * lightMapResolution)], // Apply light map
-            textureX: x % tileSize,
-          };
+            const boundary = 0.5; // Make boundaries smoother
+            if (
+              Math.floor(wallX) === testX + boundary ||
+              Math.floor(wallX) === testX - boundary ||
+              Math.floor(wallY) === testY + boundary ||
+              Math.floor(wallY) === testY - boundary
+            ) {
+              hitBoundary = true;
+            }
+          }
         }
       }
-    }
 
-    function reflectVector(vector, normal) {
-      const scalar = 2 * dotProduct(vector, normal) /
-        (vectorLength(normal) * vectorLength(normal));
+      // Calculate the distance to the ceiling and floor
+      const ceiling = screenHeight / 2 - screenHeight / distanceToWall;
+      const floor = screenHeight - ceiling;
+
       return {
-        x: vector.x - scalar * normal.x,
-        y: vector.y - scalar * normal.y,
+        distance: distanceToWall,
+        ceiling,
+        floor,
+        hitBoundary,
       };
-    }
-
-    function dotProduct(vector1, vector2) {
-      return vector1.x * vector2.x + vector1.y * vector2.y;
-    }
-
-    function vectorLength(vector) {
-      return Math.sqrt(vector.x ** 2 + vector.y ** 2);
     }
 
     function drawMiniMap() {
@@ -171,15 +120,11 @@
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
           if (map[y][x] === 1) {
-            miniMapCtx.fillStyle = `rgba(100, 100, 100, ${lightMap[y * lightMapResolution][x * lightMapResolution]})`;
+            miniMapCtx.fillStyle = 'gray';
             miniMapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
           }
         }
       }
-
-      // Draw light source on the mini-map
-      miniMapCtx.fillStyle = 'yellow';
-      miniMapCtx.fillRect(light.x * mapScale - 2, light.y * mapScale - 2, 4, 4);
 
       // Draw player on the mini-map
       miniMapCtx.fillStyle = 'red';
@@ -248,6 +193,15 @@
       }
     }
 
+    function toggleMouseLock() {
+      if (!player.isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
+      }
+      player.isMouseLocked = !player.isMouseLocked;
+    }
+
     function isWall(x, y) {
       // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
@@ -266,6 +220,19 @@
       keys[event.code] = false;
     });
 
+    document.addEventListener('mousemove', (event) => {
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        player.angle += deltaX * 0.01;
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.code === 'KeyL') {
+        toggleMouseLock();
+      }
+    });
+
     function update() {
       // Update game logic here
       handleInput();
@@ -273,38 +240,30 @@
     }
 
     function draw() {
-      // Draw the raycasting scene here
+      // Draw the raycasting scene with lighting here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls using Phong shading and light map
-      const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
-        rays.push(ray);
-      }
 
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
-        const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
+        const shading = Math.min(1, 0.1 + ray.distance / 200);
 
-        // Apply shading based on the Phong reflection model, light map, and light fall-off
-        const ambient = 0.1;
-        const diffuse = ray.shading;
-        const specular = ray.shading;
+        // Apply shading and draw walls
+        const wallHeight = Math.floor(screenHeight / ray.distance);
+        const ceiling = screenHeight / 2 - wallHeight / 2;
+        const floor = screenHeight - ceiling;
 
-        const finalShading = ambient + diffuse + specular;
+        const wallColor = ray.hitBoundary ? 'darkgray' : 'gray';
 
-        // Combine the components to get the final color, including light fall-off
-        const finalColor = {
-          r: ray.shading * finalShading * light.color.r * lightMap[Math.floor(ray.y * lightMapResolution)][Math.floor(ray.x * lightMapResolution)],
-          g: ray.shading * finalShading * light.color.g * lightMap[Math.floor(ray.y * lightMapResolution)][Math.floor(ray.x * lightMapResolution)],
-          b: ray.shading * finalShading * light.color.b * lightMap[Math.floor(ray.y * lightMapResolution)][Math.floor(ray.x * lightMapResolution)],
-        };
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, ceiling, 1, wallHeight);
 
-        ctx.fillStyle = `rgb(${Math.floor(finalColor.r * 255)}, ${Math.floor(finalColor.g * 255)}, ${Math.floor(finalColor.b * 255)})`;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
+        // Draw floor and ceiling
+        ctx.fillStyle = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
+        ctx.fillRect(i, 0, 1, ceiling);
+        ctx.fillStyle = 'darkgray';
+        ctx.fillRect(i, floor, 1, screenHeight - floor);
       }
     }
 
@@ -314,7 +273,6 @@
       requestAnimationFrame(gameLoop);
     }
 
-    generateLightMap();
     gameLoop();
   </script>
 </body>
