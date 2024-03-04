@@ -3,90 +3,300 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive Android Replica</title>
+  <title>Advanced Raycasting Demo</title>
   <style>
     body {
-      font-family: 'Roboto', sans-serif;
       margin: 0;
-      padding: 0;
-      background-color: #f4f4f4;
+      overflow: hidden;
     }
-
-    #status-bar {
-      background-color: #4CAF50;
-      color: #fff;
-      padding: 10px;
-      text-align: center;
+    canvas {
+      display: block;
+      image-rendering: pixelated;
     }
-
-    #navigation-bar {
-      background-color: #333;
-      color: #fff;
-      padding: 10px;
-      text-align: center;
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-    }
-
-    #home-screen {
-      margin-top: 40px;
-      text-align: center;
-    }
-
-    .app-icon {
-      width: 80px;
-      height: 80px;
-      background-color: #fff;
-      border-radius: 50%;
-      margin: 10px;
-      display: inline-block;
-      cursor: pointer;
-    }
-
-    .app-name {
-      font-size: 14px;
-      margin-top: 5px;
-    }
-
-    .app-container {
-      display: inline-block;
-      text-align: center;
+    #miniMap {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      border: 2px solid white;
     }
   </style>
 </head>
 <body>
-
-  <div id="status-bar">
-    Android Replica
-  </div>
-
-  <div id="home-screen">
-    <div class="app-container" onclick="openApp('App 1')">
-      <div class="app-icon"></div>
-      <div class="app-name">App 1</div>
-    </div>
-    <div class="app-container" onclick="openApp('App 2')">
-      <div class="app-icon"></div>
-      <div class="app-name">App 2</div>
-    </div>
-    <div class="app-container" onclick="openApp('App 3')">
-      <div class="app-icon"></div>
-      <div class="app-name">App 3</div>
-    </div>
-    <!-- Add more app containers as needed -->
-  </div>
-
-  <div id="navigation-bar">
-    Navigation Bar
-  </div>
-
+  <canvas id="raycastingCanvas" width="800" height="600"></canvas>
+  <canvas id="miniMap" width="160" height="120"></canvas>
   <script>
-    function openApp(appName) {
-      alert('Opening ' + appName);
-      // Add more functionality here based on the app
-    }
-  </script>
+    const canvas = document.getElementById('raycastingCanvas');
+    const ctx = canvas.getContext('2d');
 
+    const miniMap = document.getElementById('miniMap');
+    const miniMapCtx = miniMap.getContext('2d');
+
+    const screenWidth = 800;
+    const screenHeight = 600;
+    const tileSize = 32;
+    const mapWidth = 12;
+    const mapHeight = 9;
+
+    const map = [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ];
+
+    const player = {
+      pos: { x: 100, y: 100 },
+      dir: { x: Math.cos(Math.PI / 4), y: Math.sin(Math.PI / 4) },
+      fov: Math.PI / 3,
+      speed: 2.1,  // Decreased speed by 30%
+      rotationSpeed: 0.03,
+      isMouseLocked: false,
+    };
+
+    function castRay(rayAngle) {
+      const rayDir = {
+        x: Math.cos(rayAngle),
+        y: Math.sin(rayAngle),
+      };
+
+      const deltaDist = {
+        x: Math.sqrt(1 + (rayDir.y * rayDir.y) / (rayDir.x * rayDir.x)),
+        y: Math.sqrt(1 + (rayDir.x * rayDir.x) / (rayDir.y * rayDir.y)),
+      };
+
+      const step = {
+        x: (rayDir.x < 0) ? -1 : 1,
+        y: (rayDir.y < 0) ? -1 : 1,
+      };
+
+      const sideDist = {
+        x: (rayDir.x < 0) ? (player.pos.x - Math.floor(player.pos.x)) * deltaDist.x : (Math.floor(player.pos.x) + 1 - player.pos.x) * deltaDist.x,
+        y: (rayDir.y < 0) ? (player.pos.y - Math.floor(player.pos.y)) * deltaDist.y : (Math.floor(player.pos.y) + 1 - player.pos.y) * deltaDist.y,
+      };
+
+      let hit = false;
+      let side;
+
+      while (!hit) {
+        if (sideDist.x < sideDist.y) {
+          sideDist.x += deltaDist.x;
+          player.pos.x += step.x;
+          side = 0;
+        } else {
+          sideDist.y += deltaDist.y;
+          player.pos.y += step.y;
+          side = 1;
+        }
+
+        if (map[Math.floor(player.pos.y)][Math.floor(player.pos.x)] === 1) {
+          hit = true;
+        }
+      }
+
+      const perpWallDist = (side === 0)
+        ? (Math.floor(player.pos.x) - player.pos.x + (1 - step.x) / 2) / rayDir.x
+        : (Math.floor(player.pos.y) - player.pos.y + (1 - step.y) / 2) / rayDir.y;
+
+      const lineHeight = Math.floor(screenHeight / perpWallDist);
+
+      const drawStart = Math.max(0, Math.floor(-lineHeight / 2 + screenHeight / 2));
+      const drawEnd = Math.min(screenHeight - 1, Math.floor(lineHeight / 2 + screenHeight / 2));
+
+      const wallColor = `rgb(${255 * (1 - perpWallDist / 10)}, ${255 * (1 - perpWallDist / 10)}, ${255 * (1 - perpWallDist / 10)})`;
+
+      return {
+        drawStart,
+        drawEnd,
+        side,
+        wallColor,
+      };
+    }
+
+    function drawMiniMap() {
+      miniMapCtx.clearRect(0, 0, miniMap.width, miniMap.height);
+
+      const mapScale = miniMap.width / (mapWidth * tileSize);
+
+      // Draw walls on the mini-map
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+          if (map[y][x] === 1) {
+            miniMapCtx.fillStyle = 'gray';
+            miniMapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
+          }
+        }
+      }
+
+      // Draw player on the mini-map
+      miniMapCtx.fillStyle = 'red';
+      miniMapCtx.fillRect(player.pos.x * mapScale - 2, player.pos.y * mapScale - 2, 4, 4);
+
+      // Draw player's field of view on the mini-map
+      miniMapCtx.beginPath();
+      miniMapCtx.moveTo(player.pos.x * mapScale, player.pos.y * mapScale);
+      miniMapCtx.lineTo(
+        player.pos.x * mapScale + player.dir.x * 20,
+        player.pos.y * mapScale + player.dir.y * 20
+      );
+      miniMapCtx.strokeStyle = 'red';
+      miniMapCtx.stroke();
+    }
+
+    function handleInput() {
+      // Handle player input
+      if (keys['ArrowLeft']) {
+        const oldDirX = player.dir.x;
+        player.dir.x = player.dir.x * Math.cos(-player.rotationSpeed) - player.dir.y * Math.sin(-player.rotationSpeed);
+        player.dir.y = oldDirX * Math.sin(-player.rotationSpeed) + player.dir.y * Math.cos(-player.rotationSpeed);
+
+        const oldPlaneX = player.plane.x;
+        player.plane.x = player.plane.x * Math.cos(-player.rotationSpeed) - player.plane.y * Math.sin(-player.rotationSpeed);
+        player.plane.y = oldPlaneX * Math.sin(-player.rotationSpeed) + player.plane.y * Math.cos(-player.rotationSpeed);
+      }
+      if (keys['ArrowRight']) {
+        const oldDirX = player.dir.x;
+        player.dir.x = player.dir.x * Math.cos(player.rotationSpeed) - player.dir.y * Math.sin(player.rotationSpeed);
+        player.dir.y = oldDirX * Math.sin(player.rotationSpeed) + player.dir.y * Math.cos(player.rotationSpeed);
+
+        const oldPlaneX = player.plane.x;
+        player.plane.x = player.plane.x * Math.cos(player.rotationSpeed) - player.plane.y * Math.sin(player.rotationSpeed);
+        player.plane.y = oldPlaneX * Math.sin(player.rotationSpeed) + player.plane.y * Math.cos(player.rotationSpeed);
+      }
+
+      const moveStep = player.speed;
+
+      // Move forward and backward without rotating the camera angle
+      if (keys['ArrowUp'] || keys['KeyW']) {
+        const newX = player.pos.x + player.dir.x * moveStep;
+        const newY = player.pos.y + player.dir.y * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.pos.x = newX;
+          player.pos.y = newY;
+        }
+      }
+      if (keys['ArrowDown'] || keys['KeyS']) {
+        const newX = player.pos.x - player.dir.x * moveStep;
+        const newY = player.pos.y - player.dir.y * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.pos.x = newX;
+          player.pos.y = newY;
+        }
+      }
+
+      // Move left and right without rotating the camera angle
+      if (keys['KeyA']) {
+        const newX = player.pos.x - player.plane.x * moveStep;
+        const newY = player.pos.y - player.plane.y * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.pos.x = newX;
+          player.pos.y = newY;
+        }
+      }
+      if (keys['KeyD']) {
+        const newX = player.pos.x + player.plane.x * moveStep;
+        const newY = player.pos.y + player.plane.y * moveStep;
+
+        if (!isWall(newX, newY)) {
+          player.pos.x = newX;
+          player.pos.y = newY;
+        }
+      }
+    }
+
+    function toggleMouseLock() {
+      if (!player.isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
+      }
+      player.isMouseLocked = !player.isMouseLocked;
+    }
+
+    function isWall(x, y) {
+      // Check if the given coordinates are inside a wall
+      const mapX = Math.floor(x / tileSize);
+      const mapY = Math.floor(y / tileSize);
+
+      return map[mapY][mapX] === 1;
+    }
+
+    const keys = {};
+
+    document.addEventListener('keydown', (event) => {
+      keys[event.code] = true;
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keys[event.code] = false;
+    });
+
+    document.addEventListener('mousemove', (event) => {
+      if (player.isMouseLocked) {
+        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+        const oldDirX = player.dir.x;
+        player.dir.x = player.dir.x * Math.cos(-deltaX * 0.005) - player.dir.y * Math.sin(-deltaX * 0.005);
+        player.dir.y = oldDirX * Math.sin(-deltaX * 0.005) + player.dir.y * Math.cos(-deltaX * 0.005);
+
+        const oldPlaneX = player.plane.x;
+        player.plane.x = player.plane.x * Math.cos(-deltaX * 0.005) - player.plane.y * Math.sin(-deltaX * 0.005);
+        player.plane.y = oldPlaneX * Math.sin(-deltaX * 0.005) + player.plane.y * Math.cos(-deltaX * 0.005);
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.code === 'KeyL') {
+        toggleMouseLock();
+      }
+    });
+
+    function update() {
+      // Update game logic here
+      handleInput();
+      drawMiniMap();
+    }
+
+    function draw() {
+      // Draw the raycasting scene here
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      // Draw walls using DDA algorithm for better precision
+      for (let x = 0; x < screenWidth; x++) {
+        const cameraX = 2 * x / screenWidth - 1;
+        const rayDir = {
+          x: player.dir.x + player.plane.x * cameraX,
+          y: player.dir.y + player.plane.y * cameraX,
+        };
+
+        const rayAngle = Math.atan2(rayDir.y, rayDir.x);
+        const ray = castRay(rayAngle);
+
+        const lineHeight = ray.drawEnd - ray.drawStart + 1;
+
+        // Apply shading based on distance
+        const shading = Math.min(1, 0.1 + ray.sideDist / 600);
+
+        const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
+
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(x, ray.drawStart, 1, lineHeight);
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
 </body>
 </html>
