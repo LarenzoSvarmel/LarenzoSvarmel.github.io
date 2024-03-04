@@ -17,6 +17,8 @@
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
+  <button id="exportButton">Export Map and Player Data</button>
+  <input type="file" id="importInput" accept=".json" />
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
@@ -24,15 +26,6 @@
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
-    const map = [
-      [1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 1, 0, 1],
-      [1, 0, 1, 0, 0, 1, 0, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1],
-    ];
 
     const player = {
       x: 100,
@@ -42,6 +35,16 @@
       speed: 5,
       isMouseLocked: false,
     };
+
+    let map = [
+      [1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1],
+    ];
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -164,6 +167,57 @@
         toggleMouseLock();
       }
     });
+
+    document.getElementById('exportButton').addEventListener('click', exportMapAndPlayerData);
+    document.getElementById('importInput').addEventListener('change', importMapAndPlayerData);
+
+    function exportMapAndPlayerData() {
+      const data = {
+        map: map,
+        player: {
+          x: player.x,
+          y: player.y,
+          angle: player.angle,
+        },
+      };
+
+      const json = JSON.stringify(data);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'map_and_player_data.json';
+      a.click();
+
+      URL.revokeObjectURL(url);
+    }
+
+    function importMapAndPlayerData(event) {
+      const input = event.target;
+      if (!input.files || input.files.length === 0) {
+        return;
+      }
+
+      const file = input.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        const json = e.target.result;
+        const data = JSON.parse(json);
+
+        if (data.map && data.player) {
+          map = data.map;
+          player.x = data.player.x;
+          player.y = data.player.y;
+          player.angle = data.player.angle;
+        } else {
+          alert('Invalid file format');
+        }
+      };
+
+      reader.readAsText(file);
+    }
 
     function update() {
       // Update game logic here
