@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Reader Example</title>
+</head>
+<body>
+    <input type="file" id="fileInput" accept=".cod22">
+    <pre id="output"></pre>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const fileInput = event.target;
+            const file = fileInput.files[0];
+
+            if (file) {
+                readFile(file);
+            }
+        }
+
+        function readFile(file) {
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const content = e.target.result;
+                displayFileContent(content);
+            };
+
+            reader.readAsText(file, 'utf-8'); // You can use readAsBinaryString or other methods if needed
+        }
+
+        function displayFileContent(content) {
+            const outputElement = document.getElementById('output');
+            outputElement.textContent = content;
+        }
+    </script>
+</body>
+</html>
