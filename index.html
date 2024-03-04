@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Raycasting Demo with Stationary Light</title>
+  <title>Advanced Raycasting Demo with Light Maps</title>
   <style>
     body {
       margin: 0;
@@ -67,6 +67,20 @@
       },
     };
 
+    // Light map
+    const lightMap = [];
+
+    function generateLightMap() {
+      for (let y = 0; y < mapHeight; y++) {
+        lightMap[y] = [];
+        for (let x = 0; x < mapWidth; x++) {
+          const distanceToLight = Math.sqrt((x * tileSize - light.x) ** 2 + (y * tileSize - light.y) ** 2);
+          const shading = Math.max(0, 1 - distanceToLight / (tileSize * 5)); // Adjust the range as needed
+          lightMap[y][x] = shading;
+        }
+      }
+    }
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -118,7 +132,7 @@
             y: y,
             distance: correctedDistance,
             height: wallHeight,
-            shading: shading,
+            shading: shading * lightMap[mapY][mapX], // Apply light map
             textureX: x % tileSize,
           };
         }
@@ -151,7 +165,7 @@
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
           if (map[y][x] === 1) {
-            miniMapCtx.fillStyle = 'gray';
+            miniMapCtx.fillStyle = `rgba(100, 100, 100, ${lightMap[y][x]})`;
             miniMapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
           }
         }
@@ -256,7 +270,7 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls using Phong shading
+      // Draw walls using Phong shading and light map
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -269,7 +283,7 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Apply shading based on the Phong reflection model
+        // Apply shading based on the Phong reflection model and light map
         const ambient = 0.1;
         const diffuse = ray.shading;
         const specular = ray.shading;
@@ -278,9 +292,9 @@
 
         // Combine the components to get the final color
         const finalColor = {
-          r: ray.shading * finalShading * light.color.r,
-          g: ray.shading * finalShading * light.color.g,
-          b: ray.shading * finalShading * light.color.b,
+          r: ray.shading * finalShading * light.color.r * lightMap[Math.floor(ray.y / tileSize)][Math.floor(ray.x / tileSize)],
+          g: ray.shading * finalShading * light.color.g * lightMap[Math.floor(ray.y / tileSize)][Math.floor(ray.x / tileSize)],
+          b: ray.shading * finalShading * light.color.b * lightMap[Math.floor(ray.y / tileSize)][Math.floor(ray.x / tileSize)],
         };
 
         ctx.fillStyle = `rgb(${Math.floor(finalColor.r * 255)}, ${Math.floor(finalColor.g * 255)}, ${Math.floor(finalColor.b * 255)})`;
@@ -294,6 +308,7 @@
       requestAnimationFrame(gameLoop);
     }
 
+    generateLightMap();
     gameLoop();
   </script>
 </body>
