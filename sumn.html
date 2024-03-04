@@ -25,11 +25,23 @@
             const reader = new FileReader();
 
             reader.onload = function (e) {
-                const content = e.target.result;
+                const arrayBuffer = e.target.result;
+                const content = arrayBufferToHex(arrayBuffer);
                 displayFileContent(content);
             };
 
-            reader.readAsText(file, 'utf-8'); // You can use readAsBinaryString or other methods if needed
+            reader.readAsArrayBuffer(file);
+        }
+
+        function arrayBufferToHex(arrayBuffer) {
+            const byteArray = new Uint8Array(arrayBuffer);
+            const hexArray = [];
+
+            byteArray.forEach(function (byte) {
+                hexArray.push(byte.toString(16).padStart(2, '0'));
+            });
+
+            return hexArray.join(' ');
         }
 
         function displayFileContent(content) {
