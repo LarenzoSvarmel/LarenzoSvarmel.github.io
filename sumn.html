@@ -37,7 +37,20 @@
         floorColor: 'green',
         ceilingColor: 'blue',
       },
+      {
+        linedefs: [
+          { start: { x: 300, y: 100 }, end: { x: 400, y: 100 } },
+          { start: { x: 400, y: 100 }, end: { x: 400, y: 200 } },
+          { start: { x: 400, y: 200 }, end: { x: 300, y: 200 } },
+          { start: { x: 300, y: 200 }, end: { x: 300, y: 100 } },
+        ],
+        floorHeight: 0,
+        ceilingHeight: 150,
+        floorColor: 'brown',
+        ceilingColor: 'gray',
+      },
     ];
+
 
     const player = {
       x: 150,
@@ -156,15 +169,9 @@ function isLeft(p0, p1, p2) {
 function drawFirstPersonView() {
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
-        rays.push(ray);
-      }
-
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
         const wallHeight = screenHeight / (ray.distance * Math.cos(rayAngle - player.angle));
         const wallTop = (screenHeight - wallHeight) / 2;
 
