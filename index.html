@@ -27,6 +27,15 @@
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
+    const map = [
+      [1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1],
+    ];
 
     const player = {
       x: 100,
@@ -36,16 +45,6 @@
       speed: 5,
       isMouseLocked: false,
     };
-
-    let map = [
-      [1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 1, 0, 1],
-      [1, 0, 1, 0, 0, 1, 0, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1],
-    ];
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -85,56 +84,6 @@
       if (keys['ArrowRight']) {
         player.angle += 0.05;
       }
-
- function exportMap() {
-      const mapData = {
-        map: map,
-        player: {
-          x: player.x,
-          y: player.y,
-          angle: player.angle,
-        },
-      };
-   
-const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(mapData));
-      const a = document.createElement('a');
-      a.href = dataStr;
-      a.download = 'map.json';
-      a.click();
-    }
-
-function importMap(file) {
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-        const content = e.target.result;
-        const mapData = JSON.parse(content);
-
-        if (mapData.map && mapData.player) {
-          map = mapData.map;
-          player.x = mapData.player.x;
-          player.y = mapData.player.y;
-          player.angle = mapData.player.angle;
-        } else {
-          alert('Invalid map data format');
-        }
-      };
-
-      reader.readAsText(file);
-    }
-
-    document.getElementById('exportButton').addEventListener('click', exportMap);
-
-    document.getElementById('importInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        importMap(file);
-      }
-    });
-
-    document.getElementById('importButton').addEventListener('click', () => {
-      document.getElementById('importInput').click();
-    });
 
       // Synchronize left/right and forward/backward speed, decrease by 20%
       const moveStep = player.speed * 0.8;
@@ -219,57 +168,6 @@ function importMap(file) {
       }
     });
 
-    document.getElementById('exportButton').addEventListener('click', exportMapAndPlayerData);
-    document.getElementById('importInput').addEventListener('change', importMapAndPlayerData);
-
-    function exportMapAndPlayerData() {
-      const data = {
-        map: map,
-        player: {
-          x: player.x,
-          y: player.y,
-          angle: player.angle,
-        },
-      };
-
-      const json = JSON.stringify(data);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'map_and_player_data.json';
-      a.click();
-
-      URL.revokeObjectURL(url);
-    }
-
-    function importMapAndPlayerData(event) {
-      const input = event.target;
-      if (!input.files || input.files.length === 0) {
-        return;
-      }
-
-      const file = input.files[0];
-      const reader = new FileReader();
-
-      reader.onload = function (e) {
-        const json = e.target.result;
-        const data = JSON.parse(json);
-
-        if (data.map && data.player) {
-          map = data.map;
-          player.x = data.player.x;
-          player.y = data.player.y;
-          player.angle = data.player.angle;
-        } else {
-          alert('Invalid file format');
-        }
-      };
-
-      reader.readAsText(file);
-    }
-
     function update() {
       // Update game logic here
       handleInput();
@@ -286,6 +184,53 @@ function importMap(file) {
         const ray = castRay(rayAngle);
         rays.push(ray);
       }
+function exportMap() {
+      const mapData = {
+        map: map,
+        player: {
+          x: player.x,
+          y: player.y,
+          angle: player.angle,
+        },
+      };
+ const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(mapData));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = 'map.json';
+      a.click();
+    }
+function importMap(file) {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const content = e.target.result;
+        const mapData = JSON.parse(content);
+
+        if (mapData.map && mapData.player) {
+          map = mapData.map;
+          player.x = mapData.player.x;
+          player.y = mapData.player.y;
+          player.angle = mapData.player.angle;
+        } else {
+          alert('Invalid map data format');
+        }
+      };
+
+      reader.readAsText(file);
+    }
+
+    document.getElementById('exportButton').addEventListener('click', exportMap);
+
+    document.getElementById('importInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        importMap(file);
+      }
+    });
+
+    document.getElementById('importButton').addEventListener('click', () => {
+      document.getElementById('importInput').click();
+    });
 
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
