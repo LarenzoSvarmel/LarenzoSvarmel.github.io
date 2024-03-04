@@ -65,17 +65,23 @@
         g: 1,
         b: 1,
       },
+      intensity: 1, // Light intensity
+      fallOff: 0.01, // Light fall-off
     };
 
     // Light map
     const lightMap = [];
+    const lightMapResolution = 10; // Adjust light map resolution
 
     function generateLightMap() {
-      for (let y = 0; y < mapHeight; y++) {
+      for (let y = 0; y < mapHeight * lightMapResolution; y++) {
         lightMap[y] = [];
-        for (let x = 0; x < mapWidth; x++) {
-          const distanceToLight = Math.sqrt((x * tileSize - light.x) ** 2 + (y * tileSize - light.y) ** 2);
-          const shading = Math.max(0, 1 - distanceToLight / (tileSize * 5)); // Adjust the range as needed
+        for (let x = 0; x < mapWidth * lightMapResolution; x++) {
+          const lightX = x / lightMapResolution;
+          const lightY = y / lightMapResolution;
+
+          const distanceToLight = Math.sqrt((lightX * tileSize - light.x) ** 2 + (lightY * tileSize - light.y) ** 2);
+          const shading = Math.max(0, 1 - light.fallOff * distanceToLight); // Apply light fall-off
           lightMap[y][x] = shading;
         }
       }
@@ -132,7 +138,7 @@
             y: y,
             distance: correctedDistance,
             height: wallHeight,
-            shading: shading * lightMap[mapY][mapX], // Apply light map
+            shading: shading * lightMap[Math.floor(y * lightMapResolution)][Math.floor(x * lightMapResolution)], // Apply light map
             textureX: x % tileSize,
           };
         }
@@ -165,7 +171,7 @@
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
           if (map[y][x] === 1) {
-            miniMapCtx.fillStyle = `rgba(100, 100, 100, ${lightMap[y][x]})`;
+            miniMapCtx.fillStyle = `rgba(100, 100, 100, ${lightMap[y * lightMapResolution][x * lightMapResolution]})`;
             miniMapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
           }
         }
@@ -283,18 +289,18 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Apply shading based on the Phong reflection model and light map
+        // Apply shading based on the Phong reflection model, light map, and light fall-off
         const ambient = 0.1;
         const diffuse = ray.shading;
         const specular = ray.shading;
 
         const finalShading = ambient + diffuse + specular;
 
-        // Combine the components to get the final color
+        // Combine the components to get the final color, including light fall-off
         const finalColor = {
-          r: ray.shading * finalShading * light.color.r * lightMap[Math.floor(ray.y / tileSize)][Math.floor(ray.x / tileSize)],
-          g: ray.shading * finalShading * light.color.g * lightMap[Math.floor(ray.y / tileSize)][Math.floor(ray.x / tileSize)],
-          b: ray.shading * finalShading * light.color.b * lightMap[Math.floor(ray.y / tileSize)][Math.floor(ray.x / tileSize)],
+          r: ray.shading * finalShading * light.color.r * lightMap[Math.floor(ray.y * lightMapResolution)][Math.floor(ray.x * lightMapResolution)],
+          g: ray.shading * finalShading * light.color.g * lightMap[Math.floor(ray.y * lightMapResolution)][Math.floor(ray.x * lightMapResolution)],
+          b: ray.shading * finalShading * light.color.b * lightMap[Math.floor(ray.y * lightMapResolution)][Math.floor(ray.x * lightMapResolution)],
         };
 
         ctx.fillStyle = `rgb(${Math.floor(finalColor.r * 255)}, ${Math.floor(finalColor.g * 255)}, ${Math.floor(finalColor.b * 255)})`;
