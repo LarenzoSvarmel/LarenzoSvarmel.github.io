@@ -1,139 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OS Simulation</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
-            background-color: #f0f0f0;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Android Replica</title>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
 
-        #desktop {
-            margin: auto;
-            padding: 20px;
-            border: 2px solid #ccc;
-            border-radius: 10px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
+    #status-bar {
+      background-color: #4CAF50;
+      color: #fff;
+      padding: 10px;
+      text-align: center;
+    }
 
-        .window {
-            position: absolute;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #fff;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-            user-select: none;
-            cursor: move;
-        }
+    #navigation-bar {
+      background-color: #333;
+      color: #fff;
+      padding: 10px;
+      text-align: center;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+    }
 
-        #fileExplorer {
-            width: 300px;
-            height: 200px;
-            top: 50px;
-            left: 50px;
-        }
+    #home-screen {
+      margin-top: 40px;
+      text-align: center;
+    }
 
-        #terminal {
-            width: 400px;
-            height: 300px;
-            top: 120px;
-            left: 120px;
-        }
+    .app-icon {
+      width: 80px;
+      height: 80px;
+      background-color: #fff;
+      border-radius: 50%;
+      margin: 10px;
+      display: inline-block;
+      cursor: pointer;
+    }
 
-        .title-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #ccc;
-            padding: 5px;
-            border-bottom: 1px solid #999;
-            border-radius: 5px 5px 0 0;
-            cursor: move;
-        }
+    .app-name {
+      font-size: 14px;
+      margin-top: 5px;
+    }
 
-        .close-btn {
-            cursor: pointer;
-        }
-
-        .content {
-            padding: 10px;
-            overflow: auto;
-            height: calc(100% - 30px);
-        }
-    </style>
+    .app-container {
+      display: inline-block;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-    <div id="desktop">
-        <div id="fileExplorer" class="window">
-            <div class="title-bar">
-                <span>File Explorer</span>
-                <span class="close-btn" onclick="closeWindow('fileExplorer')">X</span>
-            </div>
-            <div class="content">
-                <!-- File Explorer content here -->
-                <p>File Explorer content goes here.</p>
-            </div>
-        </div>
 
-        <div id="terminal" class="window">
-            <div class="title-bar">
-                <span>Terminal</span>
-                <span class="close-btn" onclick="closeWindow('terminal')">X</span>
-            </div>
-            <div class="content">
-                <!-- Terminal content here -->
-                <p>Terminal content goes here.</p>
-            </div>
-        </div>
+  <div id="status-bar">
+    Android Replica
+  </div>
 
-        <!-- Add more windows as needed -->
-
+  <div id="home-screen">
+    <div class="app-container" onclick="openApp('App 1')">
+      <div class="app-icon"></div>
+      <div class="app-name">App 1</div>
     </div>
+    <div class="app-container" onclick="openApp('App 2')">
+      <div class="app-icon"></div>
+      <div class="app-name">App 2</div>
+    </div>
+    <div class="app-container" onclick="openApp('App 3')">
+      <div class="app-icon"></div>
+      <div class="app-name">App 3</div>
+    </div>
+    <!-- Add more app containers as needed -->
+  </div>
 
-    <script>
-        // Make the window draggable
-        let active = false;
-        let currentWindow = null;
-        let offsetX, offsetY;
+  <div id="navigation-bar">
+    Navigation Bar
+  </div>
 
-        document.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('window')) {
-                active = true;
-                currentWindow = e.target;
-                offsetX = e.clientX - currentWindow.getBoundingClientRect().left;
-                offsetY = e.clientY - currentWindow.getBoundingClientRect().top;
-            }
-        });
+  <script>
+    function openApp(appName) {
+      alert('Opening ' + appName);
+      // Add more functionality here based on the app
+    }
+  </script>
 
-        document.addEventListener('mousemove', (e) => {
-            if (active) {
-                const x = e.clientX - offsetX;
-                const y = e.clientY - offsetY;
-                currentWindow.style.left = `${x}px`;
-                currentWindow.style.top = `${y}px`;
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            active = false;
-            currentWindow = null;
-        });
-
-        // Function to close a window
-        function closeWindow(windowId) {
-            const window = document.getElementById(windowId);
-            window.style.display = 'none';
-        }
-    </script>
 </body>
 </html>
