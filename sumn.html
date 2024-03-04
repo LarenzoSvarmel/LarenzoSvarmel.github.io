@@ -49,45 +49,137 @@
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
 
+    const textures = {
+      wall: new Image(),
+    };
+
+    textures.wall.src = 'wall_texture.jpg'; // Replace with the path to your wall texture image
+
     const player = {
       x: 100,
       y: 100,
       angle: Math.PI / 4,
       fov: Math.PI / 3,
-      speed: 2.1,  // Decreased speed by 30%
+      speed: 2.1,
       rotationSpeed: 0.03,
       isMouseLocked: false,
     };
 
-    function castRay(rayAngle) {
+    function castRay(rayAngle, player) {
       let x = player.x;
       let y = player.y;
-
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
+      const mapX = Math.floor(x / tileSize);
+      const mapY = Math.floor(y / tileSize);
 
-      // Increment by small steps along the ray until a wall is hit
-      while (true) {
-        x += rayCos;
-        y += raySin;
+      // Ray direction
+      const deltaDistX = Math.sqrt(1 + (raySin * raySin) / (rayCos * rayCos));
+      const deltaDistY = Math.sqrt(1 + (rayCos * rayCos) / (raySin * raySin));
+      let stepX, stepY, sideDistX, sideDistY;
 
-        const mapX = Math.floor(x / tileSize);
-        const mapY = Math.floor(y / tileSize);
+      if (rayCos < 0) {
+        stepX = -1;
+        sideDistX = (x - mapX * tileSize) * deltaDistX;
+      } else {
+        stepX = 1;
+        sideDistX = (mapX * tileSize + tileSize - x) * deltaDistX;
+      }
+      if (raySin < 0) {
+        stepY = -1;
+        sideDistY = (y - mapY * tileSize) * deltaDistY;
+      } else {
+        stepY = 1;
+        sideDistY = (mapY * tileSize + tileSize - y) * deltaDistY;
+      }
 
-        // Check if the ray hit a wall
+      let hit = false;
+      let side; // 0 for horizontal, 1 for vertical
+
+      while (!hit) {
+        if (sideDistX < sideDistY) {
+          sideDistX += deltaDistX;
+          mapX += stepX;
+          side = 0;
+        } else {
+          sideDistY += deltaDistY;
+          mapY += stepY;
+          side = 1;
+        }
+
         if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
+          hit = true;
+        }
+      }
 
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (correctedDistance));
+      // Calculate distance to the point of impact
+      let distance;
+      if (side === 0) {
+        distance = Math.abs((mapX * tileSize - x + (1 - stepX) * tileSize) / rayCos);
+      } else {
+        distance = Math.abs((mapY * tileSize - y + (1 - stepY) * tileSize) / raySin);
+      }
 
-          return {
-            x: x,
-            y: y,
-            distance: correctedDistance,
-            height: wallHeight,
-            textureX: x % tileSize,
-          };
+      // Calculate height of the wall
+      const lineHeight = Math.abs(Math.floor(screenHeight / distance));
+
+      // Calculate starting and ending points of the wall segment
+      const drawStart = -lineHeight / 2 + screenHeight / 2;
+      const drawEnd = lineHeight / 2 + screenHeight / 2;
+
+      // Calculate texture offset
+      const wallX = side === 0 ? y + distance * raySin : x + distance * rayCos;
+      let textureX = Math.floor(wallX) % tileSize;
+      if ((side === 0 && rayCos > 0) || (side === 1 && raySin < 0)) {
+        textureX = tileSize - textureX - 1;
+      }
+
+      return {
+        drawStart,
+        drawEnd,
+        distance,
+        textureX,
+        side,
+      };
+    }
+
+    function drawTexturedWall(ray, column) {
+      const textureColumn = ray.textureX / tileSize * textures.wall.width;
+      const textureData = ctx.createImageData(1, ray.drawEnd - ray.drawStart);
+
+      for (let y = 0; y < textureData.height; y++) {
+        const textureY = Math.floor((y / (ray.drawEnd - ray.drawStart)) * textures.wall.height);
+        const textureIndex = (textureY * textures.wall.width + textureColumn) * 4;
+
+        const color = {
+          r: textures.wall.data[textureIndex],
+          g: textures.wall.data[textureIndex + 1],
+          b: textures.wall.data[textureIndex + 2],
+          a: textures.wall.data[textureIndex + 3],
+        };
+
+        const imageDataIndex = y * 4;
+        textureData.data[imageDataIndex] = color.r;
+        textureData.data[imageDataIndex + 1] = color.g;
+        textureData.data[imageDataIndex + 2] = color.b;
+        textureData.data[imageDataIndex + 3] = color.a;
+      }
+
+      ctx.putImageData(textureData, column, ray.drawStart);
+    }
+
+    function drawWalls(rays) {
+      for (let i = 0; i < rays.length; i++) {
+        const ray = rays[i];
+        const shading = Math.min(1, 0.1 + ray.distance / 600);
+        const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
+
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, ray.drawStart, 1, ray.drawEnd - ray.drawStart);
+
+        // Draw textured walls
+        if (ray.side === 0) {
+          drawTexturedWall(ray, i);
         }
       }
     }
@@ -184,7 +276,6 @@
     }
 
     function isWall(x, y) {
-      // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
       const mapY = Math.floor(y / tileSize);
 
@@ -215,36 +306,21 @@
     });
 
     function update() {
-      // Update game logic here
       handleInput();
       drawMiniMap();
     }
 
     function draw() {
-      // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls using shading
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
+        const ray = castRay(rayAngle, player);
         rays.push(ray);
       }
 
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
-        const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
-
-        // Apply shading based on distance
-        const shading = Math.min(1, 0.1 + ray.distance / 600);
-
-        const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
-
-        ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
-      }
+      drawWalls(rays);
     }
 
     function gameLoop() {
