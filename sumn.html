@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Raycasting Demo</title>
+  <title>Sector-Based Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -13,205 +13,187 @@
       display: block;
       image-rendering: pixelated;
     }
-    #miniMap {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      border: 2px solid white;
-    }
   </style>
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
-  <canvas id="miniMap" width="160" height="120"></canvas>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
-    const miniMap = document.getElementById('miniMap');
-    const miniMapCtx = miniMap.getContext('2d');
-
     const screenWidth = 800;
     const screenHeight = 600;
-    const tileSize = 32;
-    const mapWidth = 12;
-    const mapHeight = 9;
 
-    const map = [
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1],
-      [1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    const sectors = [
+      {
+        linedefs: [
+          { start: { x: 100, y: 100 }, end: { x: 200, y: 100 } },
+          { start: { x: 200, y: 100 }, end: { x: 200, y: 200 } },
+          { start: { x: 200, y: 200 }, end: { x: 100, y: 200 } },
+          { start: { x: 100, y: 200 }, end: { x: 100, y: 100 } },
+        ],
+        floorHeight: 0,
+        ceilingHeight: 100,
+        floorColor: 'green',
+        ceilingColor: 'blue',
+      },
     ];
 
-    const textures = {
-      wall: new Image(),
-    };
-
-    textures.wall.src = 'wall_texture.jpg'; // Replace with the path to your wall texture image
-
     const player = {
-      x: 100,
-      y: 100,
+      x: 150,
+      y: 150,
       angle: Math.PI / 4,
       fov: Math.PI / 3,
-      speed: 2.1,
+      speed: 2.5,
       rotationSpeed: 0.03,
-      isMouseLocked: false,
     };
 
-    function castRay(rayAngle, player) {
-  let x = player.x;
-  let y = player.y;
-  const raySin = Math.sin(rayAngle);
-  const rayCos = Math.cos(rayAngle);
-  const mapX = Math.floor(x / tileSize);
-  const mapY = Math.floor(y / tileSize);
+    function castRay(rayAngle) {
+      const ray = {
+        start: { x: player.x, y: player.y },
+        angle: rayAngle,
+        distance: 0,
+        sector: null,
+      };
 
-  // Ray direction
-  const deltaDistX = Math.sqrt(1 + (raySin * raySin) / (rayCos * rayCos));
-  const deltaDistY = Math.sqrt(1 + (rayCos * rayCos) / (raySin * raySin));
-  let stepX, stepY, sideDistX, sideDistY;
+      // Increment by small steps along the ray until a wall is hit
+      while (ray.distance < 1000) {
+        ray.distance += 1;
 
-  if (rayCos < 0) {
-    stepX = -1;
-    sideDistX = (x - mapX * tileSize) * deltaDistX;
-  } else {
-    stepX = 1;
-    sideDistX = (mapX * tileSize + tileSize - x) * deltaDistX;
-  }
-  if (raySin < 0) {
-    stepY = -1;
-    sideDistY = (y - mapY * tileSize) * deltaDistY;
-  } else {
-    stepY = 1;
-    sideDistY = (mapY * tileSize + tileSize - y) * deltaDistY;
-  }
-
-  let hit = false;
-  let side; // 0 for horizontal, 1 for vertical
-
-  while (!hit) {
-    if (sideDistX < sideDistY) {
-      sideDistX += deltaDistX;
-      mapX += stepX;
-      side = 0;
-    } else {
-      sideDistY += deltaDistY;
-      mapY += stepY;
-      side = 1;
-    }
-
-    if (map[mapY][mapX] === 1) {
-      hit = true;
-    }
-  }
-
-  // Calculate distance to the point of impact
-  let distance;
-  if (side === 0) {
-    distance = Math.abs((mapX * tileSize - x + (1 - stepX) * tileSize) / rayCos);
-  } else {
-    distance = Math.abs((mapY * tileSize - y + (1 - stepY) * tileSize) / raySin);
-  }
-
-  // Calculate height of the wall
-  const lineHeight = Math.abs(Math.floor(screenHeight / distance));
-
-  // Calculate starting and ending points of the wall segment
-  const drawStart = Math.max(0, -lineHeight / 2 + screenHeight / 2);
-  const drawEnd = Math.min(screenHeight - 1, lineHeight / 2 + screenHeight / 2);
-
-  // Calculate texture offset
-  const wallX = side === 0 ? y + distance * raySin : x + distance * rayCos;
-  let textureX = Math.floor(wallX) % tileSize;
-  if ((side === 0 && rayCos > 0) || (side === 1 && raySin < 0)) {
-    textureX = tileSize - textureX - 1;
-  }
-
-  return {
-    drawStart,
-    drawEnd,
-    distance,
-    textureX,
-    side,
-  };
-}
-
-    function drawTexturedWall(ray, column) {
-      const textureColumn = ray.textureX / tileSize * textures.wall.width;
-      const textureData = ctx.createImageData(1, ray.drawEnd - ray.drawStart);
-
-      for (let y = 0; y < textureData.height; y++) {
-        const textureY = Math.floor((y / (ray.drawEnd - ray.drawStart)) * textures.wall.height);
-        const textureIndex = (textureY * textures.wall.width + textureColumn) * 4;
-
-        const color = {
-          r: textures.wall.data[textureIndex],
-          g: textures.wall.data[textureIndex + 1],
-          b: textures.wall.data[textureIndex + 2],
-          a: textures.wall.data[textureIndex + 3],
+        ray.end = {
+          x: ray.start.x + Math.cos(ray.angle) * ray.distance,
+          y: ray.start.y + Math.sin(ray.angle) * ray.distance,
         };
 
-        const imageDataIndex = y * 4;
-        textureData.data[imageDataIndex] = color.r;
-        textureData.data[imageDataIndex + 1] = color.g;
-        textureData.data[imageDataIndex + 2] = color.b;
-        textureData.data[imageDataIndex + 3] = color.a;
-      }
-
-      ctx.putImageData(textureData, column, ray.drawStart);
-    }
-
-    function drawWalls(rays) {
-      for (let i = 0; i < rays.length; i++) {
-        const ray = rays[i];
-        const shading = Math.min(1, 0.1 + ray.distance / 600);
-        const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
-
-        ctx.fillStyle = wallColor;
-        ctx.fillRect(i, ray.drawStart, 1, ray.drawEnd - ray.drawStart);
-
-        // Draw textured walls
-        if (ray.side === 0) {
-          drawTexturedWall(ray, i);
+        const intersectedSector = getIntersectedSector(ray);
+        if (intersectedSector) {
+          ray.sector = intersectedSector;
+          break;
         }
       }
+
+      return ray;
     }
 
-    function drawMiniMap() {
-      miniMapCtx.clearRect(0, 0, miniMap.width, miniMap.height);
+    function getIntersectedSector(ray) {
+      for (let i = 0; i < sectors.length; i++) {
+        const sector = sectors[i];
 
-      const mapScale = miniMap.width / (mapWidth * tileSize);
+        if (isInsideSector(ray.end.x, ray.end.y, sector)) {
+          // Check if the ray intersects with any linedef in the sector
+          for (let j = 0; j < sector.linedefs.length; j++) {
+            const linedef = sector.linedefs[j];
 
-      // Draw walls on the mini-map
-      for (let y = 0; y < mapHeight; y++) {
-        for (let x = 0; x < mapWidth; x++) {
-          if (map[y][x] === 1) {
-            miniMapCtx.fillStyle = 'gray';
-            miniMapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
+            if (lineIntersects(ray.start, ray.end, linedef.start, linedef.end)) {
+              return i; // Return the index of the intersected sector
+            }
           }
         }
       }
 
-      // Draw player on the mini-map
-      miniMapCtx.fillStyle = 'red';
-      miniMapCtx.fillRect(player.x * mapScale - 2, player.y * mapScale - 2, 4, 4);
+      return null;
+    }
 
-      // Draw player's field of view on the mini-map
-      miniMapCtx.beginPath();
-      miniMapCtx.moveTo(player.x * mapScale, player.y * mapScale);
-      miniMapCtx.lineTo(
-        player.x * mapScale + Math.cos(player.angle) * 20,
-        player.y * mapScale + Math.sin(player.angle) * 20
-      );
-      miniMapCtx.strokeStyle = 'red';
-      miniMapCtx.stroke();
+    // ...
+
+function isInsideSector(x, y, sector) {
+  const linedefs = sector.linedefs;
+
+  let windingNumber = 0;
+
+  for (let i = 0; i < linedefs.length; i++) {
+    const currentPoint = linedefs[i].start;
+    const nextPoint = linedefs[(i + 1) % linedefs.length].start;
+
+    if (currentPoint.y <= y) {
+      if (nextPoint.y > y && isLeft(currentPoint, nextPoint, { x, y }) > 0) {
+        windingNumber++;
+      }
+    } else if (nextPoint.y <= y && isLeft(currentPoint, nextPoint, { x, y }) < 0) {
+      windingNumber--;
+    }
+  }
+
+  return windingNumber !== 0;
+}
+
+function isLeft(p0, p1, p2) {
+  return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
+}
+
+// ...
+
+    function lineIntersects(p1, q1, p2, q2) {
+      const det = (q2.y - p2.y) * (q1.x - p1.x) - (q2.x - p2.x) * (q1.y - p1.y);
+
+      if (det === 0) {
+        return false;
+      }
+
+      const lambda = ((q1.x - p1.x) * (q2.y - p2.y) - (q1.y - p1.y) * (q2.x - p2.x)) / det;
+      const gamma = ((p2.y - q2.y) * (q2.x - p1.x) + (q2.x - p2.x) * (q2.y - p1.y)) / det;
+
+      return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+    }
+
+    const keys = {};
+
+    document.addEventListener('keydown', (event) => {
+      keys[event.code] = true;
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keys[event.code] = false;
+    });
+
+    function update() {
+      // Update game logic here
+      handleInput();
+    }
+
+    function draw() {
+      // Draw the sector-based scene here
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      // Draw sectors
+      sectors.forEach((sector, index) => {
+        ctx.fillStyle = sector.floorColor;
+        ctx.fillRect(0, sector.floorHeight, screenWidth, sector.ceilingHeight - sector.floorHeight);
+
+        ctx.fillStyle = sector.ceilingColor;
+        ctx.fillRect(0, 0, screenWidth, sector.floorHeight);
+
+        // Draw walls
+        sector.linedefs.forEach((linedef) => {
+          ctx.beginPath();
+          ctx.moveTo(linedef.start.x, linedef.start.y);
+          ctx.lineTo(linedef.end.x, linedef.end.y);
+          ctx.strokeStyle = 'black';
+          ctx.stroke();
+        });
+      });
+
+      // Draw player
+      ctx.fillStyle = 'red';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Draw rays
+      const rays = [];
+      for (let i = 0; i < screenWidth; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle);
+        rays.push(ray);
+      }
+
+      ctx.strokeStyle = 'yellow';
+      rays.forEach((ray) => {
+        ctx.beginPath();
+        ctx.moveTo(ray.start.x, ray.start.y);
+        ctx.lineTo(ray.end.x, ray.end.y);
+        ctx.stroke();
+      });
     }
 
     function handleInput() {
@@ -230,7 +212,7 @@
         const newX = player.x + Math.cos(player.angle) * moveStep;
         const newY = player.y + Math.sin(player.angle) * moveStep;
 
-        if (!isWall(newX, newY)) {
+        if (!isInsideSector(newX, newY, sectors[player.sector])) {
           player.x = newX;
           player.y = newY;
         }
@@ -239,88 +221,11 @@
         const newX = player.x - Math.cos(player.angle) * moveStep;
         const newY = player.y - Math.sin(player.angle) * moveStep;
 
-        if (!isWall(newX, newY)) {
+        if (!isInsideSector(newX, newY, sectors[player.sector])) {
           player.x = newX;
           player.y = newY;
         }
       }
-
-      // Move left and right without rotating the camera angle
-      if (keys['KeyA']) {
-        const newX = player.x + Math.cos(player.angle - Math.PI / 2) * moveStep;
-        const newY = player.y + Math.sin(player.angle - Math.PI / 2) * moveStep;
-
-        if (!isWall(newX, newY)) {
-          player.x = newX;
-          player.y = newY;
-        }
-      }
-      if (keys['KeyD']) {
-        const newX = player.x + Math.cos(player.angle + Math.PI / 2) * moveStep;
-        const newY = player.y + Math.sin(player.angle + Math.PI / 2) * moveStep;
-
-        if (!isWall(newX, newY)) {
-          player.x = newX;
-          player.y = newY;
-        }
-      }
-    }
-
-    function toggleMouseLock() {
-      if (!player.isMouseLocked) {
-        canvas.requestPointerLock();
-      } else {
-        document.exitPointerLock();
-      }
-      player.isMouseLocked = !player.isMouseLocked;
-    }
-
-    function isWall(x, y) {
-      const mapX = Math.floor(x / tileSize);
-      const mapY = Math.floor(y / tileSize);
-
-      return map[mapY][mapX] === 1;
-    }
-
-    const keys = {};
-
-    document.addEventListener('keydown', (event) => {
-      keys[event.code] = true;
-    });
-
-    document.addEventListener('keyup', (event) => {
-      keys[event.code] = false;
-    });
-
-    document.addEventListener('mousemove', (event) => {
-      if (player.isMouseLocked) {
-        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        player.angle += deltaX * 0.01;
-      }
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.code === 'KeyL') {
-        toggleMouseLock();
-      }
-    });
-
-    function update() {
-      handleInput();
-      drawMiniMap();
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
-
-      const rays = [];
-      for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle, player);
-        rays.push(ray);
-      }
-
-      drawWalls(rays);
     }
 
     function gameLoop() {
