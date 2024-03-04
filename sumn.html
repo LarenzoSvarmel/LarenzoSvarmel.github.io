@@ -171,8 +171,12 @@ function drawFirstPersonView() {
 
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
-        const wallHeight = screenHeight / (ray.distance * Math.cos(rayAngle - player.angle));
+
+        // Ensure rayAngle is within the valid range (0 to 2 * Math.PI)
+        const normalizedRayAngle = (rayAngle + 2 * Math.PI) % (2 * Math.PI);
+
+        const ray = castRay(normalizedRayAngle);
+        const wallHeight = screenHeight / (ray.distance * Math.cos(normalizedRayAngle - player.angle));
         const wallTop = (screenHeight - wallHeight) / 2;
 
         const shading = Math.min(1, 0.1 + ray.distance / 600);
@@ -182,7 +186,6 @@ function drawFirstPersonView() {
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
-
     function draw() {
       // Draw the sector-based scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
