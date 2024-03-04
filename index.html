@@ -52,6 +52,58 @@
       currentSector: 0,
     };
 
+function drawMap() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw walls
+      for (let row = 0; row < map.length; row++) {
+        for (let col = 0; col < map[row].length; col++) {
+          if (map[row][col] === 1) {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+          }
+        }
+      }
+
+      // Draw player
+      ctx.fillStyle = 'red';
+      ctx.fillRect(player.x - 5, player.y - 5, 10, 10);
+    }
+
+    function handleMouseClick(event) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+
+      const clickedCol = Math.floor(mouseX / tileSize);
+      const clickedRow = Math.floor(mouseY / tileSize);
+
+      // Toggle wall
+      map[clickedRow][clickedCol] = 1 - map[clickedRow][clickedCol];
+
+      drawMap();
+    }
+
+    function handlePlayerMove(event) {
+      const rect = canvas.getBoundingClientRect();
+      player.x = event.clientX - rect.left;
+      player.y = event.clientY - rect.top;
+
+      drawMap();
+    }
+
+    canvas.addEventListener('mousedown', handleMouseClick);
+    canvas.addEventListener('mousemove', (event) => {
+      if (event.buttons === 1) {
+        handleMouseClick(event);
+      }
+    });
+
+    canvas.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      handlePlayerMove(event);
+    });
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -216,6 +268,7 @@
     function gameLoop() {
       update();
       draw();
+drawMap();
       requestAnimationFrame(gameLoop);
     }
 
