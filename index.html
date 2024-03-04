@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Raycasting Demo</title>
+  <title>Advanced Raycasting Demo with Lighting</title>
   <style>
     body {
       margin: 0;
@@ -57,6 +57,12 @@
       isMouseLocked: false,
     };
 
+    const lightSource = {
+      x: mapWidth * tileSize / 2,
+      y: 0,
+      intensity: 5000,
+    };
+
     function castRay(rayAngle) {
       let x = player.x;
       let y = player.y;
@@ -85,9 +91,17 @@
             distance: correctedDistance,
             height: wallHeight,
             textureX: x % tileSize,
+            normalAngle: Math.atan2(y - lightSource.y, x - lightSource.x),
           };
         }
       }
+    }
+
+    function calculateShading(ray, normalAngle) {
+      // Calculate shading based on the angle between the light source and the surface normal
+      const lightAngle = Math.abs(normalAngle - ray.normalAngle);
+      const shading = Math.cos(lightAngle);
+      return shading;
     }
 
     function drawMiniMap() {
@@ -222,7 +236,7 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls using shading
+      // Draw walls with lighting
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -235,8 +249,8 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Apply shading based on distance
-        const shading = Math.min(1, 0.1 + ray.distance / 600);
+        // Apply shading based on light source
+        const shading = calculateShading(ray, player.angle);
 
         const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
 
