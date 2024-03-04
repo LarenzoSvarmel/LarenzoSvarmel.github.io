@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Raycasting Demo</title>
+  <title>Advanced Raycasting Demo (Quake-style)</title>
   <style>
     body {
       margin: 0;
@@ -64,30 +64,31 @@
       const raySin = Math.sin(rayAngle);
       const rayCos = Math.cos(rayAngle);
 
+      let distanceToWall = 0;
+      let hitWall = false;
+
       // Increment by small steps along the ray until a wall is hit
-      while (true) {
-        x += rayCos;
-        y += raySin;
+      while (!hitWall && distanceToWall < 20) {
+        distanceToWall += 0.1;
 
-        const mapX = Math.floor(x / tileSize);
-        const mapY = Math.floor(y / tileSize);
+        const testX = Math.floor(x + rayCos * distanceToWall);
+        const testY = Math.floor(y + raySin * distanceToWall);
 
-        // Check if the ray hit a wall
-        if (map[mapY][mapX] === 1) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
-
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (correctedDistance));
-
-          return {
-            x: x,
-            y: y,
-            distance: correctedDistance,
-            height: wallHeight,
-            textureX: x % tileSize,
-          };
+        // Check if the ray is out of bounds
+        if (testX < 0 || testX >= mapWidth || testY < 0 || testY >= mapHeight) {
+          hitWall = true;
+          distanceToWall = 20;  // Set distance to maximum to create a skybox effect
+        } else if (map[testY][testX] === 1) {
+          hitWall = true;
         }
       }
+
+      const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (distanceToWall));
+
+      return {
+        distance: distanceToWall,
+        height: wallHeight,
+      };
     }
 
     function drawMiniMap() {
@@ -223,20 +224,15 @@
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
       // Draw walls using shading
-      const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
-        rays.push(ray);
-      }
 
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
         // Apply shading based on distance
-        const shading = Math.min(1, 0.1 + ray.distance / 600);
+        const shading = Math.min(1, 0.1 + ray.distance / 20);
 
         const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
 
