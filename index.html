@@ -227,6 +227,13 @@ function importMap(file) {
         importMap(file);
       }
     });
+document.getElementById('importInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        importMap(file);
+        draw(); // Redraw the scene after importing the map
+      }
+    });
 
     document.getElementById('importButton').addEventListener('click', () => {
       document.getElementById('importInput').click();
