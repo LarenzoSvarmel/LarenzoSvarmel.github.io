@@ -66,82 +66,82 @@
     };
 
     function castRay(rayAngle, player) {
-      let x = player.x;
-      let y = player.y;
-      const raySin = Math.sin(rayAngle);
-      const rayCos = Math.cos(rayAngle);
-      const mapX = Math.floor(x / tileSize);
-      const mapY = Math.floor(y / tileSize);
+  let x = player.x;
+  let y = player.y;
+  const raySin = Math.sin(rayAngle);
+  const rayCos = Math.cos(rayAngle);
+  const mapX = Math.floor(x / tileSize);
+  const mapY = Math.floor(y / tileSize);
 
-      // Ray direction
-      const deltaDistX = Math.sqrt(1 + (raySin * raySin) / (rayCos * rayCos));
-      const deltaDistY = Math.sqrt(1 + (rayCos * rayCos) / (raySin * raySin));
-      let stepX, stepY, sideDistX, sideDistY;
+  // Ray direction
+  const deltaDistX = Math.sqrt(1 + (raySin * raySin) / (rayCos * rayCos));
+  const deltaDistY = Math.sqrt(1 + (rayCos * rayCos) / (raySin * raySin));
+  let stepX, stepY, sideDistX, sideDistY;
 
-      if (rayCos < 0) {
-        stepX = -1;
-        sideDistX = (x - mapX * tileSize) * deltaDistX;
-      } else {
-        stepX = 1;
-        sideDistX = (mapX * tileSize + tileSize - x) * deltaDistX;
-      }
-      if (raySin < 0) {
-        stepY = -1;
-        sideDistY = (y - mapY * tileSize) * deltaDistY;
-      } else {
-        stepY = 1;
-        sideDistY = (mapY * tileSize + tileSize - y) * deltaDistY;
-      }
+  if (rayCos < 0) {
+    stepX = -1;
+    sideDistX = (x - mapX * tileSize) * deltaDistX;
+  } else {
+    stepX = 1;
+    sideDistX = (mapX * tileSize + tileSize - x) * deltaDistX;
+  }
+  if (raySin < 0) {
+    stepY = -1;
+    sideDistY = (y - mapY * tileSize) * deltaDistY;
+  } else {
+    stepY = 1;
+    sideDistY = (mapY * tileSize + tileSize - y) * deltaDistY;
+  }
 
-      let hit = false;
-      let side; // 0 for horizontal, 1 for vertical
+  let hit = false;
+  let side; // 0 for horizontal, 1 for vertical
 
-      while (!hit) {
-        if (sideDistX < sideDistY) {
-          sideDistX += deltaDistX;
-          mapX += stepX;
-          side = 0;
-        } else {
-          sideDistY += deltaDistY;
-          mapY += stepY;
-          side = 1;
-        }
-
-        if (map[mapY][mapX] === 1) {
-          hit = true;
-        }
-      }
-
-      // Calculate distance to the point of impact
-      let distance;
-      if (side === 0) {
-        distance = Math.abs((mapX * tileSize - x + (1 - stepX) * tileSize) / rayCos);
-      } else {
-        distance = Math.abs((mapY * tileSize - y + (1 - stepY) * tileSize) / raySin);
-      }
-
-      // Calculate height of the wall
-      const lineHeight = Math.abs(Math.floor(screenHeight / distance));
-
-      // Calculate starting and ending points of the wall segment
-      const drawStart = -lineHeight / 2 + screenHeight / 2;
-      const drawEnd = lineHeight / 2 + screenHeight / 2;
-
-      // Calculate texture offset
-      const wallX = side === 0 ? y + distance * raySin : x + distance * rayCos;
-      let textureX = Math.floor(wallX) % tileSize;
-      if ((side === 0 && rayCos > 0) || (side === 1 && raySin < 0)) {
-        textureX = tileSize - textureX - 1;
-      }
-
-      return {
-        drawStart,
-        drawEnd,
-        distance,
-        textureX,
-        side,
-      };
+  while (!hit) {
+    if (sideDistX < sideDistY) {
+      sideDistX += deltaDistX;
+      mapX += stepX;
+      side = 0;
+    } else {
+      sideDistY += deltaDistY;
+      mapY += stepY;
+      side = 1;
     }
+
+    if (map[mapY][mapX] === 1) {
+      hit = true;
+    }
+  }
+
+  // Calculate distance to the point of impact
+  let distance;
+  if (side === 0) {
+    distance = Math.abs((mapX * tileSize - x + (1 - stepX) * tileSize) / rayCos);
+  } else {
+    distance = Math.abs((mapY * tileSize - y + (1 - stepY) * tileSize) / raySin);
+  }
+
+  // Calculate height of the wall
+  const lineHeight = Math.abs(Math.floor(screenHeight / distance));
+
+  // Calculate starting and ending points of the wall segment
+  const drawStart = Math.max(0, -lineHeight / 2 + screenHeight / 2);
+  const drawEnd = Math.min(screenHeight - 1, lineHeight / 2 + screenHeight / 2);
+
+  // Calculate texture offset
+  const wallX = side === 0 ? y + distance * raySin : x + distance * rayCos;
+  let textureX = Math.floor(wallX) % tileSize;
+  if ((side === 0 && rayCos > 0) || (side === 1 && raySin < 0)) {
+    textureX = tileSize - textureX - 1;
+  }
+
+  return {
+    drawStart,
+    drawEnd,
+    distance,
+    textureX,
+    side,
+  };
+}
 
     function drawTexturedWall(ray, column) {
       const textureColumn = ray.textureX / tileSize * textures.wall.width;
