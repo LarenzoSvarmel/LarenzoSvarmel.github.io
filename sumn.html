@@ -3,274 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sector-Based Raycasting Demo</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-    }
-    canvas {
-      display: block;
-      image-rendering: pixelated;
-    }
-  </style>
+  <title>Discord Bot API Example</title>
 </head>
 <body>
-  <canvas id="raycastingCanvas" width="800" height="600"></canvas>
-  <script>
-    const canvas = document.getElementById('raycastingCanvas');
-    const ctx = canvas.getContext('2d');
 
-    const screenWidth = 800;
-    const screenHeight = 600;
+<script>
+  // Replace 'YOUR_BOT_TOKEN' with your actual bot token
+  const botToken = 'YOUR_BOT_TOKEN';
 
-    const sectors = [
-      {
-        linedefs: [
-          { start: { x: 100, y: 100 }, end: { x: 200, y: 100 } },
-          { start: { x: 200, y: 100 }, end: { x: 200, y: 200 } },
-          { start: { x: 200, y: 200 }, end: { x: 100, y: 200 } },
-          { start: { x: 100, y: 200 }, end: { x: 100, y: 100 } },
-        ],
-        floorHeight: 0,
-        ceilingHeight: 100,
-        floorColor: 'green',
-        ceilingColor: 'blue',
-      },
-      {
-        linedefs: [
-          { start: { x: 300, y: 100 }, end: { x: 400, y: 100 } },
-          { start: { x: 400, y: 100 }, end: { x: 400, y: 200 } },
-          { start: { x: 400, y: 200 }, end: { x: 300, y: 200 } },
-          { start: { x: 300, y: 200 }, end: { x: 300, y: 100 } },
-        ],
-        floorHeight: 0,
-        ceilingHeight: 150,
-        floorColor: 'brown',
-        ceilingColor: 'gray',
-      },
-    ];
+  // Replace 'YOUR_GUILD_ID' with the ID of your Discord server (guild)
+  const guildId = 'YOUR_GUILD_ID';
 
-
-    const player = {
-      x: 150,
-      y: 150,
-      angle: Math.PI / 4,
-      fov: Math.PI / 3,
-      speed: 2.5,
-      rotationSpeed: 0.03,
-    };
-
-    function castRay(rayAngle) {
-      const ray = {
-        start: { x: player.x, y: player.y },
-        angle: rayAngle,
-        distance: 0,
-        end: { x: player.x, y: player.y },
-        sector: player.sector,
-      };
-
-      // Increment by small steps along the ray until a wall is hit
-      while (ray.distance < 1000) {
-        ray.distance += 1;
-
-        ray.end = {
-          x: ray.start.x + Math.cos(ray.angle) * ray.distance,
-          y: ray.start.y + Math.sin(ray.angle) * ray.distance,
-        };
-
-        const intersectedSector = getIntersectedSector(ray);
-        if (intersectedSector !== null) {
-          ray.sector = intersectedSector;
-          break;
-        }
-      }
-
-      return ray;
-    }
-
-
-    function getIntersectedSector(ray) {
-      for (let i = 0; i < sectors.length; i++) {
-        const sector = sectors[i];
-
-        if (isInsideSector(ray.end.x, ray.end.y, sector)) {
-          // Check if the ray intersects with any linedef in the sector
-          for (let j = 0; j < sector.linedefs.length; j++) {
-            const linedef = sector.linedefs[j];
-
-            if (lineIntersects(ray.start, ray.end, linedef.start, linedef.end)) {
-              return i; // Return the index of the intersected sector
-            }
-          }
-        }
-      }
-
-      return null;
-    }
-
-
-    // ...
-
-function isInsideSector(x, y, sector) {
-      const linedefs = sector.linedefs;
-
-      let windingNumber = 0;
-
-      for (let i = 0; i < linedefs.length; i++) {
-        const currentPoint = linedefs[i].start;
-        const nextPoint = linedefs[(i + 1) % linedefs.length].start;
-
-        if (currentPoint.y <= y) {
-          if (nextPoint.y > y && isLeft(currentPoint, nextPoint, { x, y }) > 0) {
-            windingNumber++;
-          }
-        } else if (nextPoint.y <= y && isLeft(currentPoint, nextPoint, { x, y }) < 0) {
-          windingNumber--;
-        }
-      }
-
-      return windingNumber !== 0;
-    }
-function isLeft(p0, p1, p2) {
-  return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
-}
-
-// ...
-
-    function lineIntersects(p1, q1, p2, q2) {
-      const det = (q2.y - p2.y) * (q1.x - p1.x) - (q2.x - p2.x) * (q1.y - p1.y);
-
-      if (det === 0) {
-        return false;
-      }
-
-       const lambda = ((q1.x - p1.x) * (q2.y - p2.y) - (q1.y - p1.y) * (q2.x - p2.x)) / det;
-      const gamma = ((p2.y - q2.y) * (q2.x - p1.x) + (q2.x - p2.x) * (q2.y - p1.y)) / det;
-
-      return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
-    }
-
-    const keys = {};
-
-    document.addEventListener('keydown', (event) => {
-      keys[event.code] = true;
-    });
-
-    document.addEventListener('keyup', (event) => {
-      keys[event.code] = false;
-    });
-
-    function update() {
-      // Update game logic here
-      handleInput();
-    }
-
-function drawFirstPersonView() {
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
-
-      for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-
-        // Ensure rayAngle is within the valid range (0 to 2 * Math.PI)
-        const normalizedRayAngle = (rayAngle + 2 * Math.PI) % (2 * Math.PI);
-
-        const ray = castRay(normalizedRayAngle);
-        const wallHeight = screenHeight / (ray.distance * Math.cos(normalizedRayAngle - player.angle));
-        const wallTop = (screenHeight - wallHeight) / 2;
-
-        const shading = Math.min(1, 0.1 + ray.distance / 600);
-        const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
-
-        ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
-      }
-    }
-    function draw() {
-      // Draw the sector-based scene here
-      ctx.clearRect(0, 0, screenWidth, screenHeight);
-
-      // Draw sectors
-      sectors.forEach((sector, index) => {
-        ctx.fillStyle = sector.floorColor;
-        ctx.fillRect(0, sector.floorHeight, screenWidth, sector.ceilingHeight - sector.floorHeight);
-
-        ctx.fillStyle = sector.ceilingColor;
-        ctx.fillRect(0, 0, screenWidth, sector.floorHeight);
-
-        // Draw walls
-        sector.linedefs.forEach((linedef) => {
-          ctx.beginPath();
-          ctx.moveTo(linedef.start.x, linedef.start.y);
-          ctx.lineTo(linedef.end.x, linedef.end.y);
-          ctx.strokeStyle = 'black';
-          ctx.stroke();
-        });
+  // Function to make a simple API request to get bot information
+  async function getBotInfo() {
+    try {
+      const response = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bot ${botToken}`,
+        },
       });
 
-      // Draw player
-      ctx.fillStyle = 'red';
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 5, 0, 2 * Math.PI);
-      ctx.fill();
-
-      // Draw rays
-      const rays = [];
-      for (let i = 0; i < screenWidth; i++) {
-        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
-        const ray = castRay(rayAngle);
-        rays.push(ray);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
-      ctx.strokeStyle = 'yellow';
-      rays.forEach((ray) => {
-        ctx.beginPath();
-        ctx.moveTo(ray.start.x, ray.start.y);
-        ctx.lineTo(ray.end.x, ray.end.y);
-        ctx.stroke();
-      });
+      const data = await response.json();
+      console.log('Bot Information:', data);
+    } catch (error) {
+      console.error('Error:', error);
     }
+  }
 
-    function handleInput() {
-      // Handle player input
-      if (keys['ArrowLeft']) {
-        player.angle -= player.rotationSpeed;
-      }
-      if (keys['ArrowRight']) {
-        player.angle += player.rotationSpeed;
-      }
+  // Call the function when the page loads
+  window.onload = getBotInfo;
+</script>
 
-      const moveStep = player.speed;
-
-      // Move forward and backward without rotating the camera angle
-      if (keys['ArrowUp'] || keys['KeyW']) {
-        const newX = player.x + Math.cos(player.angle) * moveStep;
-        const newY = player.y + Math.sin(player.angle) * moveStep;
-
-        if (!isInsideSector(newX, newY, sectors[player.sector])) {
-          player.x = newX;
-          player.y = newY;
-        }
-      }
-      if (keys['ArrowDown'] || keys['KeyS']) {
-        const newX = player.x - Math.cos(player.angle) * moveStep;
-        const newY = player.y - Math.sin(player.angle) * moveStep;
-
-        if (!isInsideSector(newX, newY, sectors[player.sector])) {
-          player.x = newX;
-          player.y = newY;
-        }
-      }
-    }
-
-    function gameLoop() {
-      update();
-      draw();
-drawFirstPersonView();
-      requestAnimationFrame(gameLoop);
-    }
-
-    gameLoop();
-  </script>
 </body>
 </html>
