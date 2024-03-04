@@ -17,9 +17,6 @@
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
-  <button id="exportButton">Export Map</button>
-  <input type="file" id="importInput" accept=".json">
-  <button id="importButton">Import Map</button>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
@@ -184,63 +181,6 @@
         const ray = castRay(rayAngle);
         rays.push(ray);
       }
-function exportMap() {
-      const mapData = {
-        map: map,
-        player: {
-          x: player.x,
-          y: player.y,
-          angle: player.angle,
-        },
-      };
- const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(mapData));
-      const a = document.createElement('a');
-      a.href = dataStr;
-      a.download = 'map.json';
-      a.click();
-    }
-function importMap(file) {
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-        const content = e.target.result;
-        const mapData = JSON.parse(content);
-
-        if (mapData.map) {
-          map = mapData.map;
-          draw(); // Redraw the scene after importing the map
-        } else {
-          alert('Invalid map data format');
-        }
-      };
-
-      reader.readAsText(file);
-    }
-
-    document.getElementById('exportButton').addEventListener('click', exportMap);
-
-    document.getElementById('importInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        importMap(file);
-      }
-    });
-
-document.getElementById('importInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (mapData.map) {
-          map = mapData.map;
-        } else {
-          alert('Invalid map data format');
-        }
-
-        draw(); // Redraw the scene after importing the map
-      };
-
-
-    document.getElementById('importButton').addEventListener('click', () => {
-      document.getElementById('importInput').click();
-    });
 
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
