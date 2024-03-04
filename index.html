@@ -95,11 +95,11 @@
 
       const mapScale = miniMap.width / (mapWidth * tileSize);
 
-      // Draw walls on the mini-map as black squares
+      // Draw walls on the mini-map
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
           if (map[y][x] === 1) {
-            miniMapCtx.fillStyle = 'black';
+            miniMapCtx.fillStyle = 'gray';
             miniMapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
           }
         }
