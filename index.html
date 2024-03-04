@@ -57,10 +57,14 @@
       isMouseLocked: false,
     };
 
-    const lightSource = {
+    const light = {
       x: mapWidth * tileSize / 2,
       y: 0,
-      intensity: 5000,
+      color: {
+        r: 1,
+        g: 1,
+        b: 1,
+      },
     };
 
     function castRay(rayAngle) {
@@ -85,23 +89,57 @@
 
           const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (correctedDistance));
 
+          const normalVector = {
+            x: x - player.x,
+            y: y - player.y,
+          };
+
+          const reflectionVector = reflectVector(normalVector, { x: x - light.x, y: y - light.y });
+
+          const viewVector = {
+            x: player.x - x,
+            y: player.y - y,
+          };
+
+          const cosAngle = dotProduct(reflectionVector, viewVector) /
+            (vectorLength(reflectionVector) * vectorLength(viewVector));
+
+          const specularIntensity = Math.pow(cosAngle, 10); // Adjust the shininess/exponent value
+
+          const ambient = 0.1; // Ambient lighting
+          const diffuse = Math.max(0, dotProduct(normalVector, { x: light.x - x, y: light.y - y })) /
+            (vectorLength(normalVector) * vectorLength({ x: light.x - x, y: light.y - y }));
+          const specular = specularIntensity;
+
+          const shading = ambient + diffuse + specular;
+
           return {
             x: x,
             y: y,
             distance: correctedDistance,
             height: wallHeight,
+            shading: shading,
             textureX: x % tileSize,
-            normalAngle: Math.atan2(y - lightSource.y, x - lightSource.x),
           };
         }
       }
     }
 
-    function calculateShading(ray, normalAngle) {
-      // Calculate shading based on the angle between the light source and the surface normal
-      const lightAngle = Math.abs(normalAngle - ray.normalAngle);
-      const shading = Math.cos(lightAngle);
-      return shading;
+    function reflectVector(vector, normal) {
+      const scalar = 2 * dotProduct(vector, normal) /
+        (vectorLength(normal) * vectorLength(normal));
+      return {
+        x: vector.x - scalar * normal.x,
+        y: vector.y - scalar * normal.y,
+      };
+    }
+
+    function dotProduct(vector1, vector2) {
+      return vector1.x * vector2.x + vector1.y * vector2.y;
+    }
+
+    function vectorLength(vector) {
+      return Math.sqrt(vector.x ** 2 + vector.y ** 2);
     }
 
     function drawMiniMap() {
@@ -118,6 +156,10 @@
           }
         }
       }
+
+      // Draw light source on the mini-map
+      miniMapCtx.fillStyle = 'yellow';
+      miniMapCtx.fillRect(light.x * mapScale - 2, light.y * mapScale - 2, 4, 4);
 
       // Draw player on the mini-map
       miniMapCtx.fillStyle = 'red';
@@ -236,7 +278,7 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls with lighting
+      // Draw walls using Phong shading
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -249,12 +291,21 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Apply shading based on light source
-        const shading = calculateShading(ray, player.angle);
+        // Apply shading based on the Phong reflection model
+        const ambient = 0.1;
+        const diffuse = ray.shading;
+        const specular = ray.shading;
 
-        const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
+        const finalShading = ambient + diffuse + specular;
 
-        ctx.fillStyle = wallColor;
+        // Combine the components to get the final color
+        const finalColor = {
+          r: ray.shading * finalShading * light.color.r,
+          g: ray.shading * finalShading * light.color.g,
+          b: ray.shading * finalShading * light.color.b,
+        };
+
+        ctx.fillStyle = `rgb(${Math.floor(finalColor.r * 255)}, ${Math.floor(finalColor.g * 255)}, ${Math.floor(finalColor.b * 255)})`;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
