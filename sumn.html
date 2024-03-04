@@ -96,7 +96,21 @@
 
     // ...
 
-function isInsideSector(x, y, sector) {
+// ...
+
+function isInsideSector(x, y, sectors) {
+  for (let i = 0; i < sectors.length; i++) {
+    const sector = sectors[i];
+
+    if (isPointInsideSector(x, y, sector)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isPointInsideSector(x, y, sector) {
   const linedefs = sector.linedefs;
 
   let windingNumber = 0;
@@ -120,6 +134,45 @@ function isInsideSector(x, y, sector) {
 function isLeft(p0, p1, p2) {
   return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
 }
+
+// ...
+
+// Inside the handleInput function
+function handleInput() {
+  // Handle player input
+  if (keys['ArrowLeft']) {
+    player.angle -= player.rotationSpeed;
+  }
+  if (keys['ArrowRight']) {
+    player.angle += player.rotationSpeed;
+  }
+
+  const moveStep = player.speed;
+
+  // Check if the player is inside any sector
+  if (isInsideSector(player.x, player.y, sectors)) {
+    // Move forward and backward without rotating the camera angle
+    if (keys['ArrowUp'] || keys['KeyW']) {
+      const newX = player.x + Math.cos(player.angle) * moveStep;
+      const newY = player.y + Math.sin(player.angle) * moveStep;
+
+      if (!isInsideSector(newX, newY, sectors)) {
+        player.x = newX;
+        player.y = newY;
+      }
+    }
+    if (keys['ArrowDown'] || keys['KeyS']) {
+      const newX = player.x - Math.cos(player.angle) * moveStep;
+      const newY = player.y - Math.sin(player.angle) * moveStep;
+
+      if (!isInsideSector(newX, newY, sectors)) {
+        player.x = newX;
+        player.y = newY;
+      }
+    }
+  }
+}
+// ...
 
 // ...
 
