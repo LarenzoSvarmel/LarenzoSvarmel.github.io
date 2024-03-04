@@ -24,7 +24,8 @@
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
-    const map = [
+
+    let map = [
       [1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 1, 1, 1, 1, 0, 1],
@@ -43,7 +44,13 @@
       isMouseLocked: false,
     };
 
-    const lightColor = '#FFD700'; // Light source color
+    let sectors = [
+      // Sector with default floor and ceiling heights
+      { floor: 0, ceiling: 100 },
+
+      // Stairs sector
+      { floor: 0, ceiling: 50 },
+    ];
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -84,10 +91,9 @@
         player.angle += 0.05;
       }
 
-      // Synchronize left/right and forward/backward speed, decrease by 20%
-      const moveStep = player.speed * 0.8;
-
+      // Move forward and backward without rotating the camera angle
       if (keys['ArrowUp'] || keys['KeyW']) {
+        const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle) * moveStep;
         const newY = player.y + Math.sin(player.angle) * moveStep;
 
@@ -97,6 +103,7 @@
         }
       }
       if (keys['ArrowDown'] || keys['KeyS']) {
+        const moveStep = player.speed;
         const newX = player.x - Math.cos(player.angle) * moveStep;
         const newY = player.y - Math.sin(player.angle) * moveStep;
 
@@ -108,6 +115,7 @@
 
       // Move left and right without rotating the camera angle
       if (keys['KeyA']) {
+        const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle - Math.PI / 2) * moveStep;
         const newY = player.y + Math.sin(player.angle - Math.PI / 2) * moveStep;
 
@@ -117,6 +125,7 @@
         }
       }
       if (keys['KeyD']) {
+        const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle + Math.PI / 2) * moveStep;
         const newY = player.y + Math.sin(player.angle + Math.PI / 2) * moveStep;
 
@@ -125,15 +134,11 @@
           player.y = newY;
         }
       }
-    }
 
-    function toggleMouseLock() {
-      if (!player.isMouseLocked) {
-        canvas.requestPointerLock();
-      } else {
-        document.exitPointerLock();
+      // Create stairs sector when "2" key is pressed
+      if (keys['Digit2']) {
+        sectors.push({ floor: 50, ceiling: 100 });
       }
-      player.isMouseLocked = !player.isMouseLocked;
     }
 
     function isWall(x, y) {
@@ -184,28 +189,27 @@
         rays.push(ray);
       }
 
-      // Light intensity based on distance
-      const maxDistance = Math.sqrt((screenWidth / 2) ** 2 + (screenHeight / 2) ** 2);
-
       for (let i = 0; i < screenWidth; i++) {
         const ray = rays[i];
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        // Calculate light intensity based on distance
-        const lightIntensity = 1 - ray.distance / maxDistance;
-
-        // Darken walls and floor, lighten light sources
-        const wallColor = `rgb(${Math.floor(50 + lightIntensity * 205)}, ${Math.floor(50 + lightIntensity * 205)}, ${Math.floor(50 + lightIntensity * 205)})`;
+        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
 
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
+      }
 
-        // Draw light source
-        if (lightIntensity > 0.8) {
-          ctx.fillStyle = lightColor;
-          ctx.fillRect(i, wallTop, 1, wallHeight);
-        }
+      // Draw sectors
+      for (const sector of sectors) {
+        const floorColor = `rgb(${150 + sector.floor * 2}, ${150 + sector.floor * 2}, ${150 + sector.floor * 2})`;
+        const ceilingColor = `rgb(${150 + sector.ceiling * 2}, ${150 + sector.ceiling * 2}, ${150 + sector.ceiling * 2})`;
+
+        ctx.fillStyle = floorColor;
+        ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
+
+        ctx.fillStyle = ceilingColor;
+        ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
       }
     }
 
