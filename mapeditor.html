@@ -13,6 +13,18 @@
       display: block;
       image-rendering: pixelated;
     }
+    #exportMapEditorButton,
+    #importMapEditorButton {
+      margin: 10px;
+      padding: 5px;
+      font-size: 12px;
+    }
+    #exportMapEditorButton {
+      float: right;
+    }
+    #importMapEditorButton {
+      float: right;
+    }
   </style>
 </head>
 <body>
@@ -30,13 +42,34 @@
 
     let map = [];
 
+    let player = {
+      x: 100,
+      y: 100,
+      size: 10, // Size of the player marker
+    };
+
     function draw() {
-      // ... (draw map editor logic)
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      // Draw map
+      for (let y = 0; y < map.length; y++) {
+        for (let x = 0; x < map[y].length; x++) {
+          if (map[y][x] === 1) {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+          }
+        }
+      }
+
+      // Draw player marker
+      ctx.fillStyle = '#00F';
+      ctx.fillRect(player.x - player.size / 2, player.y - player.size / 2, player.size, player.size);
     }
 
     function exportMapEditor() {
       const mapData = {
         map: map,
+        player: player,
       };
 
       const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(mapData));
@@ -53,8 +86,9 @@
         const content = e.target.result;
         const mapData = JSON.parse(content);
 
-        if (mapData.map) {
+        if (mapData.map && mapData.player) {
           map = mapData.map;
+          player = mapData.player;
         } else {
           alert('Invalid map data format');
         }
@@ -63,12 +97,43 @@
       reader.readAsText(file);
     }
 
+    function handleClick(event) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+
+      // Convert mouse coordinates to map coordinates
+      const mapX = Math.floor(mouseX / tileSize);
+      const mapY = Math.floor(mouseY / tileSize);
+
+      // Toggle wall at the clicked position
+      map[mapY][mapX] = map[mapY][mapX] === 1 ? 0 : 1;
+
+      draw();
+    }
+
+    function handlePlayerMove(event) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+
+      // Update player coordinates
+      player.x = mouseX;
+      player.y = mouseY;
+
+      draw();
+    }
+
+    canvas.addEventListener('click', handleClick);
+    canvas.addEventListener('mousemove', handlePlayerMove);
+
     document.getElementById('exportMapEditorButton').addEventListener('click', exportMapEditor);
 
     document.getElementById('importMapEditorInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
         importMapEditor(file);
+        draw();
       }
     });
 
@@ -77,11 +142,10 @@
     });
 
     function gameLoop() {
-      draw();
-      requestAnimationFrame(gameLoop);
+      // No need for a game loop in the map editor
     }
 
-    gameLoop();
+    draw(); // Draw initial state
   </script>
 </body>
 </html>
