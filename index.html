@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raycasting Demo</title>
+  <title>Advanced Raycasting Demo</title>
   <style>
     body {
       margin: 0;
@@ -13,17 +13,30 @@
       display: block;
       image-rendering: pixelated;
     }
+    #miniMap {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      border: 2px solid white;
+    }
   </style>
 </head>
 <body>
   <canvas id="raycastingCanvas" width="800" height="600"></canvas>
+  <canvas id="miniMap" width="160" height="120"></canvas>
   <script>
     const canvas = document.getElementById('raycastingCanvas');
     const ctx = canvas.getContext('2d');
 
+    const miniMap = document.getElementById('miniMap');
+    const miniMapCtx = miniMap.getContext('2d');
+
     const screenWidth = 800;
     const screenHeight = 600;
     const tileSize = 32;
+    const mapWidth = 8;
+    const mapHeight = 7;
+
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
@@ -37,9 +50,10 @@
     const player = {
       x: 100,
       y: 100,
-      angle: 0,
+      angle: Math.PI / 4,
       fov: Math.PI / 3,
-      speed: 5,
+      speed: 3,
+      rotationSpeed: 0.03,
       isMouseLocked: false,
     };
 
@@ -61,30 +75,63 @@
         // Check if the ray hit a wall
         if (map[mapY][mapX] === 1) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (2 * distance * Math.cos(rayAngle - player.angle)));
+          const correctedDistance = distance * Math.cos(rayAngle - player.angle);
+
+          const wallHeight = Math.min(screenHeight, tileSize * screenHeight / (correctedDistance));
 
           return {
             x: x,
             y: y,
-            distance: distance,
+            distance: correctedDistance,
             height: wallHeight,
+            textureX: x % tileSize,
           };
         }
       }
     }
 
+    function drawMiniMap() {
+      miniMapCtx.clearRect(0, 0, miniMap.width, miniMap.height);
+
+      const mapScale = miniMap.width / (mapWidth * tileSize);
+
+      // Draw walls on the mini-map
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+          if (map[y][x] === 1) {
+            miniMapCtx.fillStyle = 'gray';
+            miniMapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
+          }
+        }
+      }
+
+      // Draw player on the mini-map
+      miniMapCtx.fillStyle = 'red';
+      miniMapCtx.fillRect(player.x * mapScale - 2, player.y * mapScale - 2, 4, 4);
+
+      // Draw player's field of view on the mini-map
+      miniMapCtx.beginPath();
+      miniMapCtx.moveTo(player.x * mapScale, player.y * mapScale);
+      miniMapCtx.lineTo(
+        player.x * mapScale + Math.cos(player.angle) * 20,
+        player.y * mapScale + Math.sin(player.angle) * 20
+      );
+      miniMapCtx.strokeStyle = 'red';
+      miniMapCtx.stroke();
+    }
+
     function handleInput() {
       // Handle player input
       if (keys['ArrowLeft']) {
-        player.angle -= 0.05;
+        player.angle -= player.rotationSpeed;
       }
       if (keys['ArrowRight']) {
-        player.angle += 0.05;
+        player.angle += player.rotationSpeed;
       }
 
-      // Synchronize left/right and forward/backward speed, decrease by 20%
-      const moveStep = player.speed * 0.8;
+      const moveStep = player.speed;
 
+      // Move forward and backward without rotating the camera angle
       if (keys['ArrowUp'] || keys['KeyW']) {
         const newX = player.x + Math.cos(player.angle) * moveStep;
         const newY = player.y + Math.sin(player.angle) * moveStep;
@@ -168,13 +215,14 @@
     function update() {
       // Update game logic here
       handleInput();
+      drawMiniMap();
     }
 
     function draw() {
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls
+      // Draw walls using shading
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -187,7 +235,10 @@
         const wallHeight = ray.height;
         const wallTop = (screenHeight - wallHeight) / 2;
 
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+        // Apply shading based on distance
+        const shading = Math.min(1, 0.1 + ray.distance / 600);
+
+        const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
 
         ctx.fillStyle = wallColor;
         ctx.fillRect(i, wallTop, 1, wallHeight);
