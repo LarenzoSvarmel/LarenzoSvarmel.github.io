@@ -53,7 +53,8 @@
         start: { x: player.x, y: player.y },
         angle: rayAngle,
         distance: 0,
-        sector: null,
+        end: { x: player.x, y: player.y },
+        sector: player.sector,
       };
 
       // Increment by small steps along the ray until a wall is hit
@@ -66,7 +67,7 @@
         };
 
         const intersectedSector = getIntersectedSector(ray);
-        if (intersectedSector) {
+        if (intersectedSector !== null) {
           ray.sector = intersectedSector;
           break;
         }
@@ -74,6 +75,7 @@
 
       return ray;
     }
+
 
     function getIntersectedSector(ray) {
       for (let i = 0; i < sectors.length; i++) {
@@ -94,85 +96,32 @@
       return null;
     }
 
+
     // ...
 
-// ...
+function isInsideSector(x, y, sector) {
+      const linedefs = sector.linedefs;
 
-function isInsideSector(x, y, sectors) {
-  for (let i = 0; i < sectors.length; i++) {
-    const sector = sectors[i];
+      let windingNumber = 0;
 
-    if (isPointInsideSector(x, y, sector)) {
-      return true;
-    }
-  }
+      for (let i = 0; i < linedefs.length; i++) {
+        const currentPoint = linedefs[i].start;
+        const nextPoint = linedefs[(i + 1) % linedefs.length].start;
 
-  return false;
-}
-
-function isPointInsideSector(x, y, sector) {
-  const linedefs = sector.linedefs;
-
-  let windingNumber = 0;
-
-  for (let i = 0; i < linedefs.length; i++) {
-    const currentPoint = linedefs[i].start;
-    const nextPoint = linedefs[(i + 1) % linedefs.length].start;
-
-    if (currentPoint.y <= y) {
-      if (nextPoint.y > y && isLeft(currentPoint, nextPoint, { x, y }) > 0) {
-        windingNumber++;
+        if (currentPoint.y <= y) {
+          if (nextPoint.y > y && isLeft(currentPoint, nextPoint, { x, y }) > 0) {
+            windingNumber++;
+          }
+        } else if (nextPoint.y <= y && isLeft(currentPoint, nextPoint, { x, y }) < 0) {
+          windingNumber--;
+        }
       }
-    } else if (nextPoint.y <= y && isLeft(currentPoint, nextPoint, { x, y }) < 0) {
-      windingNumber--;
+
+      return windingNumber !== 0;
     }
-  }
-
-  return windingNumber !== 0;
-}
-
 function isLeft(p0, p1, p2) {
   return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
 }
-
-// ...
-
-// Inside the handleInput function
-function handleInput() {
-  // Handle player input
-  if (keys['ArrowLeft']) {
-    player.angle -= player.rotationSpeed;
-  }
-  if (keys['ArrowRight']) {
-    player.angle += player.rotationSpeed;
-  }
-
-  const moveStep = player.speed;
-
-  // Check if the player is inside any sector
-  if (isInsideSector(player.x, player.y, sectors)) {
-    // Move forward and backward without rotating the camera angle
-    if (keys['ArrowUp'] || keys['KeyW']) {
-      const newX = player.x + Math.cos(player.angle) * moveStep;
-      const newY = player.y + Math.sin(player.angle) * moveStep;
-
-      if (!isInsideSector(newX, newY, sectors)) {
-        player.x = newX;
-        player.y = newY;
-      }
-    }
-    if (keys['ArrowDown'] || keys['KeyS']) {
-      const newX = player.x - Math.cos(player.angle) * moveStep;
-      const newY = player.y - Math.sin(player.angle) * moveStep;
-
-      if (!isInsideSector(newX, newY, sectors)) {
-        player.x = newX;
-        player.y = newY;
-      }
-    }
-  }
-}
-// ...
 
 // ...
 
@@ -183,7 +132,7 @@ function handleInput() {
         return false;
       }
 
-      const lambda = ((q1.x - p1.x) * (q2.y - p2.y) - (q1.y - p1.y) * (q2.x - p2.x)) / det;
+       const lambda = ((q1.x - p1.x) * (q2.y - p2.y) - (q1.y - p1.y) * (q2.x - p2.x)) / det;
       const gamma = ((p2.y - q2.y) * (q2.x - p1.x) + (q2.x - p2.x) * (q2.y - p1.y)) / det;
 
       return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
@@ -202,6 +151,29 @@ function handleInput() {
     function update() {
       // Update game logic here
       handleInput();
+    }
+
+function drawFirstPersonView() {
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      const rays = [];
+      for (let i = 0; i < screenWidth; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
+        const ray = castRay(rayAngle);
+        rays.push(ray);
+      }
+
+      for (let i = 0; i < screenWidth; i++) {
+        const ray = rays[i];
+        const wallHeight = screenHeight / (ray.distance * Math.cos(rayAngle - player.angle));
+        const wallTop = (screenHeight - wallHeight) / 2;
+
+        const shading = Math.min(1, 0.1 + ray.distance / 600);
+        const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
+
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(i, wallTop, 1, wallHeight);
+      }
     }
 
     function draw() {
@@ -284,6 +256,7 @@ function handleInput() {
     function gameLoop() {
       update();
       draw();
+drawFirstPersonView();
       requestAnimationFrame(gameLoop);
     }
 
