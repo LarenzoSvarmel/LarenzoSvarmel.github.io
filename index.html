@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Raycasting Demo with Lighting</title>
+  <title>Advanced Raycasting Demo with Stationary Light</title>
   <style>
     body {
       margin: 0;
@@ -59,7 +59,7 @@
 
     const light = {
       x: mapWidth * tileSize / 2,
-      y: 0,
+      y: mapHeight * tileSize / 2,
       color: {
         r: 1,
         g: 1,
@@ -228,15 +228,6 @@
       }
     }
 
-    function toggleMouseLock() {
-      if (!player.isMouseLocked) {
-        canvas.requestPointerLock();
-      } else {
-        document.exitPointerLock();
-      }
-      player.isMouseLocked = !player.isMouseLocked;
-    }
-
     function isWall(x, y) {
       // Check if the given coordinates are inside a wall
       const mapX = Math.floor(x / tileSize);
@@ -253,19 +244,6 @@
 
     document.addEventListener('keyup', (event) => {
       keys[event.code] = false;
-    });
-
-    document.addEventListener('mousemove', (event) => {
-      if (player.isMouseLocked) {
-        const deltaX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        player.angle += deltaX * 0.01;
-      }
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.code === 'KeyL') {
-        toggleMouseLock();
-      }
     });
 
     function update() {
