@@ -14,7 +14,8 @@
       image-rendering: pixelated;
     }
     #exportMapEditorButton,
-    #importMapEditorButton {
+    #importMapEditorButton,
+    #saveMapButton {
       margin: 10px;
       padding: 5px;
       font-size: 12px;
@@ -22,8 +23,9 @@
     #exportMapEditorButton {
       float: right;
     }
-    #importMapEditorButton {
-      float: right;
+    #importMapEditorButton,
+    #saveMapButton {
+      float: left;
     }
   </style>
 </head>
@@ -32,6 +34,7 @@
   <button id="exportMapEditorButton">Export Map</button>
   <input type="file" id="importMapEditorInput" accept=".json">
   <button id="importMapEditorButton">Import Map</button>
+  <button id="saveMapButton">Save Map</button>
   <script>
     const canvas = document.getElementById('mapEditorCanvas');
     const ctx = canvas.getContext('2d');
@@ -41,6 +44,7 @@
     const tileSize = 32;
 
     let map = [];
+    let originalMap = []; // Store the original map for the save feature
 
     let player = {
       x: 100,
@@ -89,12 +93,22 @@
         if (mapData.map && mapData.player) {
           map = mapData.map;
           player = mapData.player;
+          originalMap = JSON.parse(JSON.stringify(map)); // Create a deep copy of the map
         } else {
           alert('Invalid map data format');
         }
+
+        draw();
       };
 
       reader.readAsText(file);
+    }
+
+    function saveMap() {
+      // Update the original map with the current map data
+      originalMap = JSON.parse(JSON.stringify(map));
+
+      alert('Map saved!');
     }
 
     function handleClick(event) {
@@ -133,9 +147,10 @@
       const file = e.target.files[0];
       if (file) {
         importMapEditor(file);
-        draw();
       }
     });
+
+    document.getElementById('saveMapButton').addEventListener('click', saveMap);
 
     document.getElementById('importMapEditorButton').addEventListener('click', () => {
       document.getElementById('importMapEditorInput').click();
