@@ -25,10 +25,26 @@
     const screenHeight = 600;
     const tileSize = 32;
 
-    let map = [
+    // Define sectors to handle different areas of the map
+    const sectors = {
+      indoor: {
+        floorColor: 'brown',
+        ceilingColor: 'gray',
+      },
+      outdoor: {
+        floorColor: 'green',
+        ceilingColor: 'skyblue',
+      },
+      stairs: {
+        floorColor: 'gray',
+        ceilingColor: 'gray',
+      },
+    };
+
+    const map = [
       [1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 2, 1, 1, 1, 0, 1],
       [1, 0, 1, 0, 0, 1, 0, 1],
       [1, 0, 1, 0, 1, 1, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
@@ -43,14 +59,6 @@
       speed: 5,
       isMouseLocked: false,
     };
-
-    let sectors = [
-      // Sector with default floor and ceiling heights
-      { floor: 0, ceiling: 100 },
-
-      // Stairs sector
-      { floor: 0, ceiling: 50 },
-    ];
 
     function castRay(rayAngle) {
       let x = player.x;
@@ -78,6 +86,15 @@
             distance: distance,
             height: wallHeight,
           };
+        } else if (map[mapY][mapX] === 2) {
+          // Simulate stairs by adjusting colors based on the sector
+          return {
+            x: x,
+            y: y,
+            distance: 0,  // Stairs have no distance effect
+            height: screenHeight / 2,  // Half the screen height for stairs
+            isStairs: true,  // Flag to identify stairs
+          };
         }
       }
     }
@@ -91,9 +108,10 @@
         player.angle += 0.05;
       }
 
-      // Move forward and backward without rotating the camera angle
+      // Synchronize left/right and forward/backward speed, decrease by 20%
+      const moveStep = player.speed * 0.8;
+
       if (keys['ArrowUp'] || keys['KeyW']) {
-        const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle) * moveStep;
         const newY = player.y + Math.sin(player.angle) * moveStep;
 
@@ -103,7 +121,6 @@
         }
       }
       if (keys['ArrowDown'] || keys['KeyS']) {
-        const moveStep = player.speed;
         const newX = player.x - Math.cos(player.angle) * moveStep;
         const newY = player.y - Math.sin(player.angle) * moveStep;
 
@@ -115,7 +132,6 @@
 
       // Move left and right without rotating the camera angle
       if (keys['KeyA']) {
-        const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle - Math.PI / 2) * moveStep;
         const newY = player.y + Math.sin(player.angle - Math.PI / 2) * moveStep;
 
@@ -125,7 +141,6 @@
         }
       }
       if (keys['KeyD']) {
-        const moveStep = player.speed;
         const newX = player.x + Math.cos(player.angle + Math.PI / 2) * moveStep;
         const newY = player.y + Math.sin(player.angle + Math.PI / 2) * moveStep;
 
@@ -134,11 +149,15 @@
           player.y = newY;
         }
       }
+    }
 
-      // Create stairs sector when "2" key is pressed
-      if (keys['Digit2']) {
-        sectors.push({ floor: 50, ceiling: 100 });
+    function toggleMouseLock() {
+      if (!player.isMouseLocked) {
+        canvas.requestPointerLock();
+      } else {
+        document.exitPointerLock();
       }
+      player.isMouseLocked = !player.isMouseLocked;
     }
 
     function isWall(x, y) {
@@ -181,35 +200,36 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls
-      const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
         const ray = castRay(rayAngle);
-        rays.push(ray);
-      }
 
-      for (let i = 0; i < screenWidth; i++) {
-        const ray = rays[i];
-        const wallHeight = ray.height;
-        const wallTop = (screenHeight - wallHeight) / 2;
+        // Check if it's a stairs sector
+        if (ray.isStairs) {
+          // Draw stairs with different colors based on the sector
+          const stairsColor = ray.distance % 2 === 0 ? sectors.stairs.floorColor : sectors.stairs.ceilingColor;
+          ctx.fillStyle = stairsColor;
+          ctx.fillRect(i, screenHeight / 2 - ray.height / 2, 1, ray.height);
+        } else {
+          // Draw walls for other sectors
+          const wallHeight = ray.height;
+          const wallTop = (screenHeight - wallHeight) / 2;
 
-        const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+          // Determine the sector based on the map value
+          const sector = map[Math.floor(ray.y / tileSize)][Math.floor(ray.x / tileSize)] === 2 ? sectors.stairs : sectors.indoor;
 
-        ctx.fillStyle = wallColor;
-        ctx.fillRect(i, wallTop, 1, wallHeight);
-      }
+          // Draw floors and ceilings based on the sector
+          ctx.fillStyle = sector.floorColor;
+          ctx.fillRect(i, wallTop + wallHeight / 2, 1, screenHeight / 2 - wallTop + wallHeight / 2);
 
-      // Draw sectors
-      for (const sector of sectors) {
-        const floorColor = `rgb(${150 + sector.floor * 2}, ${150 + sector.floor * 2}, ${150 + sector.floor * 2})`;
-        const ceilingColor = `rgb(${150 + sector.ceiling * 2}, ${150 + sector.ceiling * 2}, ${150 + sector.ceiling * 2})`;
+          ctx.fillStyle = sector.ceilingColor;
+          ctx.fillRect(i, 0, 1, wallTop + wallHeight / 2);
 
-        ctx.fillStyle = floorColor;
-        ctx.fillRect(0, screenHeight / 2, screenWidth, screenHeight / 2);
-
-        ctx.fillStyle = ceilingColor;
-        ctx.fillRect(0, 0, screenWidth, screenHeight / 2);
+          // Draw walls
+          const wallColor = `rgb(${255 - ray.distance * 2}, ${255 - ray.distance * 2}, ${255 - ray.distance * 2})`;
+          ctx.fillStyle = wallColor;
+          ctx.fillRect(i, wallTop, 1, wallHeight);
+        }
       }
     }
 
