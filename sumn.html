@@ -6,7 +6,7 @@
     <title>HTML Terminal</title>
     <style>
         body {
-            font-family: 'Consolas', monospace; /* Use Consolas or another console font */
+            font-family: 'Courier New', monospace;
             background-color: black;
             color: white;
             margin: 0;
@@ -16,12 +16,23 @@
         }
 
         #terminal {
+            font-family: 'Courier New', monospace;
+            font-size: 16px; /* Set the desired font size */
             width: 100%;
             height: 100%;
             overflow: hidden;
             padding: 10px;
             box-sizing: border-box;
             position: relative;
+        }
+
+        #output,
+        #input-container,
+        #prompt,
+        #cursor,
+        #input {
+            font-family: 'Courier New', monospace;
+            font-size: 16px; /* Set the desired font size */
         }
 
         #output {
