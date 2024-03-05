@@ -1,118 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML Terminal</title>
-    <style>
-        body {
-            font-family: 'Courier New', monospace;
-            background-color: black;
-            color: white;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            cursor: none; /* Hide the default cursor */
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      margin: 0;
+      padding: 0;
+      background-color: #1E1E1E;
+      color: #FFFFFF;
+      overflow: hidden;
+    }
 
-        #terminal {
-            font-family: 'Courier New', monospace;
-            font-size: 16px; /* Set the desired font size */
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            padding: 10px;
-            box-sizing: border-box;
-            position: relative;
-        }
+    #terminal {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 50vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
 
-        #output,
-        #input-container,
-        #prompt,
-        #cursor,
-        #input {
-            font-family: 'Courier New', monospace;
-            font-size: 16px; /* Set the desired font size */
-        }
+    #output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
 
-        #output {
-            white-space: pre-wrap;
-        }
+    #input-container {
+      display: flex;
+      padding: 10px;
+      background-color: #333333;
+    }
 
-        #input-container {
-            display: flex;
-        }
+    #input-container:before {
+      content: "Administrator@HarmonyHaven:1";
+      color: #00FF00;
+      margin-right: 5px;
+    }
 
-        #prompt {
-            color: #00ff00; /* Green color for the prompt */
-        }
+    #input {
+      flex: 1;
+      border: none;
+      background-color: transparent;
+      color: #FFFFFF;
+      outline: none;
+    }
 
-        #cursor {
-            width: 8px; /* Adjust the cursor width as needed */
-            height: 20px; /* Adjust the cursor height as needed */
-            background-color: #00ff00; /* Green color for the cursor */
-            animation: blink 1s infinite; /* Blink animation */
-            display: inline-block;
-            margin-right: 5px; /* Adjust the spacing between cursor and text */
-        }
+    #cursor {
+      display: inline-block;
+      width: 10px;
+      height: 20px;
+      background-color: #00FF00;
+      animation: blink 0.8s infinite;
+    }
 
-        #input {
-            flex-grow: 1;
-            border: none;
-            background-color: black;
-            color: white;
-            outline: none;
-        }
-
-        #input:focus {
-            outline: none;
-        }
-
-        @keyframes blink {
-            50% {
-                opacity: 0;
-            }
-        }
-    </style>
+    @keyframes blink {
+      0%, 50% {
+        opacity: 1;
+      }
+      51%, 100% {
+        opacity: 0;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div id="terminal">
-        <div id="output"></div>
-        <div id="input-container">
-            <div id="prompt">Leith@HarmonyHaven:80996</div>
-            <div id="cursor"></div>
-            <input type="text" id="input" autofocus>
-        </div>
+  <div id="terminal">
+    <div id="output"></div>
+    <div id="input-container">
+      <div id="cursor"></div>
+      <input id="input" type="text" autocomplete="off">
     </div>
+  </div>
 
-    <script>
-        const outputContainer = document.getElementById('output');
-        const inputElement = document.getElementById('input');
+  <script>
+    const inputElement = document.getElementById('input');
+    const outputElement = document.getElementById('output');
+    const cursorElement = document.getElementById('cursor');
 
-        inputElement.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                const inputText = inputElement.value;
-                executeCommand(inputText);
-                inputElement.value = '';
-            }
-        });
+    inputElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const command = inputElement.value;
+        inputElement.value = '';
 
-        function executeCommand(command) {
-            const outputText = simulateCommandExecution(command);
-            appendOutput(`$ ${command}\n${outputText}\n`);
-        }
+        // Add your logic for handling commands and displaying output here
+        outputElement.innerHTML += `<div>${command}</div>`;
 
-        function simulateCommandExecution(command) {
-            // Here, you can implement your own logic to handle commands.
-            // For now, let's just echo back the command.
-            return `Command not implemented: ${command}`;
-        }
-
-        function appendOutput(text) {
-            outputContainer.innerHTML += text;
-            outputContainer.scrollTop = outputContainer.scrollHeight;
-        }
-    </script>
+        // Scroll to the bottom of the output
+        outputElement.scrollTop = outputElement.scrollHeight;
+      }
+    });
+  </script>
 </body>
 </html>
