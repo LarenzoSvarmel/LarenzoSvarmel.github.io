@@ -1,48 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      cursor: none;
-    }
-
-    #flashlight {
-      position: absolute;
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      background: radial-gradient(circle, transparent 80%, rgba(0, 0, 0, 0.8) 90%);
-      pointer-events: none;
-    }
-  </style>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      const flashlight = document.getElementById("flashlight");
-      let flashlightOn = true;
-
-      document.addEventListener("mousemove", function(event) {
-        if (flashlightOn) {
-          const x = event.clientX;
-          const y = event.clientY;
-          flashlight.style.left = x - flashlight.offsetWidth / 2 + "px";
-          flashlight.style.top = y - flashlight.offsetHeight / 2 + "px";
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
         }
-      });
 
-      document.addEventListener("keydown", function(event) {
-        if (event.key === "f" || event.key === "F") {
-          flashlightOn = !flashlightOn;
-          flashlight.style.display = flashlightOn ? "block" : "none";
+        #flashlight {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, transparent 50%, black 100%);
+            pointer-events: none;
+            transition: transform 0.1s ease-out;
         }
-      });
-    });
-  </script>
+
+        #content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+        }
+    </style>
 </head>
 <body>
-  <div id="flashlight"></div>
+
+<div id="flashlight"></div>
+<div id="content">Hover over this text!</div>
+
+<script>
+    const flashlight = document.getElementById('flashlight');
+    const content = document.getElementById('content');
+    let flashlightOn = true;
+
+    document.addEventListener('mousemove', updateFlashlight);
+    document.addEventListener('keydown', toggleFlashlight);
+
+    function updateFlashlight(event) {
+        if (flashlightOn) {
+            const mouseX = event.clientX;
+            const mouseY = event.clientY;
+
+            const translateX = mouseX - flashlight.clientWidth / 2;
+            const translateY = mouseY - flashlight.clientHeight / 2;
+
+            flashlight.style.transform = `translate(${translateX}px, ${translateY}px)`;
+        }
+    }
+
+    function toggleFlashlight(event) {
+        if (event.key === 'f' || event.key === 'F') {
+            flashlightOn = !flashlightOn;
+
+            if (!flashlightOn) {
+                flashlight.style.transform = 'translate(-50%, -50%) scale(0)';
+            } else {
+                flashlight.style.transform = 'translate(-50%, -50%) scale(1)';
+            }
+        }
+    }
+</script>
+
 </body>
 </html>
