@@ -1,43 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Discord Bot</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Terminal</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: black;
+            color: white;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #terminal {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #output {
+            white-space: pre-wrap;
+        }
+
+        #input-container {
+            display: flex;
+        }
+
+        #input {
+            flex-grow: 1;
+            border: none;
+            background-color: black;
+            color: white;
+            outline: none;
+        }
+
+        #input:focus {
+            outline: none;
+        }
+    </style>
 </head>
 <body>
+    <div id="terminal">
+        <div id="output"></div>
+        <div id="input-container">
+            <span>$</span>
+            <input type="text" id="input" autofocus>
+        </div>
+    </div>
 
-<script>
-  // Replace 'YOUR_BOT_TOKEN' with your actual bot token
-  const botToken = 'MTE3Mzk5NTI0NjcwMzYxNjAyMA.G9Oybw.q8c4TEi6zqUPz0mdDgnXstk7NPb_Z5uN1hW6CE';
+    <script>
+        const outputContainer = document.getElementById('output');
+        const inputElement = document.getElementById('input');
 
-  // Replace 'YOUR_GUILD_ID' with the ID of your Discord server (guild)
-  const guildId = '1213584600488476793';
+        inputElement.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const inputText = inputElement.value;
+                executeCommand(inputText);
+                inputElement.value = '';
+            }
+        });
 
-  // Function to make a simple API request to get bot information
-  async function getBotInfo() {
-    try {
-      const response = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bot ${botToken}`,
-        },
-      });
+        function executeCommand(command) {
+            const outputText = simulateCommandExecution(command);
+            appendOutput(`$ ${command}\n${outputText}\n`);
+        }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
+        function simulateCommandExecution(command) {
+            // Here, you can implement your own logic to handle commands.
+            // For now, let's just echo back the command.
+            return `Command not implemented: ${command}`;
+        }
 
-      const data = await response.json();
-      console.log('Bot Information:', data);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  }
-
-  // Call the function when the page loads
-  window.onload = getBotInfo;
-</script>
-
+        function appendOutput(text) {
+            outputContainer.innerText += text;
+            outputContainer.scrollTop = outputContainer.scrollHeight;
+        }
+    </script>
 </body>
 </html>
