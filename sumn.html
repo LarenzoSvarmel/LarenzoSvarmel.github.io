@@ -8,21 +8,34 @@
     body {
       margin: 0;
       overflow: hidden;
+      background-color: black; /* Set the background to black */
     }
 
     #flashlight {
       position: absolute;
       width: 200px;
       height: 200px;
-      background: radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.7) 70%);
       border-radius: 50%;
       pointer-events: none;
+      overflow: hidden;
+      mix-blend-mode: screen; /* Use mix-blend-mode to make content inside circle visible */
+    }
+
+    #flashlight-content {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-image: url('your-image.jpg'); /* Replace with your content/image */
+      background-size: cover;
+      transform-origin: top left;
     }
   </style>
 </head>
 <body>
 
-<div id="flashlight"></div>
+<div id="flashlight">
+  <div id="flashlight-content"></div>
+</div>
 
 <script>
   document.addEventListener('mousemove', (e) => {
