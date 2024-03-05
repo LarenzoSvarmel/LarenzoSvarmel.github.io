@@ -1,100 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: 'Courier New', monospace;
-      margin: 0;
-      padding: 0;
-      background-color: #1E1E1E;
-      color: #FFFFFF;
-      overflow: hidden;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Terminal</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: 'Source Code Pro', monospace;
+            margin: 0;
+            overflow: hidden;
+        }
 
-    #terminal {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 50vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
+        #terminal {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border-top: 1px solid white;
+        }
 
-    #output {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-    }
+        #cursor {
+            display: inline-block;
+            width: 10px;
+            height: 20px;
+            background-color: white;
+            animation: blink 0.8s infinite;
+        }
 
-    #input-container {
-      display: flex;
-      padding: 10px;
-      background-color: #333333;
-    }
-
-    #input-container:before {
-      content: "Administrator@HarmonyHaven:1";
-      color: #00FF00;
-      margin-right: 5px;
-    }
-
-    #input {
-      flex: 1;
-      border: none;
-      background-color: transparent;
-      color: #FFFFFF;
-      outline: none;
-    }
-
-    #cursor {
-      display: inline-block;
-      width: 10px;
-      height: 20px;
-      background-color: #00FF00;
-      animation: blink 0.8s infinite;
-    }
-
-    @keyframes blink {
-      0%, 50% {
-        opacity: 1;
-      }
-      51%, 100% {
-        opacity: 0;
-      }
-    }
-  </style>
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div id="terminal">
-    <div id="output"></div>
-    <div id="input-container">
-      <div id="cursor"></div>
-      <input id="input" type="text" autocomplete="off">
+    <div id="terminal">
+        <div id="prompt">Administrator@HarmonyHaven:1 $ </div>
+        <span id="command"></span><span id="cursor"></span>
     </div>
-  </div>
 
-  <script>
-    const inputElement = document.getElementById('input');
-    const outputElement = document.getElementById('output');
-    const cursorElement = document.getElementById('cursor');
+    <script>
+        document.addEventListener('keydown', function (event) {
+            const commandSpan = document.getElementById('command');
+            const cursor = document.getElementById('cursor');
 
-    inputElement.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const command = inputElement.value;
-        inputElement.value = '';
+            if (event.key.length === 1) {
+                commandSpan.textContent += event.key;
+            } else if (event.key === 'Backspace') {
+                commandSpan.textContent = commandSpan.textContent.slice(0, -1);
+            }
 
-        // Add your logic for handling commands and displaying output here
-        outputElement.innerHTML += `<div>${command}</div>`;
-
-        // Scroll to the bottom of the output
-        outputElement.scrollTop = outputElement.scrollHeight;
-      }
-    });
-  </script>
+            // Update cursor position
+            const prompt = document.getElementById('prompt');
+            cursor.style.marginLeft = (prompt.offsetWidth + commandSpan.offsetWidth) + 'px';
+        });
+    </script>
 </body>
 </html>
