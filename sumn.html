@@ -7,43 +7,42 @@
     body {
       margin: 0;
       overflow: hidden;
+      cursor: none;
     }
 
     #flashlight {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      opacity: 0;
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, transparent 80%, rgba(0, 0, 0, 0.8) 90%);
       pointer-events: none;
-      transition: opacity 0.3s ease-in-out;
     }
   </style>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const flashlight = document.getElementById("flashlight");
+      let flashlightOn = true;
+
+      document.addEventListener("mousemove", function(event) {
+        if (flashlightOn) {
+          const x = event.clientX;
+          const y = event.clientY;
+          flashlight.style.left = x - flashlight.offsetWidth / 2 + "px";
+          flashlight.style.top = y - flashlight.offsetHeight / 2 + "px";
+        }
+      });
+
+      document.addEventListener("keydown", function(event) {
+        if (event.key === "f" || event.key === "F") {
+          flashlightOn = !flashlightOn;
+          flashlight.style.display = flashlightOn ? "block" : "none";
+        }
+      });
+    });
+  </script>
 </head>
 <body>
   <div id="flashlight"></div>
-
-  <script>
-    let flashlightOn = false;
-
-    function toggleFlashlight() {
-      const flashlight = document.getElementById('flashlight');
-      flashlightOn = !flashlightOn;
-
-      if (flashlightOn) {
-        flashlight.style.opacity = '0.7';
-      } else {
-        flashlight.style.opacity = '0';
-      }
-    }
-
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'f' || event.key === 'F') {
-        toggleFlashlight();
-      }
-    });
-  </script>
 </body>
 </html>
