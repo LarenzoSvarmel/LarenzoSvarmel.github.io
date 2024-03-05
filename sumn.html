@@ -20,6 +20,7 @@
             overflow: hidden;
             padding: 10px;
             box-sizing: border-box;
+            position: relative;
         }
 
         #output {
@@ -28,6 +29,19 @@
 
         #input-container {
             display: flex;
+        }
+
+        #prompt {
+            color: #00ff00; /* Green color for the prompt */
+        }
+
+        #cursor {
+            width: 8px; /* Adjust the cursor width as needed */
+            height: 20px; /* Adjust the cursor height as needed */
+            background-color: #00ff00; /* Green color for the cursor */
+            animation: blink 1s infinite; /* Blink animation */
+            display: inline-block;
+            margin-right: 5px; /* Adjust the spacing between cursor and text */
         }
 
         #input {
@@ -41,13 +55,20 @@
         #input:focus {
             outline: none;
         }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="terminal">
         <div id="output"></div>
         <div id="input-container">
-            <span>$</span>
+            <div id="prompt">Leith@HarmonyHaven:80996</div>
+            <div id="cursor"></div>
             <input type="text" id="input" autofocus>
         </div>
     </div>
@@ -77,7 +98,7 @@
         }
 
         function appendOutput(text) {
-            outputContainer.innerText += text;
+            outputContainer.innerHTML += text;
             outputContainer.scrollTop = outputContainer.scrollHeight;
         }
     </script>
