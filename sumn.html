@@ -1,70 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Terminal</title>
-    <style>
-        body {
-            background-color: black;
-            color: white;
-            font-family: 'CustomFont', monospace;
-            margin: 0;
-            overflow: hidden;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-family: 'Tifax-AJ7g', sans-serif; /* Replace 'YourCustomFont' with the actual font name or URL */
+      margin: 0;
+      overflow: hidden;
+      cursor: none;
+    }
 
-        @font-face {
-            font-family: 'CustomFont';
-            src: url('Tifax-AJ7g.ttf') format('ttf');
-            font-weight: normal;
-            font-style: normal;
-        }
+    #terminal {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      padding: 10px;
+    }
 
-        #terminal {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-            border-top: 1px solid white;
-        }
+    #prompt {
+      display: block;
+      margin-bottom: 5px;
+    }
 
-        #cursor {
-            display: inline-block;
-            width: 10px;
-            height: 20px;
-            background-color: white;
-            animation: blink 0.8s infinite;
-        }
+    #input-line {
+      display: flex;
+    }
 
-        @keyframes blink {
-            50% {
-                opacity: 0;
-            }
-        }
-    </style>
+    #input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: white;
+    }
+
+    #cursor {
+      display: inline-block;
+      width: 8px; /* Adjust the cursor size as needed */
+      height: 20px;
+      background-color: white;
+      animation: cursor-blink 0.8s infinite;
+    }
+
+    @keyframes cursor-blink {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div id="terminal">
-        <div id="prompt">Administrator@HarmonyHaven:1 $ </div>
-        <span id="command"></span><span id="cursor"></span>
+  <div id="terminal">
+    <div id="output">
+      <!-- Your terminal output goes here -->
     </div>
+    <div id="input-line">
+      <span id="prompt">Administrator@HarmonyHaven:1$</span>
+      <span id="input" contenteditable></span>
+      <span id="cursor"></span>
+    </div>
+  </div>
 
-    <script>
-        document.addEventListener('keydown', function (event) {
-            const commandSpan = document.getElementById('command');
-            const cursor = document.getElementById('cursor');
+  <!-- Include your custom font -->
+  <!-- Example using Google Fonts -->
+  <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=YourCustomFont&display=swap"> -->
 
-            if (event.key.length === 1) {
-                commandSpan.textContent += event.key;
-            } else if (event.key === 'Backspace') {
-                commandSpan.textContent = commandSpan.textContent.slice(0, -1);
-            }
+  <script>
+    // JavaScript for handling typing effect
+    const inputElement = document.getElementById('input');
+    const cursorElement = document.getElementById('cursor');
 
-            // Update cursor position
-            const prompt = document.getElementById('prompt');
-            cursor.style.marginLeft = (prompt.offsetWidth + commandSpan.offsetWidth) + 'px';
-        });
-    </script>
+    inputElement.addEventListener('input', function() {
+      cursorElement.style.display = 'none';
+    });
+
+    inputElement.addEventListener('focus', function() {
+      cursorElement.style.display = 'inline-block';
+    });
+
+    inputElement.addEventListener('blur', function() {
+      cursorElement.style.display = 'none';
+    });
+  </script>
 </body>
 </html>
