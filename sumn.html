@@ -1,95 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Simulation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
 
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
+    .email-list {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+    }
 
-        .email-header {
-            padding: 20px;
-            background-color: #007bff;
-            color: #fff;
-            text-align: center;
-            border-bottom: 2px solid #0056b3;
-        }
+    .email-item {
+      border-bottom: 1px solid #ddd;
+      padding: 10px;
+      cursor: pointer;
+    }
 
-        .email-content {
-            padding: 20px;
-            line-height: 1.6;
-            color: #333;
-        }
+    .email-item:hover {
+      background-color: #f9f9f9;
+    }
 
-        .sender-info {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-        }
+    .email-content {
+      display: none;
+      padding: 10px;
+      border-top: 1px solid #ddd;
+      margin-top: 5px;
+    }
 
-        .profile-picture {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
+    .email-actions {
+      margin-top: 10px;
+    }
 
-        .email-signature {
-            margin-top: 20px;
-            font-style: italic;
-        }
-    </style>
+    .profile-picture {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .button {
+      padding: 5px 10px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    .reply-button {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .star-button {
+      background-color: #FFD700;
+      color: #333;
+    }
+  </style>
 </head>
-
 <body>
 
-    <div class="email-container">
-
-        <!-- Email 1 -->
-        <div class="email-header">
-            <h2>Email from John Doe</h2>
+  <ul class="email-list">
+    <li class="email-item">
+      <img class="profile-picture" src="default_profile_picture.jpg" alt="Profile Picture">
+      John Doe
+      <div class="email-content">
+        <p><strong>Subject:</strong> Meeting Tomorrow</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam euismod justo at neque ullamcorper.</p>
+        <div class="email-actions">
+          <button class="button reply-button">Reply</button>
+          <button class="button star-button">Star</button>
         </div>
-        <div class="email-content">
-            <div class="sender-info">
-                <img class="profile-picture" src="https://placekitten.com/40/40" alt="John Doe">
-                <strong>John Doe</strong> &lt;johndoe@email.com&gt;
-            </div>
-            <p>Hey everyone,</p>
-            <p>I hope you are all doing well. I wanted to share some updates on our story project....</p>
-            <p class="email-signature">Best regards,<br>John</p>
-        </div>
+      </div>
+    </li>
 
-        <!-- Email 2 -->
-        <div class="email-header" style="background-color: #dc3545;">
-            <h2>Email from Jane Smith</h2>
-        </div>
-        <div class="email-content">
-            <div class="sender-info">
-                <img class="profile-picture" src="https://placekitten.com/40/41" alt="Jane Smith">
-                <strong>Jane Smith</strong> &lt;janesmith@email.com&gt;
-            </div>
-            <p>Hi everyone,</p>
-            <p>I have some exciting ideas for our story project. Let's discuss them in our next meeting...</p>
-            <p class="email-signature">Warm regards,<br>Jane</p>
-        </div>
+    <!-- Add more email items here with different content -->
 
-        <!-- Add more emails as needed -->
+  </ul>
 
-    </div>
+  <script>
+    // JavaScript to toggle email content visibility
+    document.querySelectorAll('.email-item').forEach(function(emailItem) {
+      emailItem.addEventListener('click', function() {
+        var emailContent = this.querySelector('.email-content');
+        emailContent.style.display = (emailContent.style.display === 'none' || emailContent.style.display === '') ? 'block' : 'none';
+      });
+    });
+  </script>
 
 </body>
-
 </html>
