@@ -1,74 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Simulation</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
+            padding: 20px;
         }
 
         .email-container {
             max-width: 600px;
-            margin: 20px auto;
+            margin: 0 auto;
             background-color: #fff;
-            padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
 
-        .header {
+        .email-header {
+            padding: 20px;
+            background-color: #007bff;
+            color: #fff;
             text-align: center;
-            margin-bottom: 20px;
+            border-bottom: 2px solid #0056b3;
         }
 
-        .sender {
-            font-weight: bold;
-            color: #333;
-        }
-
-        .recipient {
-            color: #555;
-        }
-
-        .email-body {
+        .email-content {
+            padding: 20px;
             line-height: 1.6;
             color: #333;
         }
 
-        .signature {
+        .sender-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .profile-picture {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .email-signature {
             margin-top: 20px;
-            color: #555;
+            font-style: italic;
         }
     </style>
 </head>
+
 <body>
+
     <div class="email-container">
-        <div class="header">
-            <h2>Email Simulation</h2>
+
+        <!-- Email 1 -->
+        <div class="email-header">
+            <h2>Email from John Doe</h2>
         </div>
-        <div class="sender">John Doe</div>
-        <div class="recipient">To: Jane Smith</div>
-        <hr>
-        <div class="email-body">
-            <p>Dear Jane,</p>
-            <p>I hope this email finds you well. I wanted to update you on the progress of our project. We've made significant strides and achieved some key milestones.</p>
-            <p>The team is working diligently to ensure that we meet our deadlines. Your contributions have been invaluable, and we appreciate your dedication to the project.</p>
-            <p>If you have any questions or concerns, please feel free to reach out. Let's schedule a meeting to discuss any updates or address any issues that may have arisen.</p>
-            <p>Looking forward to your continued collaboration.</p>
-            <p>Best regards,</p>
-            <p>John Doe</p>
+        <div class="email-content">
+            <div class="sender-info">
+                <img class="profile-picture" src="https://placekitten.com/40/40" alt="John Doe">
+                <strong>John Doe</strong> &lt;johndoe@email.com&gt;
+            </div>
+            <p>Hey everyone,</p>
+            <p>I hope you are all doing well. I wanted to share some updates on our story project....</p>
+            <p class="email-signature">Best regards,<br>John</p>
         </div>
-        <div class="signature">
-            <p>John Doe</p>
-            <p>Project Manager</p>
-            <p>XYZ Company</p>
+
+        <!-- Email 2 -->
+        <div class="email-header" style="background-color: #dc3545;">
+            <h2>Email from Jane Smith</h2>
         </div>
+        <div class="email-content">
+            <div class="sender-info">
+                <img class="profile-picture" src="https://placekitten.com/40/41" alt="Jane Smith">
+                <strong>Jane Smith</strong> &lt;janesmith@email.com&gt;
+            </div>
+            <p>Hi everyone,</p>
+            <p>I have some exciting ideas for our story project. Let's discuss them in our next meeting...</p>
+            <p class="email-signature">Warm regards,<br>Jane</p>
+        </div>
+
+        <!-- Add more emails as needed -->
+
     </div>
+
 </body>
+
 </html>
