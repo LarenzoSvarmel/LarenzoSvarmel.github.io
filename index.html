@@ -39,12 +39,12 @@
 
     const map = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1],
       [1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1],
-      [1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1],
+      [1, 0, 1, 0, 1, 1, 2, 3, 1, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
@@ -54,7 +54,7 @@
       y: 100,
       angle: Math.PI / 4,
       fov: Math.PI / 3,
-      speed: 2.1,  // Decreased speed by 30%
+      speed: 2.1,
       rotationSpeed: 0.03,
       isMouseLocked: false,
     };
@@ -75,7 +75,7 @@
         const mapY = Math.floor(y / tileSize);
 
         // Check if the ray hit a wall
-        if (map[mapY][mapX] === 1) {
+        if (map[mapY][mapX] !== 0) {
           const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
           const correctedDistance = distance * Math.cos(rayAngle - player.angle);
 
@@ -87,6 +87,7 @@
             distance: correctedDistance,
             height: wallHeight,
             textureX: x % tileSize,
+            shapeType: map[mapY][mapX],  // Added shape type information
           };
         }
       }
@@ -97,11 +98,15 @@
 
       const mapScale = miniMap.width / (mapWidth * tileSize);
 
-      // Draw walls on the mini-map
+      // Draw walls and shapes on the mini-map
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
           if (map[y][x] === 1) {
             miniMapCtx.fillStyle = 'gray';
+            miniMapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
+          } else if (map[y][x] !== 0) {
+            // Different shapes represented by different colors
+            miniMapCtx.fillStyle = getShapeColor(map[y][x]);
             miniMapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
           }
         }
@@ -120,6 +125,19 @@
       );
       miniMapCtx.strokeStyle = 'red';
       miniMapCtx.stroke();
+    }
+
+    function getShapeColor(shapeType) {
+      // Define colors for different shape types
+      switch (shapeType) {
+        case 2: // Triangle
+          return 'orange';
+        case 3: // Circle
+          return 'blue';
+        // Add more cases for other shape types as needed
+        default:
+          return 'white';
+      }
     }
 
     function handleInput() {
@@ -184,11 +202,11 @@
     }
 
     function isWall(x, y) {
-      // Check if the given coordinates are inside a wall
+      // Check if the given coordinates are inside a wall or shape
       const mapX = Math.floor(x / tileSize);
       const mapY = Math.floor(y / tileSize);
 
-      return map[mapY][mapX] === 1;
+      return map[mapY][mapX] !== 0;
     }
 
     const keys = {};
@@ -224,7 +242,7 @@
       // Draw the raycasting scene here
       ctx.clearRect(0, 0, screenWidth, screenHeight);
 
-      // Draw walls using shading
+      // Draw walls and shapes using shading
       const rays = [];
       for (let i = 0; i < screenWidth; i++) {
         const rayAngle = player.angle - player.fov / 2 + (i / screenWidth) * player.fov;
@@ -240,9 +258,16 @@
         // Apply shading based on distance
         const shading = Math.min(1, 0.1 + ray.distance / 600);
 
-        const wallColor = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
+        let color;
+        if (ray.shapeType !== undefined) {
+          // Use shape color if the ray hit a shape
+          color = getShapeColor(ray.shapeType);
+        } else {
+          // Use wall color if the ray hit a wall
+          color = `rgb(${255 * shading}, ${255 * shading}, ${255 * shading})`;
+        }
 
-        ctx.fillStyle = wallColor;
+        ctx.fillStyle = color;
         ctx.fillRect(i, wallTop, 1, wallHeight);
       }
     }
