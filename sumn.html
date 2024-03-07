@@ -3,69 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Command Prompt</title>
     <style>
         body {
             margin: 0;
-            overflow: hidden;
+            padding: 0;
+            background-color: black;
+            color: purple;
+            font-family: Consolas, monospace;
         }
 
-        #flashlight {
-            position: absolute;
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            background: radial-gradient(circle, transparent 50%, black 100%);
-            pointer-events: none;
-            transition: transform 0.1s ease-out;
+        #console {
+            width: 80%;
+            margin: 20px auto;
+            padding: 10px;
+            border: 1px solid purple;
+            min-height: 200px;
+            overflow-y: auto;
         }
 
-        #content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 24px;
+        input {
+            width: calc(100% - 20px);
+            padding: 5px;
+            margin: 0;
+            border: none;
+            outline: none;
+            background-color: black;
+            color: purple;
+            font-family: Consolas, monospace;
         }
     </style>
 </head>
 <body>
+    <div id="console"></div>
+    <input type="text" id="commandInput" autocomplete="off" autofocus>
 
-<div id="flashlight"></div>
-<div id="content">Hover over this text!</div>
+    <script>
+        const consoleDiv = document.getElementById('console');
+        const inputElement = document.getElementById('commandInput');
 
-<script>
-    const flashlight = document.getElementById('flashlight');
-    const content = document.getElementById('content');
-    let flashlightOn = true;
+        const commands = {
+            '?help': 'List of preset commands:\n1. ?help - Display this help message\n2. ?about - Show information about the console\n3. ?list - List items\n4. ?add [item] - Add an item to the list',
+            '?about': 'Interactive Command Prompt\nVersion 1.0\nDeveloped by YourName',
+            '?list': 'List items:\n1. Item 1\n2. Item 2\n3. Item 3',
+            '?add': (args) => {
+                const newItem = args.trim();
+                if (newItem !== '') {
+                    return `Added "${newItem}" to the list`;
+                } else {
+                    return 'Please provide an item to add to the list';
+                }
+            }
+        };
 
-    document.addEventListener('mousemove', updateFlashlight);
-    document.addEventListener('keydown', toggleFlashlight);
+        function executeCommand(input) {
+            const [command, ...args] = input.split(' ');
+            const commandFunction = commands[command];
+            
+            if (commandFunction) {
+                let output;
+                if (typeof commandFunction === 'function') {
+                    output = commandFunction(args.join(' '));
+                } else {
+                    output = commandFunction;
+                }
 
-    function updateFlashlight(event) {
-        if (flashlightOn) {
-            const mouseX = event.clientX;
-            const mouseY = event.clientY;
-
-            const translateX = mouseX - flashlight.clientWidth / 2;
-            const translateY = mouseY - flashlight.clientHeight / 2;
-
-            flashlight.style.transform = `translate(${translateX}px, ${translateY}px)`;
-        }
-    }
-
-    function toggleFlashlight(event) {
-        if (event.key === 'f' || event.key === 'F') {
-            flashlightOn = !flashlightOn;
-
-            if (!flashlightOn) {
-                flashlight.style.transform = 'translate(-50%, -50%) scale(0)';
+                consoleDiv.innerHTML += `<p>> ${input}</p>`;
+                consoleDiv.innerHTML += `<p>${output}</p>`;
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
             } else {
-                flashlight.style.transform = 'translate(-50%, -50%) scale(1)';
+                consoleDiv.innerHTML += `<p>> ${input}</p>`;
+                consoleDiv.innerHTML += `<p>Command not found. Type ?help for a list of commands.</p>`;
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
             }
         }
-    }
-</script>
 
+        inputElement.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                const input = inputElement.value.trim();
+                if (input !== '') {
+                    inputElement.value = '';
+                    executeCommand(input);
+                }
+            }
+        });
+
+        // Initial help message
+        executeCommand('?help');
+    </script>
 </body>
 </html>
