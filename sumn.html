@@ -3,147 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Command Prompt</title>
+    <title>Harmony Haven Technologies (TM) - (1955-2009)</title>
+    <!-- Add Google Fonts link for Consolas -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Consolas&display=swap">
     <style>
         body {
             margin: 0;
-            padding: 0;
-            background-color: black;
+            background-color: #000;
             color: purple;
             font-family: 'Consolas', monospace;
             overflow: hidden;
         }
 
-        #console {
+        #prompt {
             width: 800px;
-            height: 500px;
-            margin: 50px auto;
+            height: 600px;
+            margin: auto;
+            position: absolute;
+            top: 0; bottom: 0; left: 0; right: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #header {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #output {
+            flex-grow: 1;
+            overflow-y: auto;
             padding: 10px;
             border: 1px solid purple;
-            min-height: 200px;
-            overflow-y: auto;
-            position: relative;
         }
 
-        #startText {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 18px;
+        #input-container {
+            display: flex;
+            align-items: center;
         }
 
-        input {
-            width: calc(100% - 20px);
-            padding: 5px;
-            margin: 0;
+        #input {
+            flex-grow: 1;
             border: none;
-            outline: none;
-            background-color: black;
+            background-color: transparent;
             color: purple;
+            outline: none;
             font-family: 'Consolas', monospace;
-            position: absolute;
-            bottom: 30px;
-            left: 10px;
+            font-size: 14px;
+            caret-color: purple;
+            width: 100%;
         }
 
-        .cursor {
-            position: absolute;
-            bottom: 28px;
-            height: 20px;
-            width: 7px;
-            background-color: purple;
-            animation: blink 1s infinite step-start;
+        /* Custom cursor */
+        #input:focus {
+            border-bottom: 2px solid purple;
         }
 
-        @keyframes blink {
-            50% {
-                opacity: 0;
-            }
-        }
-
-        /* CRT effect */
+        /* Scan lines for realism and immersion */
         body::before {
             content: "";
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
+            right: 0;
+            bottom: 0;
             pointer-events: none;
-            background: repeating-linear-gradient(
-                180deg,
-                transparent,
-                transparent 2px,
-                rgba(255, 255, 255, 0.05) 2px,
-                rgba(255, 255, 255, 0.05) 4px
-            );
+            background: repeating-linear-gradient(180deg, transparent, transparent 2px, #444 2px, #444 4px);
         }
     </style>
 </head>
 <body>
-    <div id="console">
-        <div id="startText">Harmony Haven Technologies<br>1955-200X</div>
-        <div class="cursor"></div>
-        <input type="text" id="commandInput" autocomplete="off" autofocus>
+    <div id="prompt">
+        <div id="header">Harmony Haven Technologies (TM) - (1955-2009)</div>
+        <div id="output">Welcome to Harmony Haven Technologies. Type commands here...</div>
+        <div id="input-container">
+            <span>&gt;</span>
+            <input type="text" id="input" autofocus>
+        </div>
     </div>
-
-    <script>
-        const consoleDiv = document.getElementById('console');
-        const inputElement = document.getElementById('commandInput');
-        const cursorElement = document.querySelector('.cursor');
-
-        const commands = {
-            '?help': 'List of preset commands:\n1. ?help - Display this help message\n2. ?about - Show information about the console\n3. ?list - List items\n4. ?add [item] - Add an item to the list',
-            '?about': 'Interactive Command Prompt\nVersion 1.0\nDeveloped by YourName',
-            '?list': 'List items:\n1. Item 1\n2. Item 2\n3. Item 3',
-            '?add': (args) => {
-                const newItem = args.trim();
-                if (newItem !== '') {
-                    return `Added "${newItem}" to the list`;
-                } else {
-                    return 'Please provide an item to add to the list';
-                }
-            }
-        };
-
-        function executeCommand(input) {
-            const [command, ...args] = input.split(' ');
-            const commandFunction = commands[command];
-            
-            if (commandFunction) {
-                let output;
-                if (typeof commandFunction === 'function') {
-                    output = commandFunction(args.join(' '));
-                } else {
-                    output = commandFunction;
-                }
-
-                consoleDiv.innerHTML += `<p>> ${input}</p>`;
-                consoleDiv.innerHTML += `<p>${output}</p>`;
-                consoleDiv.scrollTop = consoleDiv.scrollHeight;
-            } else {
-                consoleDiv.innerHTML += `<p>> ${input}</p>`;
-                consoleDiv.innerHTML += `<p>Command not found. Type ?help for a list of commands.</p>`;
-                consoleDiv.scrollTop = consoleDiv.scrollHeight;
-            }
-        }
-
-        inputElement.addEventListener('input', () => {
-            // Move the cursor with each new letter input
-            cursorElement.style.left = `${10 + inputElement.value.length * 10}px`;
-        });
-
-        inputElement.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                const input = inputElement.value.trim();
-                if (input !== '') {
-                    inputElement.value = '';
-                    executeCommand(input);
-                }
-            }
-        });
-    </script>
 </body>
 </html>
