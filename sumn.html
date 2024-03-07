@@ -1,29 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Consolas&display=swap">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Command Prompt</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Consolas&display=swap">
     <style>
         body {
             margin: 0;
             padding: 0;
             background-color: black;
             color: purple;
-            font-family: Consolas, monospace;
+            font-family: 'Consolas', monospace;
             overflow: hidden;
         }
 
         #console {
-            width: 600px;
-            height: 450px;
-            margin: 75px auto;
+            width: 800px;
+            height: 500px;
+            margin: 50px auto;
             padding: 10px;
             border: 1px solid purple;
             min-height: 200px;
             overflow-y: auto;
             position: relative;
+        }
+
+        #startText {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
         }
 
         input {
@@ -34,14 +41,15 @@
             outline: none;
             background-color: black;
             color: purple;
-            font-family: Consolas, monospace;
+            font-family: 'Consolas', monospace;
             position: absolute;
-            bottom: 10px;
+            bottom: 30px;
+            left: 10px;
         }
 
         .cursor {
             position: absolute;
-            bottom: 8px;
+            bottom: 28px;
             height: 20px;
             width: 7px;
             background-color: purple;
@@ -72,22 +80,14 @@
                 rgba(255, 255, 255, 0.05) 4px
             );
         }
-
-        /* Start text */
-        #startText {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 18px;
-        }
     </style>
 </head>
 <body>
     <div id="console">
         <div id="startText">Harmony Haven Technologies<br>1955-200X</div>
         <div class="cursor"></div>
+        <input type="text" id="commandInput" autocomplete="off" autofocus>
     </div>
-    <input type="text" id="commandInput" autocomplete="off" autofocus>
 
     <script>
         const consoleDiv = document.getElementById('console');
@@ -129,6 +129,11 @@
                 consoleDiv.scrollTop = consoleDiv.scrollHeight;
             }
         }
+
+        inputElement.addEventListener('input', () => {
+            // Move the cursor with each new letter input
+            cursorElement.style.left = `${10 + inputElement.value.length * 10}px`;
+        });
 
         inputElement.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
