@@ -31,16 +31,38 @@
             background-color: black;
             color: purple;
             font-family: Consolas, monospace;
+            caret-color: transparent;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 0.6em;
+            height: 1.2em;
+            background-color: purple;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% {
+                opacity: 0;
+            }
+            51%, 100% {
+                opacity: 1;
+            }
         }
     </style>
 </head>
 <body>
     <div id="console"></div>
-    <input type="text" id="commandInput" autocomplete="off" autofocus>
+    <div>
+        <input type="text" id="commandInput" class="input" autocomplete="off" autofocus>
+        <div class="cursor"></div>
+    </div>
 
     <script>
         const consoleDiv = document.getElementById('console');
         const inputElement = document.getElementById('commandInput');
+        const cursor = document.querySelector('.cursor');
 
         const commands = {
             '?help': 'List of preset commands:\n1. ?help - Display this help message\n2. ?about - Show information about the console\n3. ?list - List items\n4. ?add [item] - Add an item to the list',
