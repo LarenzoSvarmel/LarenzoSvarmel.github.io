@@ -11,15 +11,18 @@
             background-color: black;
             color: purple;
             font-family: Consolas, monospace;
+            overflow: hidden;
         }
 
         #console {
-            width: 80%;
-            margin: 20px auto;
+            width: 600px;
+            height: 450px;
+            margin: 75px auto;
             padding: 10px;
             border: 1px solid purple;
             min-height: 200px;
             overflow-y: auto;
+            position: relative;
         }
 
         input {
@@ -31,38 +34,55 @@
             background-color: black;
             color: purple;
             font-family: Consolas, monospace;
-            caret-color: transparent;
+            position: absolute;
+            bottom: 10px;
         }
 
         .cursor {
-            display: inline-block;
-            width: 0.6em;
-            height: 1.2em;
+            position: absolute;
+            bottom: 8px;
+            height: 20px;
+            width: 7px;
             background-color: purple;
-            animation: blink 1s infinite;
+            animation: blink 1s infinite step-start;
         }
 
         @keyframes blink {
-            0%, 50% {
+            50% {
                 opacity: 0;
             }
-            51%, 100% {
-                opacity: 1;
-            }
+        }
+
+        /* CRT effect */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                180deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 255, 255, 0.05) 2px,
+                rgba(255, 255, 255, 0.05) 4px
+            );
         }
     </style>
 </head>
 <body>
-    <div id="console"></div>
-    <div>
-        <input type="text" id="commandInput" class="input" autocomplete="off" autofocus>
+    <div id="console">
         <div class="cursor"></div>
     </div>
+    <input type="text" id="commandInput" autocomplete="off" autofocus>
 
     <script>
         const consoleDiv = document.getElementById('console');
         const inputElement = document.getElementById('commandInput');
-        const cursor = document.querySelector('.cursor');
+        const cursorElement = document.querySelector('.cursor');
 
         const commands = {
             '?help': 'List of preset commands:\n1. ?help - Display this help message\n2. ?about - Show information about the console\n3. ?list - List items\n4. ?add [item] - Add an item to the list',
@@ -109,9 +129,6 @@
                 }
             }
         });
-
-        // Initial help message
-        executeCommand('?help');
     </script>
 </body>
 </html>
