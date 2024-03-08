@@ -3,90 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Command Prompt Simulation</title>
+    <title>Harmony Haven Technologies (TM) - (1955-2009)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Consolas&display=swap" rel="stylesheet">
     <style>
         body {
-            background-color: black;
+            background-color: #1f1f1f;
             color: purple;
-            font-family: 'Courier New', monospace;
+            font-family: 'Consolas', monospace;
             margin: 0;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
-            overflow: hidden;
         }
 
-        #prompt {
-            border: 1px solid purple;
-            padding: 10px;
+        #command-prompt {
             width: 800px;
             height: 600px;
-            box-sizing: border-box;
             position: relative;
+            border: 2px solid purple;
             overflow: hidden;
-            aspect-ratio: 4 / 3;
         }
 
-        #prompt::before {
-            content: "Harmony Haven Technologies (TM)\nAdministrator@HarmonyHaven:";
-            white-space: pre;
-            display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
-            color: white;
+        #header {
+            background-color: #1f1f1f;
+            color: purple;
+            padding: 5px;
+            font-size: 16px;
+            text-align: center;
         }
 
-        #command-line {
-            margin-top: 20px;
-            color: white;
+        #output {
+            padding: 10px;
+            overflow-y: auto;
+            height: calc(100% - 40px);
+            box-sizing: border-box;
+        }
+
+        #input-container {
             display: flex;
-            align-items: center;
         }
 
         #input {
-            background-color: transparent;
+            width: calc(100% - 20px);
+            margin: 0;
+            padding: 10px;
             border: none;
+            background-color: transparent;
+            color: purple;
+            font-size: 16px;
+            font-family: 'Consolas', monospace;
             outline: none;
-            color: purple;
-            font-family: 'Courier New', monospace;
-            width: 100%;
-            caret-color: purple;
-            border-bottom: 1px solid purple;
         }
 
-        #input::placeholder {
-            color: purple;
-            opacity: 0.5;
+        #cursor {
+            width: 10px;
+            height: 20px;
+            background-color: purple;
+            animation: blink 1s infinite;
         }
 
-        #scan-lines {
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* Add scan lines for realism and immersion */
+        #command-prompt::before {
             content: "";
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            background: repeating-linear-gradient(180deg, transparent, transparent 1px, rgba(255, 255, 255, 0.1) 1px, rgba(255, 255, 255, 0.1) 2px);
+            background: repeating-linear-gradient(0deg, transparent, transparent 1px, #1f1f1f 1px, #1f1f1f 2px);
+            opacity: 0.2;
             pointer-events: none;
-            z-index: -1;
         }
     </style>
 </head>
 <body>
-    <div id="prompt">
-        <div id="scan-lines"></div>
-        <div id="command-line">$ <span id="command-text"></span></div>
+    <div id="command-prompt">
+        <div id="header">Harmony Haven Technologies (TM) - (1955-2009)</div>
+        <div id="output"></div>
+        <div id="input-container">
+            <div id="cursor"></div>
+            <input type="text" id="input" autofocus>
+        </div>
     </div>
-    <input type="text" id="input" placeholder="Type here...">
-
-    <script>
-        const input = document.getElementById('input');
-        const commandText = document.getElementById('command-text');
-
-        input.addEventListener('input', function () {
-            commandText.innerText = this.value;
-        });
-    </script>
 </body>
 </html>
