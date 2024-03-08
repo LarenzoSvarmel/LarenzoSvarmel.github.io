@@ -15,6 +15,7 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
+            overflow: hidden;
         }
 
         #prompt {
@@ -24,10 +25,11 @@
             max-width: 600px;
             box-sizing: border-box;
             position: relative;
+            overflow: hidden;
         }
 
         #prompt::before {
-            content: "Harmony Haven Technologies (TM)\AAdministrator@HarmonyHaven:";
+            content: "Harmony Haven Technologies (TM)\nAdministrator@HarmonyHaven:";
             white-space: pre;
             display: block;
             position: absolute;
@@ -50,6 +52,8 @@
             color: purple;
             font-family: 'Courier New', monospace;
             flex-grow: 1;
+            caret-color: purple;
+            border-bottom: 1px solid purple;
         }
 
         #input::placeholder {
@@ -62,8 +66,9 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            background: repeating-linear-gradient(180deg, transparent, transparent 2px, rgba(255, 255, 255, 0.1) 2px, rgba(255, 255, 255, 0.1) 4px);
+            background: repeating-linear-gradient(180deg, transparent, transparent 1px, rgba(255, 255, 255, 0.1) 1px, rgba(255, 255, 255, 0.1) 2px);
             pointer-events: none;
+            z-index: -1;
         }
     </style>
 </head>
@@ -71,6 +76,7 @@
     <div id="prompt">
         <div id="scan-lines"></div>
         <div id="command-line">$ <span id="command-text"></span></div>
+        <input type="text" id="input" placeholder="Type here...">
     </div>
 
     <script>
