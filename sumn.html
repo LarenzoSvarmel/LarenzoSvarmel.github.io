@@ -16,13 +16,27 @@
         }
 
         .login-container {
+            text-align: center;
+        }
+
+        #logo {
+            width: 100%;
+            max-width: 200px;
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeIn 2s forwards;
+        }
+
+        .login-form {
             background-color: #ffffff;
             padding: 20px;
             border: 2px solid #000000;
             border-radius: 5px;
             width: 300px;
-            text-align: center;
+            opacity: 1;
+            animation: fadeOut 2s forwards;
             position: relative;
+            display: inline-block;
         }
 
         .login-form input {
@@ -45,17 +59,6 @@
             background-color: #006666;
         }
 
-        .post-login-content {
-            display: none;
-            margin-top: 20px;
-        }
-
-        #logo {
-            width: 100%;
-            max-width: 200px;
-            margin-bottom: 20px;
-        }
-
         .loading-circle {
             border: 8px solid #f3f3f3;
             border-top: 8px solid #008080;
@@ -70,6 +73,23 @@
             display: none;
         }
 
+        .post-login-content {
+            display: none;
+            margin-top: 20px;
+            opacity: 0;
+            animation: fadeIn 2s 3s forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -79,7 +99,7 @@
 <body>
     <div class="login-container">
         <img id="logo" src="yadaddy.jpg" alt="Logo">
-        <div class="login-form" id="form1">
+        <div class="login-form" id="loginForm">
             <form onsubmit="return login()">
                 <input type="text" id="username" placeholder="Username" required>
                 <br>
@@ -87,8 +107,8 @@
                 <br>
                 <button type="submit">Login</button>
             </form>
+            <div class="loading-circle" id="loadingCircle"></div>
         </div>
-        <div class="loading-circle" id="loadingCircle"></div>
         <div class="post-login-content" id="postLoginContent">
             <h3>Welcome, admin!</h3>
             <p>This is the post-login content.</p>
@@ -100,22 +120,22 @@
             var username = document.getElementById('username').value;
             var password = document.getElementById('password').value;
 
-            // Hide Form 1 and show loading circle
-            document.getElementById('form1').style.display = 'none';
+            // Show loading circle
             document.getElementById('loadingCircle').style.display = 'block';
 
             // Simulate loading process (3 seconds)
             setTimeout(function () {
                 // Check the username and password
                 if (username === 'admin' && password === 'admin') {
-                    // Hide the loading circle
+                    // Hide the login form and loading circle
+                    document.getElementById('loginForm').style.display = 'none';
                     document.getElementById('loadingCircle').style.display = 'none';
                     // Show the post-login content
                     document.getElementById('postLoginContent').style.display = 'block';
                 } else {
+                    // Hide the loading circle
+                    document.getElementById('loadingCircle').style.display = 'none';
                     alert('Invalid username or password. Please try again.');
-                    // Show Form 1 again
-                    document.getElementById('form1').style.display = 'block';
                 }
             }, 3000);
 
