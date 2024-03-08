@@ -3,87 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Harmony Haven Technologies (TM) - (1955-2009)</title>
-    <!-- Add Google Fonts link for Consolas -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Consolas&display=swap">
+    <title>Windows 2000 Login</title>
     <style>
         body {
+            font-family: Arial, sans-serif;
+            background-color: #008080;
             margin: 0;
-            background-color: #000;
-            color: purple;
-            font-family: 'Consolas', monospace;
-            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
         }
 
-        #prompt {
-            width: 800px;
-            height: 600px;
-            margin: auto;
-            position: absolute;
-            top: 0; bottom: 0; left: 0; right: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+        .login-container {
+            background-color: #ffffff;
             padding: 20px;
+            border: 2px solid #000000;
+            border-radius: 5px;
+            width: 300px;
+            text-align: center;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
             box-sizing: border-box;
         }
 
-        #header {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        #output {
-            flex-grow: 1;
-            overflow-y: auto;
+        .login-form button {
+            background-color: #008080;
+            color: #ffffff;
             padding: 10px;
-            border: 1px solid purple;
-        }
-
-        #input-container {
-            display: flex;
-            align-items: center;
-        }
-
-        #input {
-            flex-grow: 1;
             border: none;
-            background-color: transparent;
-            color: purple;
-            outline: none;
-            font-family: 'Consolas', monospace;
-            font-size: 14px;
-            caret-color: purple;
-            width: 100%;
+            border-radius: 3px;
+            cursor: pointer;
         }
 
-        /* Custom cursor */
-        #input:focus {
-            border-bottom: 2px solid purple;
+        .login-form button:hover {
+            background-color: #006666;
         }
 
-        /* Scan lines for realism and immersion */
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            background: repeating-linear-gradient(180deg, transparent, transparent 2px, #444 2px, #444 4px);
+        .post-login-content {
+            display: none;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div id="prompt">
-        <div id="header">Harmony Haven Technologies (TM) - (1955-2009)</div>
-        <div id="output">Welcome to Harmony Haven Technologies. Type commands here...</div>
-        <div id="input-container">
-            <span>&gt;</span>
-            <input type="text" id="input" autofocus>
+    <div class="login-container">
+        <div class="login-form">
+            <h2>Windows 2000 Login</h2>
+            <form id="loginForm" onsubmit="return login()">
+                <input type="text" id="username" placeholder="Username" required>
+                <br>
+                <input type="password" id="password" placeholder="Password" required>
+                <br>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+        <div class="post-login-content" id="postLoginContent">
+            <h3>Welcome, admin!</h3>
+            <p>This is the post-login content.</p>
         </div>
     </div>
+
+    <script>
+        function login() {
+            var username = document.getElementById('username').value;
+            var password = document.getElementById('password').value;
+
+            // Check the username and password
+            if (username === 'admin' && password === 'admin') {
+                // Hide the login form
+                document.getElementById('loginForm').style.display = 'none';
+                // Show the post-login content
+                document.getElementById('postLoginContent').style.display = 'block';
+                return false; // Prevent form submission
+            } else {
+                alert('Invalid username or password. Please try again.');
+                return false; // Prevent form submission
+            }
+        }
+    </script>
 </body>
 </html>
