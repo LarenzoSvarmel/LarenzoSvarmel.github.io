@@ -16,27 +16,23 @@
         }
 
         .login-container {
-            text-align: center;
-        }
-
-        #logo {
-            width: 100%;
-            max-width: 200px;
-            margin-bottom: 20px;
-            opacity: 0;
-            animation: fadeIn 2s forwards;
-        }
-
-        .login-form {
             background-color: #ffffff;
             padding: 20px;
             border: 2px solid #000000;
             border-radius: 5px;
             width: 300px;
-            opacity: 1;
-            animation: fadeOut 2s forwards;
+            text-align: center;
             position: relative;
-            display: inline-block;
+            animation: fadeIn 1.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
 
         .login-form input {
@@ -59,6 +55,13 @@
             background-color: #006666;
         }
 
+        #logo {
+            width: 100%;
+            max-width: 200px;
+            margin-bottom: 20px;
+            animation: fadeIn 1.5s ease-in-out;
+        }
+
         .loading-circle {
             border: 8px solid #f3f3f3;
             border-top: 8px solid #008080;
@@ -73,34 +76,24 @@
             display: none;
         }
 
-        .post-login-content {
-            display: none;
-            margin-top: 20px;
-            opacity: 0;
-            animation: fadeIn 2s 3s forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .post-login-content {
+            display: none;
+            margin-top: 20px;
+            animation: fadeIn 1.5s ease-in-out;
         }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <img id="logo" src="yadaddy.jpg" alt="Logo">
-        <div class="login-form" id="loginForm">
-            <form onsubmit="return login()">
+        <img id="logo" src="your_image_path.jpg" alt="Logo">
+        <div class="login-form">
+            <h2>Windows 2000 Login</h2>
+            <form id="loginForm" onsubmit="return login()">
                 <input type="text" id="username" placeholder="Username" required>
                 <br>
                 <input type="password" id="password" placeholder="Password" required>
@@ -127,10 +120,17 @@
             setTimeout(function () {
                 // Check the username and password
                 if (username === 'admin' && password === 'admin') {
-                    // Hide the login form and loading circle
+                    // Hide Form 1 (login form) and the image with fade-out animation
                     document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('logo').style.display = 'none';
+                    
+                    // Show loading circle until Form 2 is ready
                     document.getElementById('loadingCircle').style.display = 'none';
-                    // Show the post-login content
+
+                    // Hide the loading circle
+                    document.getElementById('loadingCircle').style.display = 'none';
+                    
+                    // Show Form 2 (post-login content) with fade-in animation
                     document.getElementById('postLoginContent').style.display = 'block';
                 } else {
                     // Hide the loading circle
