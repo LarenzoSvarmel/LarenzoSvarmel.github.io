@@ -21,11 +21,12 @@
         #prompt {
             border: 1px solid purple;
             padding: 10px;
-            width: 80%;
-            max-width: 600px;
+            width: 800px;
+            height: 600px;
             box-sizing: border-box;
             position: relative;
             overflow: hidden;
+            aspect-ratio: 4 / 3;
         }
 
         #prompt::before {
@@ -51,7 +52,7 @@
             outline: none;
             color: purple;
             font-family: 'Courier New', monospace;
-            flex-grow: 1;
+            width: 100%;
             caret-color: purple;
             border-bottom: 1px solid purple;
         }
@@ -76,8 +77,8 @@
     <div id="prompt">
         <div id="scan-lines"></div>
         <div id="command-line">$ <span id="command-text"></span></div>
-        <input type="text" id="input" placeholder="Type here...">
     </div>
+    <input type="text" id="input" placeholder="Type here...">
 
     <script>
         const input = document.getElementById('input');
