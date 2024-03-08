@@ -1,87 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Command Prompt</title>
-    <link href="https://fonts.googleapis.com/css2?family=Consolas&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background-color: black;
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Consolas', monospace;
-            color: purple;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command Prompt Simulation</title>
+  <style>
+    body {
+      background-color: black;
+      color: #00ff00; /* Green text */
+      font-family: 'Courier New', monospace;
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
 
-        #command-prompt {
-            width: 800px;
-            height: 600px;
-            padding: 20px;
-            box-sizing: border-box;
-            border: 2px solid purple;
-            position: relative;
-        }
+    #prompt {
+      color: #00ff00;
+      font-weight: bold;
+    }
 
-        #header {
-            color: purple;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
+    #output {
+      margin-top: 10px;
+    }
 
-        #output {
-            height: 80%;
-            overflow-y: auto;
-            padding: 10px;
-            background-color: black;
-            border: 1px solid purple;
-            border-radius: 5px;
-        }
+    /* CRT Effect */
+    @keyframes crt {
+      0% {
+        text-shadow: 0 0 10px #00ff00;
+      }
+      50% {
+        text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+      }
+      100% {
+        text-shadow: 0 0 10px #00ff00;
+      }
+    }
 
-        #input-container {
-            display: flex;
-        }
-
-        #input {
-            flex: 1;
-            border: none;
-            background: transparent;
-            color: purple;
-            font-size: 16px;
-            outline: none;
-            caret-color: purple;
-        }
-
-        #cursor {
-            display: inline-block;
-            width: 10px;
-            height: 20px;
-            background-color: purple;
-            animation: blink 0.8s infinite;
-        }
-
-        @keyframes blink {
-            0%, 49% {
-                opacity: 0;
-            }
-            50%, 100% {
-                opacity: 1;
-            }
-        }
-    </style>
+    #prompt, #output {
+      animation: crt 0.1s infinite alternate;
+    }
+  </style>
 </head>
 <body>
-    <div id="command-prompt">
-        <div id="header">Harmony Haven Technologies (TM) - (1955-2009)</div>
-        <div id="output"></div>
-        <div id="input-container">
-            <div id="cursor"></div>
-            <input id="input" type="text" autofocus>
-        </div>
-    </div>
+  <div id="prompt">
+    Harmony Haven Technologies (TM)<br>
+    Administrator@HarmonyHaven:
+  </div>
+  <div id="output">
+    <p>Welcome to Harmony Haven Command Prompt Simulation</p>
+    <p>Type 'help' to see available commands.</p>
+  </div>
 </body>
 </html>
