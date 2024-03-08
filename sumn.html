@@ -22,6 +22,7 @@
             border-radius: 5px;
             width: 300px;
             text-align: center;
+            position: relative;
         }
 
         .login-form input {
@@ -48,19 +49,51 @@
             display: none;
             margin-top: 20px;
         }
+
+        .login-image {
+            width: 100%;
+            max-width: 200px;
+            margin-bottom: 20px;
+        }
+
+        .loading-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        .loading-circle:before {
+            content: '';
+            box-sizing: border-box;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 5px solid #008080;
+            border-top: 5px solid #ffffff;
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <div class="login-form">
+        <img class="login-image" src="your_image_url.jpg" alt="Windows 2000 Logo">
+        <div class="login-form" id="loginForm">
             <h2>Windows 2000 Login</h2>
-            <form id="loginForm" onsubmit="return login()">
+            <form onsubmit="return login()">
                 <input type="text" id="username" placeholder="Username" required>
                 <br>
                 <input type="password" id="password" placeholder="Password" required>
                 <br>
                 <button type="submit">Login</button>
             </form>
+            <div class="loading-circle" id="loadingCircle"></div>
         </div>
         <div class="post-login-content" id="postLoginContent">
             <h3>Welcome, admin!</h3>
@@ -73,17 +106,26 @@
             var username = document.getElementById('username').value;
             var password = document.getElementById('password').value;
 
-            // Check the username and password
-            if (username === 'admin' && password === 'admin') {
-                // Hide the login form
-                document.getElementById('loginForm').style.display = 'none';
-                // Show the post-login content
-                document.getElementById('postLoginContent').style.display = 'block';
-                return false; // Prevent form submission
-            } else {
-                alert('Invalid username or password. Please try again.');
-                return false; // Prevent form submission
-            }
+            // Show loading circle
+            document.getElementById('loadingCircle').style.display = 'block';
+
+            // Simulate a delay (3 seconds) before transitioning to the post-login content
+            setTimeout(function () {
+                // Check the username and password
+                if (username === 'admin' && password === 'admin') {
+                    // Hide the login form and loading circle
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('loadingCircle').style.display = 'none';
+                    // Show the post-login content
+                    document.getElementById('postLoginContent').style.display = 'block';
+                } else {
+                    // Hide loading circle if login fails
+                    document.getElementById('loadingCircle').style.display = 'none';
+                    alert('Invalid username or password. Please try again.');
+                }
+            }, 3000);
+
+            return false; // Prevent form submission
         }
     </script>
 </body>
