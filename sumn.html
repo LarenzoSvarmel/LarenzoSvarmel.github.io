@@ -69,10 +69,7 @@
             width: 50px;
             height: 50px;
             animation: spin 3s linear infinite;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            margin-top: 20px;
             display: none;
         }
 
@@ -90,17 +87,16 @@
 </head>
 <body>
     <div class="login-container">
-        <img id="logo" src="your_image_path.jpg" alt="Logo">
+        <img id="logo" src="yadaddy.jpg" alt="Logo">
         <div class="login-form">
-            <h2>Windows 2000 Login</h2>
             <form id="loginForm" onsubmit="return login()">
                 <input type="text" id="username" placeholder="Username" required>
                 <br>
                 <input type="password" id="password" placeholder="Password" required>
                 <br>
                 <button type="submit">Login</button>
+                <div class="loading-circle" id="loadingCircle"></div>
             </form>
-            <div class="loading-circle" id="loadingCircle"></div>
         </div>
         <div class="post-login-content" id="postLoginContent">
             <h3>Welcome, admin!</h3>
@@ -124,9 +120,6 @@
                     document.getElementById('loginForm').style.display = 'none';
                     document.getElementById('logo').style.display = 'none';
                     
-                    // Show loading circle until Form 2 is ready
-                    document.getElementById('loadingCircle').style.display = 'none';
-
                     // Hide the loading circle
                     document.getElementById('loadingCircle').style.display = 'none';
                     
