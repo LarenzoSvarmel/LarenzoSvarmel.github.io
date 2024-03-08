@@ -79,16 +79,16 @@
 <body>
     <div class="login-container">
         <img id="logo" src="yadaddy.jpg" alt="Logo">
-        <div class="login-form">
-            <form id="loginForm" onsubmit="return login()">
+        <div class="login-form" id="form1">
+            <form onsubmit="return login()">
                 <input type="text" id="username" placeholder="Username" required>
                 <br>
                 <input type="password" id="password" placeholder="Password" required>
                 <br>
                 <button type="submit">Login</button>
             </form>
-            <div class="loading-circle" id="loadingCircle"></div>
         </div>
+        <div class="loading-circle" id="loadingCircle"></div>
         <div class="post-login-content" id="postLoginContent">
             <h3>Welcome, admin!</h3>
             <p>This is the post-login content.</p>
@@ -100,22 +100,22 @@
             var username = document.getElementById('username').value;
             var password = document.getElementById('password').value;
 
-            // Show loading circle
+            // Hide Form 1 and show loading circle
+            document.getElementById('form1').style.display = 'none';
             document.getElementById('loadingCircle').style.display = 'block';
 
             // Simulate loading process (3 seconds)
             setTimeout(function () {
                 // Check the username and password
                 if (username === 'admin' && password === 'admin') {
-                    // Hide the login form and loading circle
-                    document.getElementById('loginForm').style.display = 'none';
+                    // Hide the loading circle
                     document.getElementById('loadingCircle').style.display = 'none';
                     // Show the post-login content
                     document.getElementById('postLoginContent').style.display = 'block';
                 } else {
-                    // Hide the loading circle
-                    document.getElementById('loadingCircle').style.display = 'none';
                     alert('Invalid username or password. Please try again.');
+                    // Show Form 1 again
+                    document.getElementById('form1').style.display = 'block';
                 }
             }, 3000);
 
