@@ -1,58 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Command Prompt Simulation</title>
-  <style>
-    body {
-      background-color: black;
-      color: #00ff00; /* Green text */
-      font-family: 'Courier New', monospace;
-      margin: 0;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background-color: black;
+            color: purple;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            overflow: hidden;
+        }
 
-    #prompt {
-      color: #00ff00;
-      font-weight: bold;
-    }
+        #prompt {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border-top: 2px solid purple;
+        }
 
-    #output {
-      margin-top: 10px;
-    }
+        #output {
+            padding: 10px;
+            height: calc(100% - 40px);
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
 
-    /* CRT Effect */
-    @keyframes crt {
-      0% {
-        text-shadow: 0 0 10px #00ff00;
-      }
-      50% {
-        text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
-      }
-      100% {
-        text-shadow: 0 0 10px #00ff00;
-      }
-    }
+        .crt {
+            animation: crt 0.1s infinite alternate-reverse;
+        }
 
-    #prompt, #output {
-      animation: crt 0.1s infinite alternate;
-    }
-  </style>
+        @keyframes crt {
+            0% {
+                opacity: 0.8;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div id="prompt">
-    Harmony Haven Technologies (TM)<br>
-    Administrator@HarmonyHaven:
-  </div>
-  <div id="output">
-    <p>Welcome to Harmony Haven Command Prompt Simulation</p>
-    <p>Type 'help' to see available commands.</p>
-  </div>
+    <div id="output" class="crt">
+        <div>Harmony Haven Technologies (TM)</div>
+        <div id="user">Administrator@HarmonyHaven:</div>
+        <div>Welcome to Harmony Haven Command Prompt. Type 'help' for a list of commands.</div>
+    </div>
+    <div id="prompt">
+        <span id="user">Administrator@HarmonyHaven:</span> <input type="text" id="input" autofocus>
+    </div>
+
+    <script>
+        document.getElementById('input').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                handleCommand();
+            }
+        });
+
+        function handleCommand() {
+            const inputElement = document.getElementById('input');
+            const outputElement = document.getElementById('output');
+            const userElement = document.getElementById('user');
+
+            const command = inputElement.value.trim();
+            const response = executeCommand(command);
+
+            const newLine = document.createElement('div');
+            newLine.textContent = userElement.textContent + ' ' + command;
+            outputElement.appendChild(newLine);
+
+            if (response) {
+                const responseLine = document.createElement('div');
+                responseLine.textContent = response;
+                outputElement.appendChild(responseLine);
+            }
+
+            inputElement.value = '';
+            outputElement.scrollTop = outputElement.scrollHeight;
+        }
+
+        function executeCommand(command) {
+            switch (command.toLowerCase()) {
+                case 'help':
+                    return 'Available commands: <br>- help<br>- about<br>- contact';
+                case 'about':
+                    return 'Harmony Haven Technologies (TM) is a leading technology company.';
+                case 'contact':
+                    return 'For support, please email support@harmonyhaven.com';
+                default:
+                    return 'Command not recognized. Type "help" for a list of commands.';
+            }
+        }
+    </script>
 </body>
 </html>
