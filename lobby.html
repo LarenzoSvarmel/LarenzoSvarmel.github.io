@@ -3,114 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MW2019 Menu</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #17202A; /* Dark blue background similar to MW2019 */
-            color: #fff;
-            text-align: center;
-        }
-
-        header {
-            background-color: #3498DB; /* Blue header */
-            padding: 10px;
-        }
-
-        nav {
-            display: flex;
-            justify-content: center;
-            background-color: #2980B9; /* Dark blue navigation bar */
-            padding: 10px;
-        }
-
-        nav a {
-            text-decoration: none;
-            color: #fff;
-            font-size: 18px;
-            margin: 0 20px;
-            transition: color 0.3s;
-        }
-
-        nav a:hover {
-            color: #4CAF50;
-        }
-
-        section {
-            padding: 20px;
-        }
-
-        .mode-box {
-            background-color: #34495E; /* Darker blue box background */
-            padding: 20px;
-            margin: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Box shadow effect */
-            transition: transform 0.3s;
-        }
-
-        .mode-box:hover {
-            transform: scale(1.05);
-        }
-    </style>
+    <title>Index Page</title>
 </head>
 <body>
-    <header>
-        <h1 style="color: #fff;">Modern Warfare 2019 Menu</h1>
-    </header>
-
-    <nav>
-        <a href="#" class="mode-link" data-mode="home">Home</a>
-        <a href="#" class="mode-link" data-mode="campaign">Campaign</a>
-        <a href="#" class="mode-link" data-mode="multiplayer">Multiplayer</a>
-        <a href="#" class="mode-link" data-mode="co-op">Co-op</a>
-        <a href="#" class="mode-link" data-mode="settings">Settings</a>
-    </nav>
-
-    <section>
-        <div id="home" class="mode-box">
-            <h2>Welcome to Call of Duty: Modern Warfare 2019</h2>
-            <p>This is a basic representation of the menu inspired by MW2019. Customize and enhance it according to your educational needs.</p>
-        </div>
-
-        <div id="campaign" class="mode-box" style="display: none;">
-            <h2>Campaign Mode</h2>
-            <p>Explore the thrilling campaign of Modern Warfare 2019.</p>
-        </div>
-
-        <div id="multiplayer" class="mode-box" style="display: none;">
-            <h2>Multiplayer Mode</h2>
-            <p>Engage in intense multiplayer battles with players from around the world.</p>
-        </div>
-
-        <div id="co-op" class="mode-box" style="display: none;">
-            <h2>Co-op Mode</h2>
-            <p>Team up with friends to tackle cooperative missions and challenges.</p>
-        </div>
-
-        <div id="settings" class="mode-box" style="display: none;">
-            <h2>Settings</h2>
-            <p>Adjust your game settings for the best experience.</p>
-        </div>
-    </section>
-
-    <script>
-        // JavaScript to handle mode switching
-        const modeLinks = document.querySelectorAll('.mode-link');
-        const modeBoxes = document.querySelectorAll('.mode-box');
-
-        modeLinks.forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                const mode = this.getAttribute('data-mode');
-                modeBoxes.forEach(box => {
-                    box.style.display = 'none';
-                });
-                document.getElementById(mode).style.display = 'block';
-            });
-        });
-    </script>
+    <h1>Welcome to the Index Page</h1>
+    <p>This is the main page of your website.</p>
+    
+    <h2>Contents:</h2>
+    <ul>
+        <li><a href="subdirectory/">discord</a></li>
+    </ul>
 </body>
 </html>
