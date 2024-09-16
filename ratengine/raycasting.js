@@ -17,7 +17,6 @@ const map = [
 const TILE_SIZE = 64; // Each block on the map is 64x64 pixels
 const FOV = Math.PI / 3; // Field of view (60 degrees)
 const NUM_RAYS = canvas.width; // One ray for each column of pixels
-const MAX_DISTANCE = 100; // Maximum distance to draw walls
 
 let player = {
     x: 160, // Player starting position
@@ -32,16 +31,13 @@ window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
 
 function updatePlayer() {
-    let moveX = 0;
-    let moveY = 0;
-
     if (keys['w']) { // Move forward
-        moveX += Math.cos(player.angle) * player.moveSpeed;
-        moveY += Math.sin(player.angle) * player.moveSpeed;
+        player.x += Math.cos(player.angle) * player.moveSpeed;
+        player.y += Math.sin(player.angle) * player.moveSpeed;
     }
     if (keys['s']) { // Move backward
-        moveX -= Math.cos(player.angle) * player.moveSpeed;
-        moveY -= Math.sin(player.angle) * player.moveSpeed;
+        player.x -= Math.cos(player.angle) * player.moveSpeed;
+        player.y -= Math.sin(player.angle) * player.moveSpeed;
     }
     if (keys['a']) { // Rotate left
         player.angle -= player.rotSpeed;
@@ -50,19 +46,12 @@ function updatePlayer() {
         player.angle += player.rotSpeed;
     }
 
-    // Calculate new position
-    const newX = player.x + moveX;
-    const newY = player.y + moveY;
-
-    // Check collisions with walls
-    const mapX = Math.floor(newX / TILE_SIZE);
-    const mapY = Math.floor(newY / TILE_SIZE);
-
-    if (mapX >= 0 && mapX < map[0].length && mapY >= 0 && mapY < map.length) {
-        if (map[mapY][mapX] === 0) {
-            player.x = newX;
-            player.y = newY;
-        }
+    // Collision detection to prevent player from walking through walls
+    const mapX = Math.floor(player.x / TILE_SIZE);
+    const mapY = Math.floor(player.y / TILE_SIZE);
+    if (map[mapY][mapX] === 1) { // If player hits a wall
+        player.x -= Math.cos(player.angle) * player.moveSpeed; // Move them back
+        player.y -= Math.sin(player.angle) * player.moveSpeed;
     }
 }
 
@@ -70,19 +59,21 @@ function castRay(rayAngle) {
     let distanceToWall = 0;
     const stepSize = 0.1; // The increment step per ray
     let hitWall = false;
-    let eyeX = Math.cos(rayAngle);
+
+    let eyeX = Math.cos(rayAngle); // Ray direction (normalized)
     let eyeY = Math.sin(rayAngle);
 
-    while (!hitWall && distanceToWall < MAX_DISTANCE) {
+    while (!hitWall && distanceToWall < 32) {
         distanceToWall += stepSize;
 
         const testX = Math.floor((player.x + eyeX * distanceToWall) / TILE_SIZE);
         const testY = Math.floor((player.y + eyeY * distanceToWall) / TILE_SIZE);
 
+        // If the ray is outside the map bounds
         if (testX < 0 || testX >= map[0].length || testY < 0 || testY >= map.length) {
             hitWall = true;
-            distanceToWall = MAX_DISTANCE; // End the raycasting if out of bounds
-        } else if (map[testY][testX] === 1) { // Hit a wall
+            distanceToWall = 32; // Arbitrarily large distance for walls outside the map
+        } else if (map[testY][testX] === 1) { // If we hit a wall
             hitWall = true;
         }
     }
@@ -100,13 +91,13 @@ function renderScene() {
         const rayAngle = (player.angle - FOV / 2) + (i / NUM_RAYS) * FOV;
         const distanceToWall = castRay(rayAngle);
 
-        // Calculate the height of the wall slice
-        const wallHeight = (TILE_SIZE * canvas.height) / (distanceToWall || 0.1);
-        const lineStart = (canvas.height / 2) - (wallHeight / 2);
-        const lineEnd = wallHeight;
+        // Calculate the perceived height of the wall (the closer, the taller)
+        const lineHeight = (TILE_SIZE * canvas.height) / distanceToWall;
+        const lineStart = (canvas.height / 2) - (lineHeight / 2);
+        const lineEnd = lineHeight;
 
         // Shading based on distance (closer walls are brighter)
-        const shade = Math.min(255, 255 - distanceToWall * 5);
+        const shade = Math.min(255, 255 - distanceToWall * 10);
         ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
         ctx.fillRect(i, lineStart, 1, lineEnd);
     }
