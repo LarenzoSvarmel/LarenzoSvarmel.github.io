@@ -17,6 +17,7 @@ const map = [
 const TILE_SIZE = 64; // Each block on the map is 64x64 pixels
 const FOV = Math.PI / 3; // Field of view (60 degrees)
 const NUM_RAYS = canvas.width; // One ray for each column of pixels
+const MAX_DISTANCE = 64; // Increase this to extend the draw distance
 
 let player = {
     x: 160, // Player starting position
@@ -72,7 +73,7 @@ function castRay(rayAngle) {
     let eyeX = Math.cos(rayAngle);
     let eyeY = Math.sin(rayAngle);
 
-    while (!hitWall && distanceToWall < 32) {
+    while (!hitWall && distanceToWall < MAX_DISTANCE) {
         distanceToWall += stepSize;
 
         const testX = Math.floor((player.x + eyeX * distanceToWall) / TILE_SIZE);
@@ -80,7 +81,7 @@ function castRay(rayAngle) {
 
         if (testX < 0 || testX >= map[0].length || testY < 0 || testY >= map.length) {
             hitWall = true;
-            distanceToWall = 32; // Arbitrarily large distance for walls outside the map
+            distanceToWall = MAX_DISTANCE; // End the ray at max distance
         } else if (map[testY][testX] === 1) { // Hit a wall
             hitWall = true;
         }
@@ -105,7 +106,7 @@ function renderScene() {
         const lineEnd = wallHeight;
 
         // Shading based on distance
-        const shade = Math.min(255, 255 - distanceToWall * 10);
+        const shade = Math.min(255, 255 - distanceToWall * 5);
         ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
         ctx.fillRect(i, lineStart, 1, lineEnd);
     }
