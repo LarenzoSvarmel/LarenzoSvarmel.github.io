@@ -19,61 +19,59 @@ const map = [
 ];
 
 const player = {
-    x: canvas.width / 2,
+    x: canvas.width / 4, // Starting in the middle of the canvas
     y: canvas.height / 2,
     angle: 0,
     speed: 3,
     turnSpeed: 0.03
 };
 
-function drawMap() {
-    // Optional: Draw the map for debugging purposes
-    for (let y = 0; y < map.length; y++) {
-        for (let x = 0; x < map[y].length; x++) {
-            if (map[y][x] === '1') {
-                ctx.fillStyle = '#444';
-                ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            }
-        }
-    }
-}
-
 function castRays() {
     const numRays = canvas.width;
     const rayAngle = FOV / numRays;
-    const halfWidth = canvas.width / 2;
 
     for (let i = 0; i < numRays; i++) {
         let angle = player.angle - FOV / 2 + rayAngle * i;
         let x = player.x;
         let y = player.y;
+        let stepSize = 1;
         let distance = 0;
+        let hit = false;
 
         while (distance < MAX_DIST) {
-            x += Math.cos(angle);
-            y += Math.sin(angle);
-            distance++;
+            x += Math.cos(angle) * stepSize;
+            y += Math.sin(angle) * stepSize;
+            distance += stepSize;
 
             const mapX = Math.floor(x / TILE_SIZE);
             const mapY = Math.floor(y / TILE_SIZE);
 
             if (mapY >= 0 && mapY < map.length && mapX >= 0 && mapX < map[mapY].length) {
                 if (map[mapY][mapX] === '1') {
-                    const lineHeight = (TILE_SIZE * canvas.height) / (distance * Math.cos(angle - player.angle));
-                    const lineOffset = (canvas.height - lineHeight) / 2;
-
-                    ctx.fillStyle = '#aaa';
-                    ctx.fillRect(i, lineOffset, 1, lineHeight);
+                    hit = true;
                     break;
                 }
+            } else {
+                break; // Stop if out of bounds
             }
+        }
+
+        if (hit) {
+            const lineHeight = (TILE_SIZE * canvas.height) / (distance * Math.cos(angle - player.angle));
+            const lineOffset = (canvas.height - lineHeight) / 2;
+
+            ctx.fillStyle = '#aaa';
+            ctx.fillRect(i, lineOffset, 1, lineHeight);
+        } else {
+            // Render background color for non-hit rays
+            ctx.fillStyle = '#000'; // Black background
+            ctx.fillRect(i, 0, 1, canvas.height);
         }
     }
 }
 
 function update() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawMap();
     castRays();
     requestAnimationFrame(update);
 }
