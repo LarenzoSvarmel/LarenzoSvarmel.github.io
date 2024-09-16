@@ -31,13 +31,16 @@ window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
 
 function updatePlayer() {
+    let moveX = 0;
+    let moveY = 0;
+    
     if (keys['w']) { // Move forward
-        player.x += Math.cos(player.angle) * player.moveSpeed;
-        player.y += Math.sin(player.angle) * player.moveSpeed;
+        moveX += Math.cos(player.angle) * player.moveSpeed;
+        moveY += Math.sin(player.angle) * player.moveSpeed;
     }
     if (keys['s']) { // Move backward
-        player.x -= Math.cos(player.angle) * player.moveSpeed;
-        player.y -= Math.sin(player.angle) * player.moveSpeed;
+        moveX -= Math.cos(player.angle) * player.moveSpeed;
+        moveY -= Math.sin(player.angle) * player.moveSpeed;
     }
     if (keys['a']) { // Rotate left
         player.angle -= player.rotSpeed;
@@ -45,13 +48,17 @@ function updatePlayer() {
     if (keys['d']) { // Rotate right
         player.angle += player.rotSpeed;
     }
+    
+    // Apply movement
+    const newX = player.x + moveX;
+    const newY = player.y + moveY;
+    const mapX = Math.floor(newX / TILE_SIZE);
+    const mapY = Math.floor(newY / TILE_SIZE);
 
-    // Collision detection to prevent player from walking through walls
-    const mapX = Math.floor(player.x / TILE_SIZE);
-    const mapY = Math.floor(player.y / TILE_SIZE);
-    if (map[mapY][mapX] === 1) { // If player hits a wall
-        player.x -= Math.cos(player.angle) * player.moveSpeed; // Move them back
-        player.y -= Math.sin(player.angle) * player.moveSpeed;
+    // Collision detection
+    if (mapX >= 0 && mapX < map[0].length && mapY >= 0 && mapY < map.length && map[mapY][mapX] === 0) {
+        player.x = newX;
+        player.y = newY;
     }
 }
 
@@ -92,9 +99,9 @@ function renderScene() {
         const distanceToWall = castRay(rayAngle);
 
         // Calculate the perceived height of the wall (the closer, the taller)
-        const lineHeight = (TILE_SIZE * canvas.height) / distanceToWall;
-        const lineStart = (canvas.height / 2) - (lineHeight / 2);
-        const lineEnd = lineHeight;
+        const wallHeight = (TILE_SIZE * canvas.height) / (distanceToWall || 0.1);
+        const lineStart = (canvas.height / 2) - (wallHeight / 2);
+        const lineEnd = wallHeight;
 
         // Shading based on distance (closer walls are brighter)
         const shade = Math.min(255, 255 - distanceToWall * 10);
