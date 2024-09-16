@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 
 const TILE_SIZE = 64; // Size of each tile
 const FOV = Math.PI / 3; // Field of view
-const MAX_DIST = 800; // Maximum draw distance
+const MAX_DIST = 2000; // Increased maximum draw distance
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -27,6 +27,7 @@ const player = {
 };
 
 function drawMap() {
+    // Optional: Draw the map for debugging purposes
     for (let y = 0; y < map.length; y++) {
         for (let x = 0; x < map[y].length; x++) {
             if (map[y][x] === '1') {
