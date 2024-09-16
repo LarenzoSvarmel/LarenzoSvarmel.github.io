@@ -17,7 +17,7 @@ const map = [
 const TILE_SIZE = 64; // Each block on the map is 64x64 pixels
 const FOV = Math.PI / 3; // Field of view (60 degrees)
 const NUM_RAYS = canvas.width; // One ray for each column of pixels
-const MAX_DISTANCE = 64; // Increase this to extend the draw distance
+const MAX_DISTANCE = 100; // Increased max draw distance
 
 let player = {
     x: 160, // Player starting position
@@ -101,12 +101,12 @@ function renderScene() {
         const distanceToWall = castRay(rayAngle);
 
         // Calculate the height of the wall slice
-        const wallHeight = (TILE_SIZE * canvas.height) / (distanceToWall || 0.1);
+        const wallHeight = (TILE_SIZE * canvas.height) / (distanceToWall || MAX_DISTANCE);
         const lineStart = (canvas.height / 2) - (wallHeight / 2);
         const lineEnd = wallHeight;
 
         // Shading based on distance
-        const shade = Math.min(255, 255 - distanceToWall * 5);
+        const shade = Math.min(255, Math.max(0, 255 - (distanceToWall * 5)));
         ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
         ctx.fillRect(i, lineStart, 1, lineEnd);
     }
