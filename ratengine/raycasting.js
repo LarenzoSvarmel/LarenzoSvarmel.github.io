@@ -1,112 +1,100 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Set canvas dimensions to full screen
+const TILE_SIZE = 64; // Size of each tile
+const FOV = Math.PI / 3; // Field of view
+const MAX_DIST = 800; // Maximum draw distance
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const map = [
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1, 0, 0, 1],
-    [1, 0, 1, 0, 1, 0, 0, 1],
-    [1, 0, 0, 0, 0, 1, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1]
+    '1111111111111111',
+    '1000000000000001',
+    '1011111101111101',
+    '1010000100000101',
+    '1010111111100101',
+    '1010000000000001',
+    '1011111111111111',
 ];
 
-const TILE_SIZE = 64; // Each block on the map is 64x64 pixels
-const FOV = Math.PI / 3; // Field of view (60 degrees)
-const NUM_RAYS = canvas.width; // One ray for each column of pixels
-
-let player = {
-    x: 160, // Player starting position
-    y: 160,
-    angle: Math.PI / 2, // Facing upwards
-    moveSpeed: 3,
-    rotSpeed: 3 * (Math.PI / 180) // Rotation speed in radians (3 degrees per frame)
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    angle: 0,
+    speed: 3,
+    turnSpeed: 0.03
 };
 
-let keys = {}; // For tracking key presses
-window.addEventListener('keydown', (e) => keys[e.key] = true);
-window.addEventListener('keyup', (e) => keys[e.key] = false);
-
-function updatePlayer() {
-    if (keys['w']) { // Move forward
-        player.x += Math.cos(player.angle) * player.moveSpeed;
-        player.y += Math.sin(player.angle) * player.moveSpeed;
-    }
-    if (keys['s']) { // Move backward
-        player.x -= Math.cos(player.angle) * player.moveSpeed;
-        player.y -= Math.sin(player.angle) * player.moveSpeed;
-    }
-    if (keys['a']) { // Rotate left
-        player.angle -= player.rotSpeed;
-    }
-    if (keys['d']) { // Rotate right
-        player.angle += player.rotSpeed;
-    }
-
-    // Collision detection to prevent player from walking through walls
-    const mapX = Math.floor(player.x / TILE_SIZE);
-    const mapY = Math.floor(player.y / TILE_SIZE);
-    if (map[mapY][mapX] === 1) { // If player hits a wall
-        player.x -= Math.cos(player.angle) * player.moveSpeed; // Move them back
-        player.y -= Math.sin(player.angle) * player.moveSpeed;
-    }
-}
-
-function castRay(rayAngle) {
-    let distanceToWall = 0;
-    const stepSize = 0.1; // The increment step per ray
-    let hitWall = false;
-
-    let eyeX = Math.cos(rayAngle); // Ray direction (normalized)
-    let eyeY = Math.sin(rayAngle);
-
-    while (!hitWall && distanceToWall < 32) {
-        distanceToWall += stepSize;
-
-        const testX = Math.floor((player.x + eyeX * distanceToWall) / TILE_SIZE);
-        const testY = Math.floor((player.y + eyeY * distanceToWall) / TILE_SIZE);
-
-        // If the ray is outside the map bounds
-        if (testX < 0 || testX >= map[0].length || testY < 0 || testY >= map.length) {
-            hitWall = true;
-            distanceToWall = 32; // Arbitrarily large distance for walls outside the map
-        } else if (map[testY][testX] === 1) { // If we hit a wall
-            hitWall = true;
+function drawMap() {
+    for (let y = 0; y < map.length; y++) {
+        for (let x = 0; x < map[y].length; x++) {
+            if (map[y][x] === '1') {
+                ctx.fillStyle = '#444';
+                ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
         }
     }
-
-    return distanceToWall;
 }
 
-function renderScene() {
-    // Clear the canvas (black background)
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+function castRays() {
+    const numRays = canvas.width;
+    const rayAngle = FOV / numRays;
+    const halfWidth = canvas.width / 2;
 
-    // Iterate through each column of the screen and cast a ray
-    for (let i = 0; i < NUM_RAYS; i++) {
-        const rayAngle = (player.angle - FOV / 2) + (i / NUM_RAYS) * FOV;
-        const distanceToWall = castRay(rayAngle);
+    for (let i = 0; i < numRays; i++) {
+        let angle = player.angle - FOV / 2 + rayAngle * i;
+        let x = player.x;
+        let y = player.y;
+        let distance = 0;
 
-        // Calculate the perceived height of the wall (the closer, the taller)
-        const lineHeight = (TILE_SIZE * canvas.height) / distanceToWall;
-        const lineStart = (canvas.height / 2) - (lineHeight / 2);
-        const lineEnd = lineHeight;
+        while (distance < MAX_DIST) {
+            x += Math.cos(angle);
+            y += Math.sin(angle);
+            distance++;
 
-        // Shading based on distance (closer walls are brighter)
-        const shade = Math.min(255, 255 - distanceToWall * 10);
-        ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
-        ctx.fillRect(i, lineStart, 1, lineEnd);
+            const mapX = Math.floor(x / TILE_SIZE);
+            const mapY = Math.floor(y / TILE_SIZE);
+
+            if (mapY >= 0 && mapY < map.length && mapX >= 0 && mapX < map[mapY].length) {
+                if (map[mapY][mapX] === '1') {
+                    const lineHeight = (TILE_SIZE * canvas.height) / (distance * Math.cos(angle - player.angle));
+                    const lineOffset = (canvas.height - lineHeight) / 2;
+
+                    ctx.fillStyle = '#aaa';
+                    ctx.fillRect(i, lineOffset, 1, lineHeight);
+                    break;
+                }
+            }
+        }
     }
 }
 
-function gameLoop() {
-    updatePlayer();
-    renderScene();
-    requestAnimationFrame(gameLoop);
+function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawMap();
+    castRays();
+    requestAnimationFrame(update);
 }
 
-gameLoop();
+function handleKeyDown(event) {
+    switch (event.key) {
+        case 'w':
+            player.x += player.speed * Math.cos(player.angle);
+            player.y += player.speed * Math.sin(player.angle);
+            break;
+        case 's':
+            player.x -= player.speed * Math.cos(player.angle);
+            player.y -= player.speed * Math.sin(player.angle);
+            break;
+        case 'a':
+            player.angle -= player.turnSpeed;
+            break;
+        case 'd':
+            player.angle += player.turnSpeed;
+            break;
+    }
+}
+
+document.addEventListener('keydown', handleKeyDown);
+update();
