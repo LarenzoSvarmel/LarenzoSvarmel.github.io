@@ -1,152 +1,138 @@
-// Set up canvas and context
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = 800;
-canvas.height = 600;
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-// Player object
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
 const player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    width: 20,
-    height: 20,
-    speed: 3,
-    color: 'blue',
-    vacRange: 50,  // Range for vacuuming slimes
-    inventory: []  // Store slimes the player vacuums up
+    width: 50,
+    height: 50,
+    color: "blue",
+    speed: 5,
+    angle: 0,
+    slimes: []
 };
 
-// Slime object
+const slimes = [];
+const collectedSlimes = [];
+
 class Slime {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 20;
-        this.height = 20;
-        this.color = 'green';
-        this.direction = Math.random() * 2 * Math.PI;
-        this.speed = 1;
-        this.isVacuumed = false;
+        this.size = 30;
+        this.color = "pink";
     }
 
-    move() {
-        if (!this.isVacuumed) {
-            // Random movement
-            this.x += Math.cos(this.direction) * this.speed;
-            this.y += Math.sin(this.direction) * this.speed;
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
+    }
+}
 
-            // Change direction randomly
-            if (Math.random() < 0.01) {
-                this.direction = Math.random() * 2 * Math.PI;
-            }
+// Spawn random slimes
+for (let i = 0; i < 10; i++) {
+    let slimeX = Math.random() * canvas.width;
+    let slimeY = Math.random() * canvas.height;
+    slimes.push(new Slime(slimeX, slimeY));
+}
 
-            // Keep slime in bounds
-            if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
-                this.direction += Math.PI; // Reverse direction
-            }
+// Player Movement
+function movePlayer() {
+    if (keys["ArrowUp"] || keys["w"]) player.y -= player.speed;
+    if (keys["ArrowDown"] || keys["s"]) player.y += player.speed;
+    if (keys["ArrowLeft"] || keys["a"]) player.x -= player.speed;
+    if (keys["ArrowRight"] || keys["d"]) player.x += player.speed;
+}
+
+// Crosshair Movement
+let mouse = {
+    x: canvas.width / 2,
+    y: canvas.height / 2
+};
+
+canvas.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+
+    let dx = mouse.x - player.x;
+    let dy = mouse.y - player.y;
+    player.angle = Math.atan2(dy, dx);
+});
+
+function collectSlime() {
+    for (let i = slimes.length - 1; i >= 0; i--) {
+        let slime = slimes[i];
+        let dist = Math.hypot(player.x - slime.x, player.y - slime.y);
+
+        if (dist < 40) { // Close enough to collect
+            collectedSlimes.push(slime);
+            slimes.splice(i, 1);
         }
     }
 }
 
-// Create slimes
-const slimes = [];
-for (let i = 0; i < 10; i++) {
-    const x = Math.random() * canvas.width;
-    const y = Math.random() * canvas.height;
-    slimes.push(new Slime(x, y));
+function throwSlime() {
+    if (collectedSlimes.length > 0) {
+        const slime = collectedSlimes.pop();
+        slime.x = player.x + Math.cos(player.angle) * 80;
+        slime.y = player.y + Math.sin(player.angle) * 80;
+        slimes.push(slime);
+    }
 }
 
-// Create a pen for slimes
-const pen = {
-    x: 100,
-    y: 100,
-    width: 100,
-    height: 100,
-    color: 'brown'
-};
-
-// Controls
+// Key & Mouse Controls
 const keys = {};
-window.addEventListener('keydown', (e) => {
+window.addEventListener("keydown", (e) => {
     keys[e.key] = true;
 });
-window.addEventListener('keyup', (e) => {
+window.addEventListener("keyup", (e) => {
     keys[e.key] = false;
 });
 
-// Check distance between player and slime
-function distance(player, slime) {
-    return Math.sqrt((player.x - slime.x) ** 2 + (player.y - slime.y) ** 2);
-}
-
-// Update game objects
-function update() {
-    // Player movement
-    if (keys['ArrowUp']) player.y -= player.speed;
-    if (keys['ArrowDown']) player.y += player.speed;
-    if (keys['ArrowLeft']) player.x -= player.speed;
-    if (keys['ArrowRight']) player.x += player.speed;
-
-    // Keep player in bounds
-    if (player.x < 0) player.x = 0;
-    if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
-    if (player.y < 0) player.y = 0;
-    if (player.y + player.height > canvas.height) player.y = canvas.height - player.height;
-
-    // Slime vacuum mechanic
-    if (keys[' '] || keys['Spacebar']) {  // Space key to vacuum
-        slimes.forEach((slime, index) => {
-            if (distance(player, slime) < player.vacRange && !slime.isVacuumed) {
-                player.inventory.push(slime);  // Add slime to player's inventory
-                slime.isVacuumed = true;  // Mark slime as vacuumed
-            }
-        });
+window.addEventListener("mousedown", (e) => {
+    if (e.button === 0) { // Left click to collect
+        collectSlime();
+    } else if (e.button === 2) { // Right click to throw
+        throwSlime();
     }
+});
 
-    // Release slimes in the pen
-    if (keys['Enter'] && player.inventory.length > 0) {
-        const releasedSlime = player.inventory.pop();  // Remove a slime from inventory
-        releasedSlime.x = pen.x + pen.width / 2;  // Move the slime into the pen
-        releasedSlime.y = pen.y + pen.height / 2;
-        releasedSlime.isVacuumed = false;  // Release it
-    }
-
-    // Update slimes
-    slimes.forEach(slime => slime.move());
-}
-
-// Draw everything
-function draw() {
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw player
+function drawPlayer() {
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.angle);
     ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.width, player.height);
-
-    // Draw slimes
-    slimes.forEach(slime => {
-        if (!slime.isVacuumed) {
-            ctx.fillStyle = slime.color;
-            ctx.fillRect(slime.x, slime.y, slime.width, slime.height);
-        }
-    });
-
-    // Draw the pen
-    ctx.fillStyle = pen.color;
-    ctx.fillRect(pen.x, pen.y, pen.width, pen.height);
-
-    // Draw inventory count
-    ctx.fillStyle = 'black';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Inventory: ${player.inventory.length}`, 10, 30);
+    ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+    ctx.restore();
 }
 
-// Game loop
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
+function drawCrosshair() {
+    ctx.strokeStyle = "black";
+    ctx.beginPath();
+    ctx.moveTo(mouse.x - 10, mouse.y);
+    ctx.lineTo(mouse.x + 10, mouse.y);
+    ctx.moveTo(mouse.x, mouse.y - 10);
+    ctx.lineTo(mouse.x, mouse.y + 10);
+    ctx.stroke();
 }
 
-gameLoop();
+function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    movePlayer();
+    drawPlayer();
+
+    for (let slime of slimes) {
+        slime.draw();
+    }
+
+    drawCrosshair();
+    requestAnimationFrame(update);
+}
+
+update();
