@@ -1,7 +1,7 @@
 const canvas = document.getElementById('webglCanvas');
 const gl = canvas.getContext('webgl');
 
-// Set canvas size
+// Set canvas SIZEEE
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
