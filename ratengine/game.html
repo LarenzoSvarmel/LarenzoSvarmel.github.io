@@ -29,24 +29,21 @@
 
     let map = generateMap(); // Generate initial map
 
-    const mapWidth = map[0].length;
-    const mapHeight = map.length;
-
     let posX = 3.5, posY = 3.5; // Player's position
     let dirX = -1, dirY = 0; // Player's direction vector
     let planeX = 0, planeY = 0.66; // Camera plane
 
     const moveSpeed = 0.05; // Movement speed
-    const rotSpeed = 0.03; // Rotation speed
     const mouseSensitivity = 0.002; // Mouse rotation speed
 
     let keyCollected = false; // Track if the key has been collected
     let doorUnlocked = false; // Track if the door has been unlocked
 
     function generateMap() {
+        // Simple fixed map layout
         return [
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 0, 0, 0, 0, 2, 0, 0, 1],
+            [1, 0, 0, 0, 0, 2, 0, 0, 1], // Key at (1, 5)
             [1, 0, 1, 0, 1, 0, 0, 0, 1],
             [1, 0, 1, 0, 0, 0, 0, 1, 1],
             [1, 0, 0, 0, 0, 1, 0, 1, 1],
@@ -119,10 +116,10 @@
                 ctx.fillStyle = side === 1 ? "rgb(200, 0, 0)" : "rgb(255, 0, 0)";
             } else if (map[mapX][mapY] === 2 && !keyCollected) {
                 ctx.fillStyle = "rgb(255, 255, 0)"; // Key color
-            } else if (map[mapX][mapY] === 3) {
+            } else if (map[mapX][mapY] === 3 && doorUnlocked) {
                 ctx.fillStyle = "rgb(0, 255, 0)"; // Unlocked door color
             } else {
-                ctx.fillStyle = "rgb(0, 0, 0)"; // Color for locked door
+                ctx.fillStyle = "rgb(0, 0, 0)"; // Locked door color
             }
 
             ctx.fillRect(x, drawStart, 1, drawEnd - drawStart);
@@ -190,8 +187,7 @@
 
     function generateNextLevel() {
         map = generateMap();
-        // Place the door on a specific location
-        map[5][5] = doorUnlocked ? 3 : 3; // Ensure the door is in the new map
+        map[5][6] = 3; // Ensure the door is in the new map
         posX = 3.5; // Reset player position
         posY = 3.5; // Reset player position
         keyCollected = false; // Reset key status
