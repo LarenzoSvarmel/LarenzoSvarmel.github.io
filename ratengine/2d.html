@@ -15,22 +15,6 @@
       background-color: #87ceeb;
       display: block;
     }
-
-    .slime {
-      width: 20px;
-      height: 20px;
-      background-color: green;
-      border-radius: 50%;
-      position: absolute;
-    }
-
-    .player {
-      width: 30px;
-      height: 30px;
-      background-color: red;
-      border-radius: 50%;
-      position: absolute;
-    }
   </style>
 </head>
 <body>
@@ -49,13 +33,17 @@
     width: 30,
     height: 30,
     color: 'red',
-    collectedSlimes: []
+    speed: 3,
+    collectedSlimes: [],
+    angle: 0,
   };
 
   const slimes = [];
   const slimeSize = 20;
-  let selectedSlime = null;
+  const keys = {};
+  let collecting = false;
 
+  // Create random slimes
   for (let i = 0; i < 10; i++) {
     slimes.push({
       x: Math.random() * canvas.width,
@@ -63,15 +51,19 @@
       width: slimeSize,
       height: slimeSize,
       color: 'green',
-      collected: false
+      collected: false,
     });
   }
 
   function drawEntity(entity) {
+    ctx.save();
+    ctx.translate(entity.x, entity.y);
+    ctx.rotate(entity.angle);
     ctx.fillStyle = entity.color;
     ctx.beginPath();
-    ctx.arc(entity.x, entity.y, entity.width / 2, 0, Math.PI * 2);
+    ctx.arc(0, 0, entity.width / 2, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   }
 
   function drawPlayer() {
@@ -86,21 +78,29 @@
     });
   }
 
-  function movePlayer(event) {
-    player.x = event.clientX;
-    player.y = event.clientY;
+  function movePlayer() {
+    if (keys['w']) player.y -= player.speed;
+    if (keys['a']) player.x -= player.speed;
+    if (keys['s']) player.y += player.speed;
+    if (keys['d']) player.x += player.speed;
   }
 
-  function collectSlime(event) {
-    const mouseX = event.clientX;
-    const mouseY = event.clientY;
+  function aimPlayer(event) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+    player.angle = angle;
+  }
+
+  function collectSlime() {
     slimes.forEach(slime => {
       if (!slime.collected) {
-        const distX = mouseX - slime.x;
-        const distY = mouseY - slime.y;
+        const distX = slime.x - player.x;
+        const distY = slime.y - player.y;
         const distance = Math.sqrt(distX * distX + distY * distY);
 
-        if (distance < slimeSize) {
+        if (distance < slimeSize + player.width) {
           player.collectedSlimes.push(slime);
           slime.collected = true;
         }
@@ -108,25 +108,44 @@
     });
   }
 
-  function throwSlimes() {
+  function throwSlime() {
     if (player.collectedSlimes.length > 0) {
       const slime = player.collectedSlimes.pop();
-      slime.x = player.x + Math.random() * 50 - 25;
-      slime.y = player.y + Math.random() * 50 - 25;
+      const throwDistance = 100;
+      slime.x = player.x + Math.cos(player.angle) * throwDistance;
+      slime.y = player.y + Math.sin(player.angle) * throwDistance;
       slime.collected = false;
     }
   }
 
-  canvas.addEventListener('mousemove', movePlayer);
-  canvas.addEventListener('click', collectSlime);
+  // Event listeners for movement and collection
   window.addEventListener('keydown', (event) => {
-    if (event.key === ' ') {
-      throwSlimes();
-    }
+    keys[event.key.toLowerCase()] = true;
   });
 
+  window.addEventListener('keyup', (event) => {
+    keys[event.key.toLowerCase()] = false;
+  });
+
+  canvas.addEventListener('mousemove', aimPlayer);
+
+  canvas.addEventListener('mousedown', () => {
+    collecting = true;
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    if (collecting && player.collectedSlimes.length === 0) {
+      collectSlime();
+    } else {
+      throwSlime();
+    }
+    collecting = false;
+  });
+
+  // Game loop
   function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    movePlayer();
     drawPlayer();
     drawSlimes();
     requestAnimationFrame(gameLoop);
