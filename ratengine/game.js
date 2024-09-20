@@ -16,8 +16,17 @@ const player = {
 // Inventory
 const inventory = [0, 0, 0, 0, 0]; // 5 inventory slots
 
+// Ranch area
+const ranch = {
+    x: 100,
+    y: 100,
+    width: 600,
+    height: 400,
+    slimes: [] // Slimes currently in the ranch
+};
+
 // Handle keyboard and mouse inputs
-const keys = { w: false, a: false, s: false, d: false };
+const keys = { w: false, a: false, s: false, d: false, space: false };
 document.addEventListener('keydown', (event) => updateKey(event.key, true));
 document.addEventListener('keyup', (event) => updateKey(event.key, false));
 canvas.addEventListener('mousemove', trackMouse);
@@ -35,8 +44,16 @@ function createSlime() {
         radius: 15,
         color: `hsl(${Math.random() * 360}, 100%, 50%)`,
         speed: 1 + Math.random(), // Random speed for slimes
-        direction: Math.random() * 2 * Math.PI // Random movement direction
+        direction: Math.random() * 2 * Math.PI, // Random movement direction
+        inRanch: false // Track if the slime is in the ranch
     };
+}
+
+// Ranch escape logic
+function checkEscape(slime) {
+    if (Math.random() < 0.01) { // 1% chance to escape
+        slime.inRanch = false;
+    }
 }
 
 // Vacuum function to suck up slimes
@@ -49,7 +66,7 @@ function vacuum() {
             slime.x += Math.cos(angleToPlayer) * slime.speed;
             slime.y += Math.sin(angleToPlayer) * slime.speed;
         }
-        if (dist <= player.radius + slime.radius) {
+        if (dist <= player.radius + slime.radius && slime.inRanch === false) {
             collectSlime(index);
         }
     });
@@ -67,6 +84,21 @@ function collectSlime(index) {
     }
 }
 
+// Throw slimes into the ranch
+function throwSlime() {
+    if (inventory[0] > 0 && isInRanch(player.x, player.y)) {
+        const thrownSlime = { x: player.x, y: player.y, radius: 15, color: 'red', inRanch: true };
+        ranch.slimes.push(thrownSlime);
+        inventory[0]--; // Remove one from inventory
+        updateInventory();
+    }
+}
+
+// Check if player is inside the ranch
+function isInRanch(x, y) {
+    return x > ranch.x && x < ranch.x + ranch.width && y > ranch.y && y < ranch.y + ranch.height;
+}
+
 // Update inventory display
 function updateInventory() {
     for (let i = 0; i < inventory.length; i++) {
@@ -80,6 +112,7 @@ function updateKey(key, isPressed) {
     if (key === 'a') keys.a = isPressed;
     if (key === 's') keys.s = isPressed;
     if (key === 'd') keys.d = isPressed;
+    if (key === ' ') keys.space = isPressed; // Space bar for throwing
 }
 function trackMouse(event) {
     const rect = canvas.getBoundingClientRect();
@@ -109,7 +142,16 @@ function moveSlimes() {
         if (slime.y < slime.radius || slime.y > canvas.height - slime.radius) {
             slime.direction = -slime.direction; // Reverse direction
         }
+
+        // Check if slime escapes
+        checkEscape(slime);
     });
+}
+
+// Draw the ranch
+function drawRanch() {
+    ctx.fillStyle = '#8B4513'; // Brown color for ranch
+    ctx.fillRect(ranch.x, ranch.y, ranch.width, ranch.height);
 }
 
 // Draw the player with vacuum
@@ -140,6 +182,15 @@ function drawSlimes() {
         ctx.fill();
         ctx.closePath();
     });
+
+    // Draw slimes in the ranch
+    ranch.slimes.forEach(slime => {
+        ctx.beginPath();
+        ctx.arc(slime.x, slime.y, slime.radius, 0, Math.PI * 2);
+        ctx.fillStyle = slime.color;
+        ctx.fill();
+        ctx.closePath();
+    });
 }
 
 // Main game loop
@@ -147,7 +198,9 @@ function gameLoop() {
     movePlayer();
     moveSlimes(); // Ensure slimes move each frame
     vacuum();
+    if (keys.space) throwSlime(); // Check if space is pressed to throw a slime
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawRanch(); // Draw the ranch
     drawPlayer();
     drawSlimes();
     requestAnimationFrame(gameLoop);
