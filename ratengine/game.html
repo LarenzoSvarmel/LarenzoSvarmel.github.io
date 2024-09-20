@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raycasting Engine</title>
+    <title>Raycasting Engine with Mouse Support</title>
     <style>
         canvas {
             display: block;
@@ -50,6 +50,7 @@
 
     const moveSpeed = 0.05; // Movement speed
     const rotSpeed = 0.03; // Rotation speed
+    let mouseSensitivity = 0.002; // Mouse rotation speed
 
     // Main raycasting function
     function castRays() {
@@ -135,29 +136,45 @@
 
     // Handle keyboard input for player movement
     document.addEventListener('keydown', (event) => {
-        if (event.code === 'ArrowUp') { // Move forward
+        if (event.code === 'ArrowUp' || event.code === 'KeyW') { // Move forward
             if (map[Math.floor(posX + dirX * moveSpeed)][Math.floor(posY)] === 0) posX += dirX * moveSpeed;
             if (map[Math.floor(posX)][Math.floor(posY + dirY * moveSpeed)] === 0) posY += dirY * moveSpeed;
         }
-        if (event.code === 'ArrowDown') { // Move backward
+        if (event.code === 'ArrowDown' || event.code === 'KeyS') { // Move backward
             if (map[Math.floor(posX - dirX * moveSpeed)][Math.floor(posY)] === 0) posX -= dirX * moveSpeed;
             if (map[Math.floor(posX)][Math.floor(posY - dirY * moveSpeed)] === 0) posY -= dirY * moveSpeed;
         }
-        if (event.code === 'ArrowLeft') { // Rotate left
-            const oldDirX = dirX;
-            dirX = dirX * Math.cos(-rotSpeed) - dirY * Math.sin(-rotSpeed);
-            dirY = oldDirX * Math.sin(-rotSpeed) + dirY * Math.cos(-rotSpeed);
-            const oldPlaneX = planeX;
-            planeX = planeX * Math.cos(-rotSpeed) - planeY * Math.sin(-rotSpeed);
-            planeY = oldPlaneX * Math.sin(-rotSpeed) + planeY * Math.cos(-rotSpeed);
+    });
+
+    // Add mouse movement for rotation
+    let isPointerLocked = false;
+    document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
+
+    document.body.addEventListener('click', () => {
+        if (!isPointerLocked) {
+            document.body.requestPointerLock();
         }
-        if (event.code === 'ArrowRight') { // Rotate right
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+        isPointerLocked = !!(document.pointerLockElement || document.mozPointerLockElement);
+    });
+
+    document.addEventListener('mousemove', (event) => {
+        if (isPointerLocked) {
+            const movementX = event.movementX || 0;
+
+            const rotAmount = -movementX * mouseSensitivity;
+
+            // Rotate the player's direction vector
             const oldDirX = dirX;
-            dirX = dirX * Math.cos(rotSpeed) - dirY * Math.sin(rotSpeed);
-            dirY = oldDirX * Math.sin(rotSpeed) + dirY * Math.cos(rotSpeed);
+            dirX = dirX * Math.cos(rotAmount) - dirY * Math.sin(rotAmount);
+            dirY = oldDirX * Math.sin(rotAmount) + dirY * Math.cos(rotAmount);
+
+            // Rotate the camera plane
             const oldPlaneX = planeX;
-            planeX = planeX * Math.cos(rotSpeed) - planeY * Math.sin(rotSpeed);
-            planeY = oldPlaneX * Math.sin(rotSpeed) + planeY * Math.cos(rotSpeed);
+            planeX = planeX * Math.cos(rotAmount) - planeY * Math.sin(rotAmount);
+            planeY = oldPlaneX * Math.sin(rotAmount) + planeY * Math.cos(rotAmount);
         }
     });
 
