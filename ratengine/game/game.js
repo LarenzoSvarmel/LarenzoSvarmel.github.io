@@ -35,8 +35,27 @@ function initShaders() {
         }`;
 
     // Compile shaders
-    // ... shader compilation code
+// Compile vertex shader
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, vertexShaderSource);
+    gl.compileShader(vertexShader);
+
+    // Compile fragment shader
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.compileShader(fragmentShader);
+
+    // Create shader program
+    const shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+    gl.useProgram(shaderProgram);
+
+    return shaderProgram;
 }
+
+    // ... shader compilation code
 
 function initBuffers() {
     // Create buffers for the ground and skybox
@@ -54,6 +73,31 @@ function initBuffers() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(groundVertices), gl.STATIC_DRAW);
 }
 
+function drawGround(shaderProgram) {
+    // Bind the buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, groundBuffer);
+    const coordinatesLocation = gl.getAttribLocation(shaderProgram, "coordinates");
+    gl.vertexAttribPointer(coordinatesLocation, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(coordinatesLocation);
+
+    // Set up model-view-projection matrix
+    const projectionMatrix = mat4.create();
+    mat4.perspective(projectionMatrix, Math.PI / 4, canvas.width / canvas.height, 0.1, 100);
+
+    const viewMatrix = mat4.create();
+    mat4.lookAt(viewMatrix, camera.position, [camera.position[0], 0, 0], [0, 1, 0]);
+
+    const modelViewProjection = mat4.create();
+    mat4.multiply(modelViewProjection, projectionMatrix, viewMatrix);
+    
+    const mvpLocation = gl.getUniformLocation(shaderProgram, "modelViewProjection");
+    gl.uniformMatrix4fv(mvpLocation, false, modelViewProjection);
+
+    // Draw the ground
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
+}
+
+
 function drawScene() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // Set up projection and model view
@@ -67,6 +111,7 @@ function drawScene() {
     mat4.multiply(modelViewProjection, projectionMatrix, viewMatrix);
 
     // Draw ground
+drawGround(shaderProgram);
     // ... draw ground using the created buffers
 
     // Draw skybox (simple color for now)
