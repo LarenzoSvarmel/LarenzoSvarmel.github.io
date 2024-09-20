@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raycasting Engine with Key and Door</title>
+    <title>Raycasting Engine with Key Object</title>
     <style>
         canvas {
             display: block;
@@ -38,12 +38,13 @@
 
     let keyCollected = false; // Track if the key has been collected
     let doorUnlocked = false; // Track if the door has been unlocked
+    let keyPosition = { x: 0, y: 0 }; // Position of the key
 
     function generateMap() {
         // Simple fixed map layout
         return [
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 0, 0, 0, 0, 2, 0, 0, 1], // Key at (1, 5)
+            [1, 0, 0, 0, 0, 0, 0, 0, 1],
             [1, 0, 1, 0, 1, 0, 0, 0, 1],
             [1, 0, 1, 0, 0, 0, 0, 1, 1],
             [1, 0, 0, 0, 0, 1, 0, 1, 1],
@@ -52,6 +53,19 @@
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
         ];
+    }
+
+    function getRandomKeyPosition() {
+        let x, y;
+        do {
+            x = Math.floor(Math.random() * (map.length - 2)) + 1; // Avoid edges
+            y = Math.floor(Math.random() * (map[0].length - 2)) + 1; // Avoid edges
+        } while (map[x][y] !== 0 || (x === Math.floor(posX) && y === Math.floor(posY))); // Ensure it's not on a wall or too close to the player
+        return { x, y };
+    }
+
+    function spawnKey() {
+        keyPosition = getRandomKeyPosition();
     }
 
     function castRays() {
@@ -114,8 +128,6 @@
             // Color walls
             if (map[mapX][mapY] === 1) {
                 ctx.fillStyle = side === 1 ? "rgb(200, 0, 0)" : "rgb(255, 0, 0)";
-            } else if (map[mapX][mapY] === 2 && !keyCollected) {
-                ctx.fillStyle = "rgb(255, 255, 0)"; // Key color
             } else if (map[mapX][mapY] === 3 && doorUnlocked) {
                 ctx.fillStyle = "rgb(0, 255, 0)"; // Unlocked door color
             } else {
@@ -124,6 +136,21 @@
 
             ctx.fillRect(x, drawStart, 1, drawEnd - drawStart);
         }
+
+        // Draw the key
+        if (!keyCollected) {
+            ctx.fillStyle = getRandomColor();
+            ctx.fillRect(
+                (keyPosition.x + 0.5) * (canvas.width / map.length) - 10,
+                (keyPosition.y + 0.5) * (canvas.height / map[0].length) - 10,
+                20, 20 // Key size
+            );
+        }
+    }
+
+    function getRandomColor() {
+        const colors = ["blue", "orange", "purple", "yellow"];
+        return colors[Math.floor(Math.random() * colors.length)];
     }
 
     document.addEventListener('keydown', (event) => {
@@ -168,9 +195,8 @@
     function checkForKey() {
         const playerMapX = Math.floor(posX);
         const playerMapY = Math.floor(posY);
-        if (map[playerMapX][playerMapY] === 2) {
+        if (playerMapX === keyPosition.x && playerMapY === keyPosition.y) {
             keyCollected = true;
-            map[playerMapX][playerMapY] = 0; // Remove key from map
             console.log("Key collected!");
         }
     }
@@ -188,12 +214,14 @@
     function generateNextLevel() {
         map = generateMap();
         map[5][6] = 3; // Ensure the door is in the new map
+        spawnKey(); // Spawn a new key in a random position
         posX = 3.5; // Reset player position
         posY = 3.5; // Reset player position
         keyCollected = false; // Reset key status
         doorUnlocked = false; // Reset door status
     }
 
+    spawnKey(); // Spawn the initial key
     function gameLoop() {
         castRays();
         checkForKey();
