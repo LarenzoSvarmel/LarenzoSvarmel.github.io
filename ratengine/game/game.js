@@ -1,8 +1,12 @@
 const canvas = document.getElementById("gameCanvas");
 const gl = canvas.getContext("webgl");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+function setCanvasSize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+setCanvasSize(); // Set initial size
 
 // Set up camera and projection
 let camera = {
@@ -21,6 +25,8 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('keyup', (event) => {
     keys[event.code] = false;
 });
+
+window.addEventListener('resize', setCanvasSize); // Adjust size on window resize
 
 function initShaders() {
     const vertexShaderSource = `
