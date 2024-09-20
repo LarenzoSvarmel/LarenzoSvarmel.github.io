@@ -18,9 +18,12 @@ const vertexShaderSource = `
 const fragmentShaderSource = `
     precision mediump float;
     void main() {
-        gl_FragColor = vec4(0.5, 0.7, 1.0, 1.0); // Sky blue
+        float gradient = gl_FragCoord.y / float(gl.drawingBufferHeight);
+        vec3 color = mix(vec3(1.0, 1.0, 1.0), vec3(0.5, 0.0, 0.5), gradient);
+        gl_FragColor = vec4(color, 1.0);
     }
 `;
+
 
 // Compile shader function
 function compileShader(source, type) {
@@ -49,20 +52,23 @@ gl.useProgram(program);
 
 // Set up the plane
 const positions = new Float32Array([
-    -1, -1,
-     1, -1,
-    -1,  1,
-     1,  1,
+    -5, 0, -5,
+     5, 0, -5,
+    -5, 0,  5,
+     5, 0,  5,
 ]);
 
+
+// Set up the floor
 const positionBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
 
-// Get position attribute location
+// Enable position attribute
 const positionLocation = gl.getAttribLocation(program, 'a_position');
 gl.enableVertexAttribArray(positionLocation);
-gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+
 
 // Get uniform location for matrix
 const matrixLocation = gl.getUniformLocation(program, 'u_matrix');
@@ -120,12 +126,12 @@ function updateCamera() {
 // Render loop
 function render() {
     // Clear the canvas
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Update camera
     updateCamera();
-    
+
     // Create the view matrix
     const viewMatrix = mat4.create();
     mat4.rotateY(viewMatrix, viewMatrix, camera.rotation[0]);
@@ -135,7 +141,7 @@ function render() {
     // Use the matrix
     gl.uniformMatrix4fv(matrixLocation, false, viewMatrix);
 
-    // Draw the plane
+    // Draw the floor
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     requestAnimationFrame(render);
