@@ -6,14 +6,40 @@
     <title>Bootleg Slime Rancher</title>
     <style>
         canvas {
-            background-color: #87CEEB; /* Slime Rancher style sky */
+            background-color: #87CEEB; /* Sky color */
             display: block;
             margin: 0 auto;
+        }
+        #inventory {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        .slot {
+            width: 50px;
+            height: 50px;
+            border: 2px solid black;
+            background-color: #f1f1f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            font-family: Arial, sans-serif;
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="inventory">
+        <div class="slot" id="slot1">0</div>
+        <div class="slot" id="slot2">0</div>
+        <div class="slot" id="slot3">0</div>
+        <div class="slot" id="slot4">0</div>
+        <div class="slot" id="slot5">0</div>
+    </div>
     <script src="game.js"></script>
 </body>
 </html>
