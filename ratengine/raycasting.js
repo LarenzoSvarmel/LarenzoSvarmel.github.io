@@ -26,6 +26,18 @@ const player = {
     turnSpeed: 0.03
 };
 
+function drawMap() {
+    // Optional: Draw the map for debugging purposes
+    for (let y = 0; y < map.length; y++) {
+        for (let x = 0; x < map[y].length; x++) {
+            if (map[y][x] === '1') {
+                ctx.fillStyle = '#444';
+                ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
+        }
+    }
+}
+
 function castRays() {
     const numRays = canvas.width;
     const rayAngle = FOV / numRays;
@@ -72,6 +84,7 @@ function castRays() {
 
 function update() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawMap(); // Optional: Only use this if you need to debug the map
     castRays();
     requestAnimationFrame(update);
 }
