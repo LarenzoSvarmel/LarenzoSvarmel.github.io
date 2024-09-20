@@ -44,8 +44,10 @@ function vacuum() {
     slimes.forEach((slime, index) => {
         const dist = Math.hypot(slime.x - player.x, slime.y - player.y);
         if (dist < player.vacuumPower && dist > player.radius) {
-            slime.x -= Math.cos(player.angle) * 2;
-            slime.y -= Math.sin(player.angle) * 2;
+            // Move slime towards player
+            const angleToPlayer = Math.atan2(player.y - slime.y, player.x - slime.x);
+            slime.x += Math.cos(angleToPlayer) * slime.speed;
+            slime.y += Math.sin(angleToPlayer) * slime.speed;
         }
         if (dist <= player.radius + slime.radius) {
             collectSlime(index);
@@ -101,8 +103,12 @@ function moveSlimes() {
         slime.y += Math.sin(slime.direction) * slime.speed;
 
         // Bounce off walls
-        if (slime.x < slime.radius || slime.x > canvas.width - slime.radius) slime.direction = Math.PI - slime.direction;
-        if (slime.y < slime.radius || slime.y > canvas.height - slime.radius) slime.direction = -slime.direction;
+        if (slime.x < slime.radius || slime.x > canvas.width - slime.radius) {
+            slime.direction = Math.PI - slime.direction; // Reverse direction
+        }
+        if (slime.y < slime.radius || slime.y > canvas.height - slime.radius) {
+            slime.direction = -slime.direction; // Reverse direction
+        }
     });
 }
 
@@ -139,7 +145,7 @@ function drawSlimes() {
 // Main game loop
 function gameLoop() {
     movePlayer();
-    moveSlimes();
+    moveSlimes(); // Ensure slimes move each frame
     vacuum();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawPlayer();
