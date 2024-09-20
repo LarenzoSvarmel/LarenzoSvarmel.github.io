@@ -1,20 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slime Rancher 2D</title>
-    <style>
-        canvas {
-            border: 1px solid black;
-            background-color: #f0f0f0;
-            display: block;
-            margin: 0 auto;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2D Slime Rancher-Like Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #f0f0f0;
+    }
+
+    canvas {
+      background-color: #87ceeb;
+      display: block;
+    }
+
+    .slime {
+      width: 20px;
+      height: 20px;
+      background-color: green;
+      border-radius: 50%;
+      position: absolute;
+    }
+
+    .player {
+      width: 30px;
+      height: 30px;
+      background-color: red;
+      border-radius: 50%;
+      position: absolute;
+    }
+  </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <script src="game.js"></script>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    width: 30,
+    height: 30,
+    color: 'red',
+    collectedSlimes: []
+  };
+
+  const slimes = [];
+  const slimeSize = 20;
+  let selectedSlime = null;
+
+  for (let i = 0; i < 10; i++) {
+    slimes.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      width: slimeSize,
+      height: slimeSize,
+      color: 'green',
+      collected: false
+    });
+  }
+
+  function drawEntity(entity) {
+    ctx.fillStyle = entity.color;
+    ctx.beginPath();
+    ctx.arc(entity.x, entity.y, entity.width / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawPlayer() {
+    drawEntity(player);
+  }
+
+  function drawSlimes() {
+    slimes.forEach(slime => {
+      if (!slime.collected) {
+        drawEntity(slime);
+      }
+    });
+  }
+
+  function movePlayer(event) {
+    player.x = event.clientX;
+    player.y = event.clientY;
+  }
+
+  function collectSlime(event) {
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+    slimes.forEach(slime => {
+      if (!slime.collected) {
+        const distX = mouseX - slime.x;
+        const distY = mouseY - slime.y;
+        const distance = Math.sqrt(distX * distX + distY * distY);
+
+        if (distance < slimeSize) {
+          player.collectedSlimes.push(slime);
+          slime.collected = true;
+        }
+      }
+    });
+  }
+
+  function throwSlimes() {
+    if (player.collectedSlimes.length > 0) {
+      const slime = player.collectedSlimes.pop();
+      slime.x = player.x + Math.random() * 50 - 25;
+      slime.y = player.y + Math.random() * 50 - 25;
+      slime.collected = false;
+    }
+  }
+
+  canvas.addEventListener('mousemove', movePlayer);
+  canvas.addEventListener('click', collectSlime);
+  window.addEventListener('keydown', (event) => {
+    if (event.key === ' ') {
+      throwSlimes();
+    }
+  });
+
+  function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawPlayer();
+    drawSlimes();
+    requestAnimationFrame(gameLoop);
+  }
+
+  gameLoop();
+</script>
+
 </body>
 </html>
