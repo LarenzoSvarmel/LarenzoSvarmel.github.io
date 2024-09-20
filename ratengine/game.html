@@ -39,6 +39,7 @@
     let keyCollected = false; // Track if the key has been collected
     let doorUnlocked = false; // Track if the door has been unlocked
     let keyPosition = { x: 0, y: 0 }; // Position of the key
+    let keyColor = getRandomColor(); // Random color for the key
 
     function generateMap() {
         // Simple fixed map layout
@@ -66,6 +67,7 @@
 
     function spawnKey() {
         keyPosition = getRandomKeyPosition();
+        keyColor = getRandomColor(); // Assign a new color to the key
     }
 
     function castRays() {
@@ -139,7 +141,7 @@
 
         // Draw the key
         if (!keyCollected) {
-            ctx.fillStyle = getRandomColor();
+            ctx.fillStyle = keyColor;
             ctx.fillRect(
                 (keyPosition.x + 0.5) * (canvas.width / map.length) - 10,
                 (keyPosition.y + 0.5) * (canvas.height / map[0].length) - 10,
@@ -222,6 +224,7 @@
     }
 
     spawnKey(); // Spawn the initial key
+
     function gameLoop() {
         castRays();
         checkForKey();
