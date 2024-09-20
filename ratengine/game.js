@@ -66,7 +66,7 @@ function vacuum() {
             slime.x += Math.cos(angleToPlayer) * slime.speed;
             slime.y += Math.sin(angleToPlayer) * slime.speed;
         }
-        if (dist <= player.radius + slime.radius && slime.inRanch === false) {
+        if (dist <= player.radius + slime.radius && !slime.inRanch) {
             collectSlime(index);
         }
     });
@@ -152,6 +152,8 @@ function moveSlimes() {
 function drawRanch() {
     ctx.fillStyle = '#8B4513'; // Brown color for ranch
     ctx.fillRect(ranch.x, ranch.y, ranch.width, ranch.height);
+    ctx.strokeStyle = '#000'; // Border color
+    ctx.strokeRect(ranch.x, ranch.y, ranch.width, ranch.height); // Draw border
 }
 
 // Draw the player with vacuum
