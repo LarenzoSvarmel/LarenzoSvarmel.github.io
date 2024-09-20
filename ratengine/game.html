@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raycasting Engine with Mouse Support</title>
+    <title>Raycasting Engine with Key and Door</title>
     <style>
         canvas {
             display: block;
@@ -22,66 +22,61 @@
 <canvas id="screen"></canvas>
 
 <script>
-    // Set up canvas and context
     const canvas = document.getElementById("screen");
     const ctx = canvas.getContext("2d");
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // Define the map (1 = wall, 0 = empty space)
-    const map = [
-        [1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 1, 0, 1],
-        [1, 0, 0, 1, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1],
-    ];
+    let map = generateMap(); // Generate initial map
 
     const mapWidth = map[0].length;
     const mapHeight = map.length;
 
-    // Player variables
-    let posX = 3.5, posY = 3.5; // Player's position (in map units)
+    let posX = 3.5, posY = 3.5; // Player's position
     let dirX = -1, dirY = 0; // Player's direction vector
-    let planeX = 0, planeY = 0.66; // Camera plane (perpendicular to direction vector)
+    let planeX = 0, planeY = 0.66; // Camera plane
 
     const moveSpeed = 0.05; // Movement speed
     const rotSpeed = 0.03; // Rotation speed
-    let mouseSensitivity = 0.002; // Mouse rotation speed
+    const mouseSensitivity = 0.002; // Mouse rotation speed
 
-    // Main raycasting function
+    let keyCollected = false; // Track if the key has been collected
+    let doorUnlocked = false; // Track if the door has been unlocked
+
+    function generateMap() {
+        return [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 2, 0, 0, 1],
+            [1, 0, 1, 0, 1, 0, 0, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 1, 1],
+            [1, 0, 0, 0, 0, 1, 0, 1, 1],
+            [1, 0, 0, 1, 0, 0, 0, 1, 3], // Door at (5, 6)
+            [1, 0, 0, 0, 0, 0, 0, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ];
+    }
+
     function castRays() {
-        // Clear the screen
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Cast rays for each column
         for (let x = 0; x < canvas.width; x++) {
-            const cameraX = 2 * x / canvas.width - 1; // x-coordinate in camera space
+            const cameraX = 2 * x / canvas.width - 1;
             const rayDirX = dirX + planeX * cameraX;
             const rayDirY = dirY + planeY * cameraX;
 
-            // Which box of the map we're in
             let mapX = Math.floor(posX);
             let mapY = Math.floor(posY);
 
-            // Length of ray from current position to next x or y-side
             let sideDistX, sideDistY;
-
-            // Length of ray from one x or y-side to the next x or y-side
             const deltaDistX = Math.abs(1 / rayDirX);
             const deltaDistY = Math.abs(1 / rayDirY);
             let perpWallDist;
 
-            // What direction to step in x or y (+1 or -1)
             let stepX, stepY;
+            let hit = 0;
+            let side;
 
-            let hit = 0; // Was there a wall hit?
-            let side; // Was a NS or a EW wall hit?
-
-            // Calculate step and initial sideDist
             if (rayDirX < 0) {
                 stepX = -1;
                 sideDistX = (posX - mapX) * deltaDistX;
@@ -97,9 +92,7 @@
                 sideDistY = (mapY + 1.0 - posY) * deltaDistY;
             }
 
-            // Perform DDA (Digital Differential Analyzer)
             while (hit === 0) {
-                // Jump to the next map square, OR in x-direction, OR in y-direction
                 if (sideDistX < sideDistY) {
                     sideDistX += deltaDistX;
                     mapX += stepX;
@@ -109,44 +102,44 @@
                     mapY += stepY;
                     side = 1;
                 }
-                // Check if ray has hit a wall
                 if (map[mapX][mapY] > 0) hit = 1;
             }
 
-            // Calculate distance projected on camera direction (perpendicular distance)
             if (side === 0) perpWallDist = (mapX - posX + (1 - stepX) / 2) / rayDirX;
             else perpWallDist = (mapY - posY + (1 - stepY) / 2) / rayDirY;
 
-            // Calculate height of the line to draw on screen
             const lineHeight = Math.floor(canvas.height / perpWallDist);
-
-            // Calculate lowest and highest pixel to fill in current stripe
             let drawStart = -lineHeight / 2 + canvas.height / 2;
             if (drawStart < 0) drawStart = 0;
             let drawEnd = lineHeight / 2 + canvas.height / 2;
             if (drawEnd >= canvas.height) drawEnd = canvas.height - 1;
 
-            // Choose wall color (simple shading based on wall side)
-            ctx.fillStyle = side === 1 ? "rgb(200, 0, 0)" : "rgb(255, 0, 0)";
+            // Color walls
+            if (map[mapX][mapY] === 1) {
+                ctx.fillStyle = side === 1 ? "rgb(200, 0, 0)" : "rgb(255, 0, 0)";
+            } else if (map[mapX][mapY] === 2 && !keyCollected) {
+                ctx.fillStyle = "rgb(255, 255, 0)"; // Key color
+            } else if (map[mapX][mapY] === 3) {
+                ctx.fillStyle = "rgb(0, 255, 0)"; // Unlocked door color
+            } else {
+                ctx.fillStyle = "rgb(0, 0, 0)"; // Color for locked door
+            }
 
-            // Draw the vertical line for this ray
             ctx.fillRect(x, drawStart, 1, drawEnd - drawStart);
         }
     }
 
-    // Handle keyboard input for player movement
     document.addEventListener('keydown', (event) => {
-        if (event.code === 'ArrowUp' || event.code === 'KeyW') { // Move forward
+        if (event.code === 'ArrowUp' || event.code === 'KeyW') {
             if (map[Math.floor(posX + dirX * moveSpeed)][Math.floor(posY)] === 0) posX += dirX * moveSpeed;
             if (map[Math.floor(posX)][Math.floor(posY + dirY * moveSpeed)] === 0) posY += dirY * moveSpeed;
         }
-        if (event.code === 'ArrowDown' || event.code === 'KeyS') { // Move backward
+        if (event.code === 'ArrowDown' || event.code === 'KeyS') {
             if (map[Math.floor(posX - dirX * moveSpeed)][Math.floor(posY)] === 0) posX -= dirX * moveSpeed;
             if (map[Math.floor(posX)][Math.floor(posY - dirY * moveSpeed)] === 0) posY -= dirY * moveSpeed;
         }
     });
 
-    // Add mouse movement for rotation
     let isPointerLocked = false;
     document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
 
@@ -163,29 +156,56 @@
     document.addEventListener('mousemove', (event) => {
         if (isPointerLocked) {
             const movementX = event.movementX || 0;
-
             const rotAmount = -movementX * mouseSensitivity;
 
-            // Rotate the player's direction vector
             const oldDirX = dirX;
             dirX = dirX * Math.cos(rotAmount) - dirY * Math.sin(rotAmount);
             dirY = oldDirX * Math.sin(rotAmount) + dirY * Math.cos(rotAmount);
 
-            // Rotate the camera plane
             const oldPlaneX = planeX;
             planeX = planeX * Math.cos(rotAmount) - planeY * Math.sin(rotAmount);
             planeY = oldPlaneX * Math.sin(rotAmount) + planeY * Math.cos(rotAmount);
         }
     });
 
-    // Game loop
+    function checkForKey() {
+        const playerMapX = Math.floor(posX);
+        const playerMapY = Math.floor(posY);
+        if (map[playerMapX][playerMapY] === 2) {
+            keyCollected = true;
+            map[playerMapX][playerMapY] = 0; // Remove key from map
+            console.log("Key collected!");
+        }
+    }
+
+    function checkForDoorUnlock() {
+        const playerMapX = Math.floor(posX);
+        const playerMapY = Math.floor(posY);
+        if (keyCollected && map[playerMapX][playerMapY] === 3) {
+            doorUnlocked = true;
+            console.log("Door unlocked!");
+            generateNextLevel();
+        }
+    }
+
+    function generateNextLevel() {
+        map = generateMap();
+        // Place the door on a specific location
+        map[5][5] = doorUnlocked ? 3 : 3; // Ensure the door is in the new map
+        posX = 3.5; // Reset player position
+        posY = 3.5; // Reset player position
+        keyCollected = false; // Reset key status
+        doorUnlocked = false; // Reset door status
+    }
+
     function gameLoop() {
         castRays();
+        checkForKey();
+        checkForDoorUnlock();
         requestAnimationFrame(gameLoop);
     }
 
     gameLoop();
-
 </script>
 
 </body>
