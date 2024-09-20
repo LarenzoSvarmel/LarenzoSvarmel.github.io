@@ -99,7 +99,6 @@ function update() {
     if (keys['KeyA']) camera.position[0] -= speed;
     if (keys['KeyD']) camera.position[0] += speed;
 
-    // Limit position to prevent going too far away (optional)
     camera.position[0] = Math.max(-20, Math.min(20, camera.position[0]));
     camera.position[2] = Math.max(-20, Math.min(20, camera.position[2]));
 }
