@@ -148,5 +148,33 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    const camTarget = new THREE.Vector3();
+    const camOffset = new THREE.Vector3(0, 3, 6);
+
     function animate() {
-      requestAnim
+      requestAnimationFrame(animate);
+
+      world.step(1 / 60);
+      handleGamepadInput();
+
+      boardMesh.position.copy(boardBody.position);
+      boardMesh.quaternion.copy(boardBody.quaternion);
+
+      frontFootMesh.position.copy(frontFootBody.position);
+      frontFootMesh.quaternion.copy(frontFootBody.quaternion);
+
+      backFootMesh.position.copy(backFootBody.position);
+      backFootMesh.quaternion.copy(backFootBody.quaternion);
+
+      // Smooth camera follow: position camera behind and above the board, looking at it
+      camTarget.copy(boardMesh.position);
+      let offset = camOffset.clone().applyQuaternion(boardMesh.quaternion);
+      camera.position.lerp(boardMesh.position.clone().add(offset), 0.1);
+      camera.lookAt(camTarget);
+
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
