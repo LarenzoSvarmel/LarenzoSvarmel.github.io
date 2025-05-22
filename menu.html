@@ -63,6 +63,7 @@
     scene.add(ambientLight);
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
     dirLight.position.set(5, 10, 7);
+    dirLight.castShadow = true;
     scene.add(dirLight);
 
     // Ground plane
@@ -73,18 +74,37 @@
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Load FBX skateboard
+    // Load FBX skateboard using raw.githubusercontent.com URL
     const loader = new THREE.FBXLoader();
-    // TODO: Replace URL with your skateboard FBX path relative to repo or hosted
-    loader.load('untitled.fbx', function(object){
-      board = object;
-      // Adjust scale and position if needed
-      board.scale.set(0.01, 0.01, 0.01);
-      board.position.y = 0.2;
-      scene.add(board);
-    }, undefined, function(error){
-      console.error('Error loading FBX:', error);
-    });
+    loader.load(
+      'https://raw.githubusercontent.com/LarenzoSvarmel/LarenzoSvarmel.github.io/main/untitled.fbx',
+      function(object){
+        board = object;
+        board.scale.set(0.01, 0.01, 0.01);
+        board.position.y = 0.2;
+
+        // Fix materials and textures
+        board.traverse((child) => {
+          if(child.isMesh){
+            child.castShadow = true;
+            child.receiveShadow = true;
+            child.material.side = THREE.DoubleSide;
+            if(child.material.map){
+              child.material.map.encoding = THREE.sRGBEncoding;
+              child.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+              child.material.map.needsUpdate = true;
+            }
+            child.material.needsUpdate = true;
+          }
+        });
+
+        scene.add(board);
+      },
+      undefined,
+      function(error){
+        console.error('Error loading FBX:', error);
+      }
+    );
 
     // Input listeners
     window.addEventListener('keydown', onKeyDown);
@@ -115,7 +135,7 @@
       startOllie();
     }
 
-    // Optional: toggle stance with 'KeyQ'
+    // Toggle stance with 'KeyQ'
     if(e.code === 'KeyQ'){
       isRegularStance = !isRegularStance;
       console.log('Stance:', isRegularStance ? 'Regular' : 'Switch');
@@ -137,7 +157,7 @@
 
     // === Input processing ===
 
-    // Keyboard for velocity and rotation
+    // Keyboard velocity & rotation
     if(keys['KeyW']){
       velocity.z -= 10 * delta;
     } else if(keys['KeyS']){
@@ -153,19 +173,19 @@
       board.rotation.y -= 2 * delta;
     }
 
-    // Gamepad
+    // Gamepad input
     if(gamepadIndex !== null){
       const gp = navigator.getGamepads()[gamepadIndex];
       if(gp){
-        // Left stick = back foot control (simulate pushing/pulling)
+        // Left stick = back foot control (push/pull)
         let lx = gp.axes[0];
         let ly = gp.axes[1];
 
-        // Right stick = front foot control (simulate pushing/pulling)
+        // Right stick = front foot control (push/pull)
         let rx = gp.axes[2];
         let ry = gp.axes[3];
 
-        // Simple velocity based on left stick Y
+        // Velocity based on left stick Y
         if(Math.abs(ly) > 0.2){
           velocity.z -= ly * 10 * delta;
         } else {
@@ -192,20 +212,13 @@
       }
     }
 
-    // === Ollie physics simulation ===
-    // We'll simulate the effect of feet pushing on the board here.
-
-    // For demonstration, we simulate a very simple ollie:
+    // === Ollie physics ===
     if(isOllie){
       ollieTimer += delta;
       const ollieHeight = 1.5;
       const t = ollieTimer / ollieDuration;
-      // Parabolic arc for board height
       const height = ollieHeight * 4 * t * (1 - t);
       board.position.y = 0.2 + height;
-
-      // Optional: add rotation/spin for flip trick based on front/back foot input
-      // Here you can implement rotation logic simulating flicks with left/right sticks.
 
       if(ollieTimer >= ollieDuration){
         isOllie = false;
@@ -215,7 +228,6 @@
         onGround = true;
       }
     } else {
-      // Gravity applies only vertical velocity (for landing)
       velocity.y += gravity * delta;
       board.position.y += velocity.y * delta;
       if(board.position.y < 0.2){
@@ -225,11 +237,11 @@
       }
     }
 
-    // Move skateboard based on velocity and rotation
+    // Move skateboard
     board.position.x += Math.sin(board.rotation.y) * velocity.z * delta;
     board.position.z += Math.cos(board.rotation.y) * velocity.z * delta;
 
-    // Camera follow with smooth lerp
+    // Smooth camera follow
     const cameraTargetOffset = new THREE.Vector3(0, 2.5, -6);
     const cameraLookAtOffset = new THREE.Vector3(0, 1.2, 0);
     const desiredCamPos = board.position.clone().add(cameraTargetOffset.clone().applyAxisAngle(new THREE.Vector3(0,1,0), board.rotation.y));
@@ -246,7 +258,6 @@
     onGround = false;
     velocity.y = 5;
   }
-
 </script>
 </body>
 </html>
