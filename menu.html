@@ -1,236 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Skateboard Physics - SkaterXL-like Controls Approximation</title>
-<style>
-  body { margin: 0; overflow: hidden; }
-  canvas { display: block; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Skater XL Style Controls</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
 </head>
 <body>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
 import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
 
+// Scene Setup
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({antialias:true});
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Lighting
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(5,10,7.5);
-scene.add(directionalLight);
-scene.add(new THREE.AmbientLight(0x404040));
-
 // Physics World
 const world = new CANNON.World();
-world.gravity.set(0,-9.82,0);
-world.broadphase = new CANNON.NaiveBroadphase();
-world.solver.iterations = 10;
+world.gravity.set(0, -9.82, 0);
 
 // Ground
-const groundMaterial = new CANNON.Material('ground');
+const groundMaterial = new CANNON.Material();
 const groundBody = new CANNON.Body({
   mass: 0,
   shape: new CANNON.Plane(),
-  material: groundMaterial,
+  material: groundMaterial
 });
-groundBody.quaternion.setFromEuler(-Math.PI/2,0,0);
+groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 world.addBody(groundBody);
 
-const groundGeo = new THREE.PlaneGeometry(100,100);
-const groundMat = new THREE.MeshStandardMaterial({color:0x444444});
-const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-groundMesh.rotation.x = -Math.PI/2;
+// Ground Mesh
+const groundGeometry = new THREE.PlaneGeometry(100, 100);
+const groundMesh = new THREE.Mesh(groundGeometry, new THREE.MeshStandardMaterial({ color: 0x808080 }));
+groundMesh.rotation.x = -Math.PI / 2;
 scene.add(groundMesh);
 
-// Board
-const boardLength = 3.0;
-const boardWidth = 1.0;
-const boardThickness = 0.06;
+// Lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambientLight);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+directionalLight.position.set(10, 10, 5);
+scene.add(directionalLight);
 
-const boardShape = new CANNON.Box(new CANNON.Vec3(boardWidth/2, boardThickness/2, boardLength/2));
-const boardBody = new CANNON.Body({
-  mass: 3,
-  shape: boardShape,
-  position: new CANNON.Vec3(0, 1, 0),
-  angularDamping: 0.6,
-  linearDamping: 0.3,
-});
+// Skateboard
+const boardMaterial = new CANNON.Material();
+const boardShape = new CANNON.Box(new CANNON.Vec3(0.4, 0.05, 1));
+const boardBody = new CANNON.Body({ mass: 5, shape: boardShape, material: boardMaterial });
+boardBody.position.set(0, 0.5, 0);
 world.addBody(boardBody);
 
-const boardGeo = new THREE.BoxGeometry(boardWidth, boardThickness, boardLength);
-const boardMat = new THREE.MeshStandardMaterial({color: 0xffcc00});
-const boardMesh = new THREE.Mesh(boardGeo, boardMat);
+const boardGeometry = new THREE.BoxGeometry(0.8, 0.1, 2);
+const boardMesh = new THREE.Mesh(boardGeometry, new THREE.MeshStandardMaterial({ color: 0x0000ff }));
 scene.add(boardMesh);
 
 // Feet
-const footRadius = 0.12;
-function createFoot(color) {
-  const body = new CANNON.Body({
-    mass: 0.5,
-    shape: new CANNON.Sphere(footRadius),
-    linearDamping: 0.9,
-    angularDamping: 0.9,
-    fixedRotation: true,
-  });
-  world.addBody(body);
+const footShape = new CANNON.Sphere(0.1);
+const frontFootBody = new CANNON.Body({ mass: 1, shape: footShape });
+const backFootBody = new CANNON.Body({ mass: 1, shape: footShape });
+world.addBody(frontFootBody);
+world.addBody(backFootBody);
 
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(footRadius, 32, 32), new THREE.MeshStandardMaterial({color}));
-  scene.add(mesh);
-  return {body, mesh};
-}
-const frontFoot = createFoot(0xff0000);
-const backFoot = createFoot(0x0000ff);
+const footGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+const frontFootMesh = new THREE.Mesh(footGeometry, new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+const backFootMesh = new THREE.Mesh(footGeometry, new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
+scene.add(frontFootMesh);
+scene.add(backFootMesh);
 
-// Initial foot local positions on board (front foot near nose, back foot near tail)
-const frontFootLocal = new THREE.Vector3(0, footRadius + boardThickness/2, boardLength/4);
-const backFootLocal = new THREE.Vector3(0, footRadius + boardThickness/2, -boardLength/4);
-
-// Constraints to "attach" feet softly to board at start (will be removed when popping)
-let frontConstraint = new CANNON.PointToPointConstraint(
-  boardBody, new CANNON.Vec3(frontFootLocal.x, frontFootLocal.y - boardThickness/2, frontFootLocal.z),
-  frontFoot.body, new CANNON.Vec3(0, 0, 0),
-  1e6
-);
-let backConstraint = new CANNON.PointToPointConstraint(
-  boardBody, new CANNON.Vec3(backFootLocal.x, backFootLocal.y - boardThickness/2, backFootLocal.z),
-  backFoot.body, new CANNON.Vec3(0, 0, 0),
-  1e6
-);
-world.addConstraint(frontConstraint);
-world.addConstraint(backConstraint);
-
-// Helpers to convert between CANNON and THREE vectors
-function cannonToThreeVec(cVec) {
-  return new THREE.Vector3(cVec.x, cVec.y, cVec.z);
-}
-function threeToCannonVec(tVec) {
-  return new CANNON.Vec3(tVec.x, tVec.y, tVec.z);
-}
-
-// Gamepad control parameters and state
-const deadzone = 0.15;
-
-let leftStickPrevActive = false;
-let rightStickPrevActive = false;
-
-let frontFootSetupPos = null; // local THREE.Vector3 on board
+// Variables for Control
+let frontFootSetupPos = null;
 let backFootSetupPos = null;
-
 let frontFootPushing = false;
 let backFootPushing = false;
+let turnTarget = 0;
+let removingTorque = false;
+let theta = 0;
+const maxBoardLean = 15; // degrees
+const wheelBase = 2;
 
-// Map stick inputs to local board foot positions with boundaries (approximation of foot movement on board surface)
-const footMoveRangeX = boardWidth / 2 * 0.8; // left-right range on board
-const footMoveRangeZFront = boardLength / 2 * 0.4; // front foot can move near nose
-const footMoveRangeZBack = boardLength / 2 * 0.4; // back foot can move near tail
+// Helper Functions
+function getFootLocalTarget(foot, x, y) {
+  if (Math.abs(x) < 0.1 && Math.abs(y) < 0.1) return null;
+  const offsetX = x * 0.3;
+  const offsetZ = y * 0.5;
+  return new CANNON.Vec3(offsetX, 0, offsetZ);
+}
 
-// Utility clamp
-function clamp(val, min, max) { return Math.min(max, Math.max(min, val)); }
+function applyFootForces(footBody, targetPos, pressure) {
+  const worldTarget = boardBody.pointToWorldFrame(targetPos);
+  const force = worldTarget.vsub(footBody.position).scale(pressure * 10);
+  footBody.applyForce(force, footBody.position);
+}
 
-// Convert stick input [-1,1] to foot local target pos (X,Z)
-function getFootLocalTarget(foot, stickX, stickY) {
-  // Invert Y axis because forward stick is usually negative Y on gamepads
-  stickY = -stickY;
+function addTurnTorque(value) {
+  turnTarget = value;
+  removingTorque = false;
+  const min = value < 0 ? -3 : 0;
+  const max = value > 0 ? 3 : 0;
 
-  if (Math.abs(stickX) < deadzone) stickX = 0;
-  if (Math.abs(stickY) < deadzone) stickY = 0;
+  const localAngularVelocity = boardBody.angularVelocity.clone();
+  boardBody.quaternion.inverse().vmult(localAngularVelocity, localAngularVelocity);
 
-  if (stickX === 0 && stickY === 0) return null;
+  localAngularVelocity.y = THREE.MathUtils.clamp(
+    THREE.MathUtils.moveTowards(localAngularVelocity.y, 3 * value, 16 * (1/60)),
+    min,
+    max
+  );
 
-  // Map stick input to foot local pos on board:
-  // front foot: moves on top nose half, back foot: moves on tail half mirrored X
-  let x, z;
-  if (foot === 'front') {
-    x = clamp(stickX * footMoveRangeX, -footMoveRangeX, footMoveRangeX);
-    z = clamp(stickY * footMoveRangeZFront, 0, footMoveRangeZFront);
+  boardBody.quaternion.vmult(localAngularVelocity, boardBody.angularVelocity);
+}
+
+function doBoardLean() {
+  const forward = new THREE.Vector3();
+  boardMesh.getWorldDirection(forward);
+
+  const velocity = boardBody.velocity;
+  const velocityDir = velocity.clone().normalize();
+
+  const dot = forward.dot(velocityDir);
+  const sign = -Math.sign(dot);
+
+  const localVelocity = velocity.clone();
+  boardBody.quaternion.inverse().vmult(localVelocity, localVelocity);
+
+  const accelX = 0; // Placeholder for actual acceleration
+  const localAccel = new CANNON.Vec3(accelX, 0, 0);
+
+  const num2 = wheelBase * localAccel.x / (localVelocity.z || 0.001);
+  const clamped = THREE.MathUtils.clamp(num2, -1, 1);
+
+  if (Math.abs(localVelocity.z) > 0.1) {
+    theta = sign * (57.29578 * Math.asin(clamped));
   } else {
-    // back foot mirrored X and Z negative (towards tail)
-    x = clamp(-stickX * footMoveRangeX, -footMoveRangeX, footMoveRangeX);
-    z = clamp(-stickY * footMoveRangeZBack, -footMoveRangeZBack, 0);
+    theta = 0;
   }
 
-  return new THREE.Vector3(x, footRadius + boardThickness/2, z);
+  theta = THREE.MathUtils.clamp(theta, -maxBoardLean, maxBoardLean);
+  boardMesh.rotation.z = THREE.MathUtils.degToRad(theta);
 }
 
-// Apply force & torque on board depending on foot pressure and position relative to board center
-function applyFootForces(footBody, localPos, pressure) {
-  if (pressure <= 0) return;
-
-  // Convert local pos to world pos and direction vector from board center
-  const boardQuat = new THREE.Quaternion(boardBody.quaternion.x, boardBody.quaternion.y, boardBody.quaternion.z, boardBody.quaternion.w);
-  const localWorldPos = localPos.clone().applyQuaternion(boardQuat).add(cannonToThreeVec(boardBody.position));
-  const boardCenter = cannonToThreeVec(boardBody.position);
-  const forceDir = localWorldPos.clone().sub(boardCenter).normalize();
-
-  // Apply downward force on board (foot pressure)
-  const forceMagnitude = pressure * 15;
-  const force = new CANNON.Vec3(0, -forceMagnitude, 0);
-
-  boardBody.applyForce(force, threeToCannonVec(localWorldPos));
-
-  // Apply small torque to board to simulate foot leaning and rotation
-  const torqueStrength = pressure * 10;
-  const torque = new CANNON.Vec3(forceDir.z * torqueStrength, 0, -forceDir.x * torqueStrength);
-  boardBody.torque.vadd(torque, boardBody.torque);
-
-  // Foot should be gently attracted to local target position to simulate foot resting on board under pressure
-  const footPos = cannonToThreeVec(footBody.position);
-  const targetWorldPos = localPos.clone().applyQuaternion(boardQuat).add(boardCenter);
-  const correctionVec = targetWorldPos.clone().sub(footPos);
-  const correctionForce = threeToCannonVec(correctionVec.multiplyScalar(50 * pressure));
-  footBody.applyForce(correctionForce, footBody.position);
-}
-
-// On stick release, pop the board by applying impulse relative to feet positions
-function popBoard(foot) {
-  if (foot === 'front' && frontFootPushing) {
-    frontFootPushing = false;
-    // Remove front foot constraint briefly so foot can "jump"
-    if (world.constraints.includes(frontConstraint)) world.removeConstraint(frontConstraint);
-
-    // Impulse on board upward and rotate forward foot side to simulate pop
-    const popImpulse = new CANNON.Vec3(0, 5, 0);
-    const popTorque = new CANNON.Vec3(10, 0, 0);
-    boardBody.applyImpulse(popImpulse, boardBody.position);
-    boardBody.torque.vadd(popTorque, boardBody.torque);
-
-    // Impulse on foot upward and backward slightly
-    frontFoot.body.applyImpulse(new CANNON.Vec3(0, 5, -1), frontFoot.body.position);
-
-    // Re-add constraint after delay to "land" foot back on board
-    setTimeout(() => {
-      if (!world.constraints.includes(frontConstraint)) {
-        world.addConstraint(frontConstraint);
-      }
-    }, 700);
-  }
-
-  if (foot === 'back' && backFootPushing) {
-    backFootPushing = false;
-    if (world.constraints.includes(backConstraint)) world.removeConstraint(backConstraint);
-
-    const popImpulse = new CANNON.Vec3(0, 5, 0);
-    const popTorque = new CANNON.Vec3(-10, 0, 0);
-    boardBody.applyImpulse(popImpulse, boardBody.position);
-    boardBody.torque.vadd(popTorque, boardBody.torque);
-
-    backFoot.body.applyImpulse(new CANNON.Vec3(0, 5, 1), backFoot.body.position);
-
-    setTimeout(() => {
-      if (!world.constraints.includes(backConstraint)) {
-        world.addConstraint(backConstraint);
-      }
-    }, 700);
-  }
-}
-
-// Gamepad state tracking
+// Gamepad Input
 function updateGamepadInputs() {
   const gamepads = navigator.getGamepads();
   if (!gamepads) return;
@@ -238,75 +151,74 @@ function updateGamepadInputs() {
   const gp = gamepads[0];
   if (!gp) return;
 
-  // Left stick controls front foot position
+  // Left stick controls front foot
   const lsX = gp.axes[0];
   const lsY = gp.axes[1];
-
   const frontTargetPos = getFootLocalTarget('front', lsX, lsY);
   if (frontTargetPos) {
     frontFootSetupPos = frontTargetPos;
     frontFootPushing = true;
   } else {
     if (frontFootPushing) {
-      popBoard('front');
+      frontFootPushing = false;
       frontFootSetupPos = null;
     }
   }
 
-  // Right stick controls back foot position
+  // Right stick controls back foot
   const rsX = gp.axes[2];
   const rsY = gp.axes[3];
-
   const backTargetPos = getFootLocalTarget('back', rsX, rsY);
   if (backTargetPos) {
     backFootSetupPos = backTargetPos;
     backFootPushing = true;
   } else {
     if (backFootPushing) {
-      popBoard('back');
+      backFootPushing = false;
       backFootSetupPos = null;
     }
   }
+
+  // Apply turn torque based on left stick X-axis
+  addTurnTorque(lsX);
 }
 
-camera.position.set(0, 4, 8);
-camera.lookAt(0, 0, 0);
-
-function animate(time) {
+// Animation Loop
+function animate() {
   requestAnimationFrame(animate);
 
   updateGamepadInputs();
 
-  // Apply forces on board based on foot positions and pressure (pressure = stick magnitude)
   if (frontFootSetupPos) {
-    const lsMag = Math.sqrt(gp.axes[0]*gp.axes[0] + gp.axes[1]*gp.axes[1]);
-    applyFootForces(frontFoot.body, frontFootSetupPos, lsMag);
-  }
-  if (backFootSetupPos) {
-    const rsMag = Math.sqrt(gp.axes[2]*gp.axes[2] + gp.axes[3]*gp.axes[3]);
-    applyFootForces(backFoot.body, backFootSetupPos, rsMag);
+    const lsMag = Math.sqrt(Math.pow(gp.axes[0], 2) + Math.pow(gp.axes[1], 2));
+    applyFootForces(frontFootBody, frontFootSetupPos, lsMag);
   }
 
-  // Step physics world
+  if (backFootSetupPos) {
+    const rsMag = Math.sqrt(Math.pow(gp.axes[2], 2) + Math.pow(gp.axes[3], 2));
+    applyFootForces(backFootBody, backFootSetupPos, rsMag);
+  }
+
+  doBoardLean();
+
   world.step(1/60);
 
-  // Sync three.js meshes with physics bodies
-  boardMesh.position.copy(cannonToThreeVec(boardBody.position));
+  // Update Mesh Positions
+  boardMesh.position.copy(boardBody.position);
   boardMesh.quaternion.copy(boardBody.quaternion);
 
-  frontFoot.mesh.position.copy(cannonToThreeVec(frontFoot.body.position));
-  frontFoot.mesh.quaternion.copy(frontFoot.body.quaternion);
+  frontFootMesh.position.copy(frontFootBody.position);
+  frontFootMesh.quaternion.copy(frontFootBody.quaternion);
 
-  backFoot.mesh.position.copy(cannonToThreeVec(backFoot.body.position));
-  backFoot.mesh.quaternion.copy(backFoot.body.quaternion);
+  backFootMesh.position.copy(backFootBody.position);
+  backFootMesh.quaternion.copy(backFootBody.quaternion);
 
-  // Camera follow board smoothly
-  const desiredCamPos = new THREE.Vector3(
+  // Camera Follow
+  camera.position.lerp(new THREE.Vector3(
     boardMesh.position.x,
     boardMesh.position.y + 3,
     boardMesh.position.z + 6
-  );
-  camera.position.lerp(desiredCamPos, 0.1);
+  ), 0.1);
   camera.lookAt(boardMesh.position);
 
   renderer.render(scene, camera);
