@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Skateboard Physics with Three.js & Cannon-es</title>
+  <title>Skateboard Physics Setup + Release</title>
   <style>
     body { margin: 0; overflow: hidden; }
     canvas { display: block; }
@@ -28,40 +28,33 @@ document.body.appendChild(renderer.domElement);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 directionalLight.position.set(5, 10, 7.5);
 scene.add(directionalLight);
-
-const ambientLight = new THREE.AmbientLight(0x404040);
-scene.add(ambientLight);
+scene.add(new THREE.AmbientLight(0x404040));
 
 const world = new CANNON.World();
 world.gravity.set(0, -9.82, 0);
 
-const groundMaterial = new CANNON.Material('ground');
+const groundMat = new CANNON.Material('ground');
 const groundBody = new CANNON.Body({
   mass: 0,
   shape: new CANNON.Plane(),
-  material: groundMaterial,
+  material: groundMat,
 });
 groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 world.addBody(groundBody);
 
 const groundGeo = new THREE.PlaneGeometry(100, 100);
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
-const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+const groundMesh = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({ color: 0x444444 }));
 groundMesh.rotation.x = -Math.PI / 2;
 scene.add(groundMesh);
 
 const boardShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.025, 1.5));
-const boardBody = new CANNON.Body({
-  mass: 2,
-  shape: boardShape,
-  position: new CANNON.Vec3(0, 1, 0),
-});
-boardBody.quaternion.setFromEuler(0, 0, 0);
+const boardBody = new CANNON.Body({ mass: 2, shape: boardShape, position: new CANNON.Vec3(0, 1, 0) });
 world.addBody(boardBody);
 
-const boardGeo = new THREE.BoxGeometry(1, 0.05, 3);
-const boardMat = new THREE.MeshStandardMaterial({ color: 0xffcc00 });
-const boardMesh = new THREE.Mesh(boardGeo, boardMat);
+const boardMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 0.05, 3),
+  new THREE.MeshStandardMaterial({ color: 0xffcc00 })
+);
 scene.add(boardMesh);
 
 const footRadius = 0.12;
@@ -72,6 +65,7 @@ function createFoot(position) {
     position: position.clone(),
     linearDamping: 0.9,
     angularDamping: 0.9,
+    fixedRotation: true,
   });
   world.addBody(body);
 
@@ -108,63 +102,53 @@ world.addConstraint(backConstraint);
 
 // Foot control points relative to board local space
 // front foot points: left edge, right edge, top (nose), bottom (pocket)
-// back foot points mirrored (left/right swapped)
+// back foot points mirrored left/right
 const footControlPoints = {
   front: {
     left: new THREE.Vector3(-0.5, 0, 1.5),
     right: new THREE.Vector3(0.5, 0, 1.5),
     top: new THREE.Vector3(0, 0, 1.5),
-    bottom: new THREE.Vector3(0, 0, 1.1), // slightly behind nose, simulating pocket area
+    bottom: new THREE.Vector3(0, 0, 1.1),
   },
   back: {
-    left: new THREE.Vector3(0.5, 0, -1.5),  // mirrored: left = right edge
+    left: new THREE.Vector3(0.5, 0, -1.5),  // mirrored left/right
     right: new THREE.Vector3(-0.5, 0, -1.5),
     top: new THREE.Vector3(0, 0, -1.5),
     bottom: new THREE.Vector3(0, 0, -1.1),
   },
 };
 
-// State to track stick position and foot pressed state
-let leftStickPos = new THREE.Vector2(0,0);
-let rightStickPos = new THREE.Vector2(0,0);
+// States for setup and release
+let setupFront = null; // THREE.Vector3 local target or null
+let setupBack = null;
+
+let leftStickPos = new THREE.Vector2(0, 0);
+let rightStickPos = new THREE.Vector2(0, 0);
 let leftStickActive = false;
 let rightStickActive = false;
+let leftStickPrevActive = false;
+let rightStickPrevActive = false;
 
-// Function to get closest control point from stick input for each foot
 function getFootTargetPoint(foot, stickPos) {
-  // stickPos x,y in range -1 to 1, center is (0,0)
-  // We'll interpret y = forward/back, x = left/right
+  const deadzone = 0.15;
+  if (stickPos.length() < deadzone) return null;
 
-  // For front foot, positive y moves towards "top" (nose), negative y towards "bottom" (pocket)
-  // For back foot, same but mirrored left/right
-
-  // Determine dominant horizontal direction (left/right)
   let horiz = stickPos.x;
   let vert = stickPos.y;
 
-  // Clamp length so we don't get crazy positions
-  const deadzone = 0.2;
-  if (stickPos.length() < deadzone) return null; // no movement
-
-  // Choose vertical point: if vert > 0 => top, else bottom
   const verticalPointName = vert > 0 ? 'top' : 'bottom';
-
-  // Choose horizontal point: if horiz < 0 => left, else right
   const horizontalPointName = horiz < 0 ? 'left' : 'right';
 
-  // Interpolate between horizontal and vertical points weighted by magnitude of horiz and vert
   const absHoriz = Math.abs(horiz);
   const absVert = Math.abs(vert);
   const total = absHoriz + absVert;
 
-  // If total is zero, no move
-  if(total === 0) return null;
+  if (total === 0) return null;
 
   const vertWeight = absVert / total;
   const horizWeight = absHoriz / total;
 
   const footPoints = footControlPoints[foot];
-  // Weighted average of horizontal and vertical points
   const target = new THREE.Vector3();
   target.copy(footPoints[verticalPointName]).multiplyScalar(vertWeight);
   target.addScaledVector(footPoints[horizontalPointName], horizWeight);
@@ -172,49 +156,37 @@ function getFootTargetPoint(foot, stickPos) {
   return target;
 }
 
-// Update feet position based on sticks
-function updateFeetPositions() {
-  // front foot controlled by right stick
-  if (rightStickActive) {
-    const localTarget = getFootTargetPoint('front', rightStickPos);
-    if(localTarget) {
-      // Convert from board local to world
-      const boardPos = new THREE.Vector3().copy(boardBody.position);
-      const quat = new THREE.Quaternion().copy(boardBody.quaternion);
-      const worldTarget = localTarget.clone().applyQuaternion(quat).add(boardPos);
+// When in setup mode, feet move smoothly to their local setup positions, but no forces on board yet.
+// On release, constraints remove and board/feet physics react.
 
-      // Raise foot slightly above board surface
-      worldTarget.y = boardBody.position.y + 0.025 + footRadius + 0.02;
+function updateFeetSetupPositions() {
+  // Front foot setup
+  if (setupFront) {
+    const quat = new THREE.Quaternion().copy(boardBody.quaternion);
+    const boardPos = new THREE.Vector3().copy(boardBody.position);
+    const worldTarget = setupFront.clone().applyQuaternion(quat).add(boardPos);
+    worldTarget.y = boardBody.position.y + 0.025 + footRadius + 0.01;
 
-      // Move front foot toward target smoothly (to avoid spazzing)
-      frontFoot.body.position.lerp(new CANNON.Vec3(worldTarget.x, worldTarget.y, worldTarget.z), 0.15);
-      frontFoot.body.velocity.set(0, 0, 0);
-      frontFoot.body.angularVelocity.set(0, 0, 0);
-    }
+    frontFoot.body.position.lerp(new CANNON.Vec3(worldTarget.x, worldTarget.y, worldTarget.z), 0.2);
+    frontFoot.body.velocity.set(0, 0, 0);
+    frontFoot.body.angularVelocity.set(0, 0, 0);
   }
 
-  // back foot controlled by left stick
-  if (leftStickActive) {
-    const localTarget = getFootTargetPoint('back', leftStickPos);
-    if(localTarget) {
-      const boardPos = new THREE.Vector3().copy(boardBody.position);
-      const quat = new THREE.Quaternion().copy(boardBody.quaternion);
-      const worldTarget = localTarget.clone().applyQuaternion(quat).add(boardPos);
+  // Back foot setup
+  if (setupBack) {
+    const quat = new THREE.Quaternion().copy(boardBody.quaternion);
+    const boardPos = new THREE.Vector3().copy(boardBody.position);
+    const worldTarget = setupBack.clone().applyQuaternion(quat).add(boardPos);
+    worldTarget.y = boardBody.position.y + 0.025 + footRadius + 0.01;
 
-      worldTarget.y = boardBody.position.y + 0.025 + footRadius + 0.02;
-
-      backFoot.body.position.lerp(new CANNON.Vec3(worldTarget.x, worldTarget.y, worldTarget.z), 0.15);
-      backFoot.body.velocity.set(0, 0, 0);
-      backFoot.body.angularVelocity.set(0, 0, 0);
-    }
+    backFoot.body.position.lerp(new CANNON.Vec3(worldTarget.x, worldTarget.y, worldTarget.z), 0.2);
+    backFoot.body.velocity.set(0, 0, 0);
+    backFoot.body.angularVelocity.set(0, 0, 0);
   }
 }
 
-// On stick release, "pop" the board and "jump" feet off the board
 function onStickRelease(foot) {
-  const footObj = foot === 'front' ? frontFoot : backFoot;
-
-  // Remove constraint for that foot so it can "jump" off
+  // Remove constraint to free foot
   if (foot === 'front' && world.constraints.includes(frontConstraint)) {
     world.removeConstraint(frontConstraint);
   }
@@ -222,30 +194,32 @@ function onStickRelease(foot) {
     world.removeConstraint(backConstraint);
   }
 
-  // Calculate impulse for feet: upwards and slightly outwards from board center
+  const footObj = foot === 'front' ? frontFoot : backFoot;
+
+  // Calculate impulse for feet: upward and slightly outward from board center
   const impulseStrength = 3;
-  // Direction vector from board center to foot
   const dir = new CANNON.Vec3().copy(footObj.body.position).vsub(boardBody.position);
   dir.y = 0;
   dir.normalize();
 
-  // Apply impulse upward and outward
   const impulse = new CANNON.Vec3(dir.x * impulseStrength * 0.5, impulseStrength, dir.z * impulseStrength * 0.5);
   footObj.body.applyImpulse(impulse, footObj.body.position);
 
-  // Apply opposite impulse to board to simulate pop
+  // Board reacts with opposite impulse
   const boardImpulse = impulse.scale(-0.5);
   boardBody.applyImpulse(boardImpulse, boardBody.position);
 
-  // After ~1.2 seconds, land feet back onto board and re-add constraint
+  // Clear setup for that foot (no longer "holding")
+  if (foot === 'front') setupFront = null;
+  else setupBack = null;
+
+  // After ~1.2 seconds, land foot back onto board and re-add constraint
   setTimeout(() => {
-    // Snap foot above board at default position
     let localPos = foot === 'front' ? frontFootStartPos : backFootStartPos;
     footObj.body.position.set(localPos.x, localPos.y, localPos.z);
     footObj.body.velocity.set(0, 0, 0);
     footObj.body.angularVelocity.set(0, 0, 0);
 
-    // Re-add constraint if missing
     if (foot === 'front' && !world.constraints.includes(frontConstraint)) {
       world.addConstraint(frontConstraint);
     }
@@ -255,11 +229,6 @@ function onStickRelease(foot) {
   }, 1200);
 }
 
-// Input handling (Gamepad + keyboard for demo)
-window.addEventListener('gamepadconnected', (e) => {
-  console.log('Gamepad connected:', e.gamepad);
-});
-
 function pollGamepads() {
   const gp = navigator.getGamepads()[0];
   if (!gp) {
@@ -267,63 +236,28 @@ function pollGamepads() {
     rightStickActive = false;
     return;
   }
-  // Left stick controls back foot
   leftStickPos.set(gp.axes[0], -gp.axes[1]);
-  leftStickActive = leftStickPos.length() > 0.2;
-
-  // Right stick controls front foot
   rightStickPos.set(gp.axes[2], -gp.axes[3]);
-  rightStickActive = rightStickPos.length() > 0.2;
 
-  // Detect stick release: if stick was active but now below deadzone, trigger release event
-  if (leftStickActive === false && leftStickLastActive) {
-    onStickRelease('back');
+  leftStickActive = leftStickPos.length() > 0.15;
+  rightStickActive = rightStickPos.length() > 0.15;
+
+  // Setup feet positions while holding sticks
+  if (rightStickActive) {
+    const target = getFootTargetPoint('front', rightStickPos);
+    if (target) setupFront = target;
   }
-  if (rightStickActive === false && rightStickLastActive) {
-    onStickRelease('front');
-  }
-
-  leftStickLastActive = leftStickActive;
-  rightStickLastActive = rightStickActive;
-}
-
-let leftStickLastActive = false;
-let rightStickLastActive = false;
-
-// Keyboard fallback for testing: arrows = back foot, WASD = front foot
-const keyState = {};
-window.addEventListener('keydown', (e) => { keyState[e.key.toLowerCase()] = true; });
-window.addEventListener('keyup', (e) => { keyState[e.key.toLowerCase()] = false; });
-
-function updateKeyboardSticks() {
-  // Back foot - arrows
-  let lx = 0, ly = 0;
-  if (keyState['arrowleft']) lx = -1;
-  else if (keyState['arrowright']) lx = 1;
-  if (keyState['arrowup']) ly = 1;
-  else if (keyState['arrowdown']) ly = -1;
-  leftStickPos.set(lx, ly);
-  leftStickActive = leftStickPos.length() > 0;
-
-  // Front foot - WASD
-  let rx = 0, ry = 0;
-  if (keyState['a']) rx = -1;
-  else if (keyState['d']) rx = 1;
-  if (keyState['w']) ry = 1;
-  else if (keyState['s']) ry = -1;
-  rightStickPos.set(rx, ry);
-  rightStickActive = rightStickPos.length() > 0;
-
-  // Detect releases for keyboard too
-  if (!leftStickActive && leftStickLastActive) {
-    onStickRelease('back');
-  }
-  if (!rightStickActive && rightStickLastActive) {
-    onStickRelease('front');
+  if (leftStickActive) {
+    const target = getFootTargetPoint('back', leftStickPos);
+    if (target) setupBack = target;
   }
 
-  leftStickLastActive = leftStickActive;
-  rightStickLastActive = rightStickActive;
+  // On stick release, trigger pop
+  if (!rightStickActive && rightStickPrevActive) onStickRelease('front');
+  if (!leftStickActive && leftStickPrevActive) onStickRelease('back');
+
+  rightStickPrevActive = rightStickActive;
+  leftStickPrevActive = leftStickActive;
 }
 
 camera.position.set(0, 3, 7);
@@ -342,8 +276,7 @@ function animate() {
   requestAnimationFrame(animate);
 
   pollGamepads();
-  updateKeyboardSticks();
-  updateFeetPositions();
+  updateFeetSetupPositions();
 
   world.step(1 / 60);
 
