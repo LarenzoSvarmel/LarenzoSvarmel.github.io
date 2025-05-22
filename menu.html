@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Skate Sim with Skeleton + Ollie + Gamepad</title>
+  <title>Skateboard Physics with FBX Model + Ollie</title>
   <style>
     body { margin: 0; overflow: hidden; background: #202030; }
     canvas { display: block; }
@@ -13,116 +13,28 @@
   </style>
 </head>
 <body>
-<div id="info">Use WASD + Space or Xbox Controller<br>Flick right stick UP for Ollie</div>
+<div id="info">
+  Left Stick = Back Foot Control (Push/Pull)<br>
+  Right Stick = Front Foot Control (Push/Pull)<br>
+  Stance: Normal (regular) or Switch (reverse)<br>
+  Ollie by pressing Space or flicking right stick up<br>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/loaders/FBXLoader.js"></script>
 
 <script>
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x202030);
-
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 5, 10);
-
-  const renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
-
-  // Lights
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-  scene.add(ambientLight);
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-  dirLight.position.set(5, 10, 7);
-  scene.add(dirLight);
-
-  // Ground plane
-  const groundMat = new THREE.MeshStandardMaterial({color: 0x444455});
-  const groundGeom = new THREE.PlaneGeometry(100, 100);
-  const ground = new THREE.Mesh(groundGeom, groundMat);
-  ground.rotation.x = -Math.PI/2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  // Skateboard (simple box)
-  const boardMat = new THREE.MeshStandardMaterial({color: 0xffcc00});
-  const boardGeom = new THREE.BoxGeometry(3, 0.1, 1);
-  const board = new THREE.Mesh(boardGeom, boardMat);
-  board.position.y = 0.2;
-  scene.add(board);
-
-  // === Skeleton Skater ===
-  const skeletonGroup = new THREE.Group();
-
-  // Helper to create bones as lines between two points
-  function createBone(start, end) {
-    const geometry = new THREE.BufferGeometry();
-    const vertices = new Float32Array([
-      ...start.toArray(),
-      ...end.toArray()
-    ]);
-    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    const material = new THREE.LineBasicMaterial({color: 0x3399ff, linewidth: 3});
-    return new THREE.Line(geometry, material);
-  }
-
-  // Basic joint positions (relative to skater origin)
-  const joints = {
-    pelvis: new THREE.Vector3(0, 1, 0),
-    spine: new THREE.Vector3(0, 1.4, 0),
-    head: new THREE.Vector3(0, 1.8, 0),
-    leftShoulder: new THREE.Vector3(-0.3, 1.5, 0),
-    rightShoulder: new THREE.Vector3(0.3, 1.5, 0),
-    leftElbow: new THREE.Vector3(-0.6, 1.2, 0),
-    rightElbow: new THREE.Vector3(0.6, 1.2, 0),
-    leftHand: new THREE.Vector3(-0.7, 0.9, 0),
-    rightHand: new THREE.Vector3(0.7, 0.9, 0),
-    leftHip: new THREE.Vector3(-0.2, 0.8, 0),
-    rightHip: new THREE.Vector3(0.2, 0.8, 0),
-    leftKnee: new THREE.Vector3(-0.2, 0.4, 0),
-    rightKnee: new THREE.Vector3(0.2, 0.4, 0),
-    leftFoot: new THREE.Vector3(-0.2, 0.1, 0.1),
-    rightFoot: new THREE.Vector3(0.2, 0.1, 0.1),
-  };
-
-  // Create bones
-  const bones = [];
-  function addBone(a,b){ bones.push(createBone(joints[a], joints[b])); }
-  addBone('pelvis', 'spine');
-  addBone('spine', 'head');
-  addBone('spine', 'leftShoulder');
-  addBone('spine', 'rightShoulder');
-  addBone('leftShoulder', 'leftElbow');
-  addBone('rightShoulder', 'rightElbow');
-  addBone('leftElbow', 'leftHand');
-  addBone('rightElbow', 'rightHand');
-  addBone('pelvis', 'leftHip');
-  addBone('pelvis', 'rightHip');
-  addBone('leftHip', 'leftKnee');
-  addBone('rightHip', 'rightKnee');
-  addBone('leftKnee', 'leftFoot');
-  addBone('rightKnee', 'rightFoot');
-
-  bones.forEach(b => skeletonGroup.add(b));
-  skeletonGroup.position.y = 0.7; // sit skater on board roughly
-  scene.add(skeletonGroup);
-
-  // Attach skeletonGroup to board so it moves with it
-  board.add(skeletonGroup);
-  skeletonGroup.position.set(0, 0.5, 0);
-
-  // Physics & movement
-  let velocity = new THREE.Vector3(0, 0, 0);
+  let scene, camera, renderer;
+  let board;
+  let velocity = new THREE.Vector3();
   const gravity = -9.8;
   let onGround = true;
-
-  // Trick state
   let isOllie = false;
   let ollieTimer = 0;
-  const ollieDuration = 0.5; // seconds
+  const ollieDuration = 0.5;
 
-  // Keyboard controls
-  const keys = {};
-  window.addEventListener('keydown', e => { keys[e.code] = true; });
-  window.addEventListener('keyup', e => { keys[e.code] = false; });
+  // Skate stance: true = regular, false = switch
+  let isRegularStance = true;
 
   // Gamepad support
   let gamepadIndex = null;
@@ -130,104 +42,171 @@
   const flickThreshold = 0.7;
   let flickCooldown = 0;
 
-  window.addEventListener("gamepadconnected", (e) => {
-    gamepadIndex = e.gamepad.index;
-    console.log("Gamepad connected at index", gamepadIndex);
-  });
-  window.addEventListener("gamepaddisconnected", (e) => {
-    if(e.gamepad.index === gamepadIndex) gamepadIndex = null;
-    console.log("Gamepad disconnected");
-  });
-
-  // Resize
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth/window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-
-  // Camera follow offsets
-  const cameraTargetOffset = new THREE.Vector3(0, 2.5, -6);
-  const cameraLookAtOffset = new THREE.Vector3(0, 1.2, 0);
-
-  // Clock for timing
   const clock = new THREE.Clock();
 
-  function animate() {
-    requestAnimationFrame(animate);
+  init();
+  animate();
 
+  function init(){
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x202030);
+
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 10);
+
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
+
+    // Ground plane
+    const groundMat = new THREE.MeshStandardMaterial({color: 0x444455});
+    const groundGeom = new THREE.PlaneGeometry(100, 100);
+    const ground = new THREE.Mesh(groundGeom, groundMat);
+    ground.rotation.x = -Math.PI/2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Load FBX skateboard
+    const loader = new THREE.FBXLoader();
+    // TODO: Replace URL with your skateboard FBX path relative to repo or hosted
+    loader.load('skateboard.fbx', function(object){
+      board = object;
+      // Adjust scale and position if needed
+      board.scale.set(0.01, 0.01, 0.01);
+      board.position.y = 0.2;
+      scene.add(board);
+    }, undefined, function(error){
+      console.error('Error loading FBX:', error);
+    });
+
+    // Input listeners
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+
+    window.addEventListener("gamepadconnected", (e) => {
+      gamepadIndex = e.gamepad.index;
+      console.log("Gamepad connected at index", gamepadIndex);
+    });
+    window.addEventListener("gamepaddisconnected", (e) => {
+      if(e.gamepad.index === gamepadIndex) gamepadIndex = null;
+      console.log("Gamepad disconnected");
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  }
+
+  const keys = {};
+
+  function onKeyDown(e){
+    keys[e.code] = true;
+
+    if(e.code === 'Space' && onGround && !isOllie){
+      startOllie();
+    }
+
+    // Optional: toggle stance with 'KeyQ'
+    if(e.code === 'KeyQ'){
+      isRegularStance = !isRegularStance;
+      console.log('Stance:', isRegularStance ? 'Regular' : 'Switch');
+    }
+  }
+
+  function onKeyUp(e){
+    keys[e.code] = false;
+  }
+
+  function animate(){
+    requestAnimationFrame(animate);
     const delta = clock.getDelta();
 
-    // === INPUT ===
+    if(!board) {
+      renderer.render(scene, camera);
+      return;
+    }
 
-    // Keyboard forward/backward
-    if(keys['KeyW']) {
+    // === Input processing ===
+
+    // Keyboard for velocity and rotation
+    if(keys['KeyW']){
       velocity.z -= 10 * delta;
-    } else if(keys['KeyS']) {
+    } else if(keys['KeyS']){
       velocity.z += 8 * delta;
     } else {
       velocity.z *= 0.95;
     }
 
-    // Keyboard rotate
-    if(keys['KeyA']) board.rotation.y += 2 * delta;
-    if(keys['KeyD']) board.rotation.y -= 2 * delta;
-
-    // Keyboard jump (ollie)
-    if(keys['Space'] && onGround && !isOllie) {
-      startOllie();
+    if(keys['KeyA']){
+      board.rotation.y += 2 * delta;
+    }
+    if(keys['KeyD']){
+      board.rotation.y -= 2 * delta;
     }
 
-    // === GAMEPAD ===
+    // Gamepad
     if(gamepadIndex !== null){
       const gp = navigator.getGamepads()[gamepadIndex];
       if(gp){
+        // Left stick = back foot control (simulate pushing/pulling)
+        let lx = gp.axes[0];
+        let ly = gp.axes[1];
 
-        // Left stick: movement
-        const lx = gp.axes[0]; // left stick X
-        const ly = gp.axes[1]; // left stick Y
-        // Deadzone
+        // Right stick = front foot control (simulate pushing/pulling)
+        let rx = gp.axes[2];
+        let ry = gp.axes[3];
+
+        // Simple velocity based on left stick Y
         if(Math.abs(ly) > 0.2){
           velocity.z -= ly * 10 * delta;
         } else {
           velocity.z *= 0.95;
         }
+
+        // Rotation based on left stick X
         if(Math.abs(lx) > 0.2){
           board.rotation.y -= lx * 2 * delta;
         }
 
-        // Right stick flick UP for ollie
-        const ry = gp.axes[3];
-        // Detect flick upward
+        // Detect right stick flick UP for ollie
         if(flickCooldown <= 0){
           if(lastRightStickY > -flickThreshold && ry <= -flickThreshold && onGround && !isOllie){
             startOllie();
-            flickCooldown = 0.3; // cooldown in seconds
+            flickCooldown = 0.3;
           }
         }
         lastRightStickY = ry;
 
-        // Button A (0) for ollie as well
-        if(gp.buttons[0].pressed && onGround && !isOllie){
-          startOllie();
+        if(flickCooldown > 0){
+          flickCooldown -= delta;
         }
       }
     }
 
-    if(flickCooldown > 0){
-      flickCooldown -= delta;
-    }
+    // === Ollie physics simulation ===
+    // We'll simulate the effect of feet pushing on the board here.
 
-    // === PHYSICS ===
-
+    // For demonstration, we simulate a very simple ollie:
     if(isOllie){
       ollieTimer += delta;
-      // Simple upward movement during ollie
       const ollieHeight = 1.5;
-      // Parabolic motion up and down
       const t = ollieTimer / ollieDuration;
-      const height = ollieHeight * 4 * t * (1 - t); // parabola from 0 to 1 back to 0
+      // Parabolic arc for board height
+      const height = ollieHeight * 4 * t * (1 - t);
       board.position.y = 0.2 + height;
+
+      // Optional: add rotation/spin for flip trick based on front/back foot input
+      // Here you can implement rotation logic simulating flicks with left/right sticks.
+
       if(ollieTimer >= ollieDuration){
         isOllie = false;
         ollieTimer = 0;
@@ -236,7 +215,7 @@
         onGround = true;
       }
     } else {
-      // Normal gravity
+      // Gravity applies only vertical velocity (for landing)
       velocity.y += gravity * delta;
       board.position.y += velocity.y * delta;
       if(board.position.y < 0.2){
@@ -246,11 +225,13 @@
       }
     }
 
-    // Move board based on velocity and rotation
+    // Move skateboard based on velocity and rotation
     board.position.x += Math.sin(board.rotation.y) * velocity.z * delta;
     board.position.z += Math.cos(board.rotation.y) * velocity.z * delta;
 
-    // Camera follow smooth lerp
+    // Camera follow with smooth lerp
+    const cameraTargetOffset = new THREE.Vector3(0, 2.5, -6);
+    const cameraLookAtOffset = new THREE.Vector3(0, 1.2, 0);
     const desiredCamPos = board.position.clone().add(cameraTargetOffset.clone().applyAxisAngle(new THREE.Vector3(0,1,0), board.rotation.y));
     camera.position.lerp(desiredCamPos, 0.1);
     const lookAtPos = board.position.clone().add(cameraLookAtOffset);
@@ -259,7 +240,6 @@
     renderer.render(scene, camera);
   }
 
-  // Start ollie trick
   function startOllie(){
     isOllie = true;
     ollieTimer = 0;
@@ -267,7 +247,6 @@
     velocity.y = 5;
   }
 
-  animate();
 </script>
 </body>
 </html>
