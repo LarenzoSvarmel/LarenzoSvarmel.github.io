@@ -4,21 +4,30 @@
   <meta charset="UTF-8" />
   <title>ARK Web Menu</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Orbitron', sans-serif;
+    }
+    .glow {
+      text-shadow: 0 0 6px #00ffff, 0 0 12px #00ffff;
+    }
+  </style>
 </head>
-<body class="bg-black text-white h-screen bg-cover bg-center" style="background-image: url('hq720.jpg'); font-family: sans-serif;">
+<body class="bg-black text-white h-screen bg-cover bg-center" style="background-image: url('ark-menu-bg.jpg');">
 
   <!-- Main Container -->
   <div class="flex h-full w-full">
     
     <!-- Left Menu -->
-    <div class="flex flex-col justify-center items-start px-10 space-y-4 w-1/4">
-      <button class="text-cyan-200 text-lg hover:text-white transition">JOIN ARK</button>
-      <button class="text-cyan-200 text-lg hover:text-white transition">HOST \\ LOCAL</button>
-      <button class="text-cyan-200 text-lg hover:text-white transition">OPTIONS</button>
-      <button class="text-cyan-200 text-lg hover:text-white transition">SURVIVAL GUIDE</button>
-      <button class="text-cyan-200 text-lg hover:text-white transition">CREDITS</button>
-      <button class="text-cyan-200 text-lg hover:text-white transition">EXIT</button>
-      <div class="pt-6 text-xs text-cyan-200">
+    <div class="flex flex-col justify-center items-start px-10 space-y-3 w-1/4">
+      <button class="text-cyan-200 text-xl glow hover:text-white transition">JOIN ARK</button>
+      <button class="text-cyan-200 text-xl glow hover:text-white transition">HOST / LOCAL</button>
+      <button class="text-cyan-200 text-xl glow hover:text-white transition">OPTIONS</button>
+      <button class="text-cyan-200 text-xl glow hover:text-white transition">SURVIVAL GUIDE</button>
+      <button class="text-cyan-200 text-xl glow hover:text-white transition">CREDITS</button>
+      <button class="text-cyan-200 text-xl glow hover:text-white transition">EXIT</button>
+      <div class="pt-6 text-xs text-cyan-200 glow">
         SURVIVETHEARK.COM<br />
         PATCH 258.5
       </div>
@@ -26,22 +35,22 @@
 
     <!-- Center Logo -->
     <div class="flex flex-col justify-center items-center w-2/4">
-      <img src="ark-logo.png" alt="ARK Logo" class="max-w-xs md:max-w-md lg:max-w-lg">
+      <img src="ark-logo.png" alt="ARK Logo" class="max-w-xs md:max-w-md lg:max-w-lg drop-shadow-xl">
     </div>
 
     <!-- Right News Panel -->
     <div class="flex flex-col justify-center items-end pr-10 w-1/4">
-      <div class="bg-black/60 border border-cyan-200 p-4 w-full max-w-sm text-sm leading-snug">
-        <h2 class="text-cyan-200 font-bold text-lg mb-2">ARK NEWS</h2>
+      <div class="bg-black/70 border border-cyan-200 p-4 w-full max-w-sm text-sm leading-snug">
+        <h2 class="text-cyan-200 font-bold text-lg glow mb-2">ARK NEWS</h2>
         <p class="text-white">
-          Participate in the ARK Anniversary 2.0x Event now through June 5 at 1pm ET! During this time, XP, Taming Speed, Harvesting, Maturing...
-          <br/><br/>
-          Calling all Survivors, for a new challenge! We've added new 140-player PvP No-Taming...
-          <br/><br/>
-          May 30: ARK v258 has been released...
+          Participate in the ARK Anniversary 2.0x Event now through June 5 at 1pm ET! During this time, XP, Taming Speed, Harvesting, Maturing, Egg Hatching, and Mating Speed are all doubled! Also, craft Event-Limited “ARK Birthday Cake Slices” that will make you feel very lucky! Thank you to all Survivors for making ARK awesome for a second year, we love you! 🦖<br><br>
+
+          Calling all Survivors, for a new challenge! We have added new 140-player PvP No-Taming Experimental Survival Servers called “140 Players! NoTamingExperiment.” Please join up and see if you can master the ultimate challenge of dominating a harsh, hostile ARK without the benefit of a dino army!<br><br>
+
+          May 30: ARK v258 has been released, adding Hyaenodon, Hesperornis, Megatherium, Megalania, Yutyrannus, Motorboat, Harpoon Gun, Toilet, and many fixes and optimizations!
         </p>
       </div>
-      <div class="mt-4 w-full max-w-sm text-cyan-200 text-sm">
+      <div class="mt-4 w-full max-w-sm text-cyan-200 text-sm glow">
         <div class="flex justify-between">
           <span>TOTAL CONVERSIONS</span>
           <span>NONE</span>
