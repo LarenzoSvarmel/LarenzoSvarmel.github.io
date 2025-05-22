@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Skate Sim - Gamepad Only</title>
+  <title>Dual Stick Skateboard Physics</title>
   <style>
     body { margin: 0; overflow: hidden; background: #202030; }
     canvas { display: block; }
@@ -13,144 +13,132 @@
   </style>
 </head>
 <body>
-<div id="info">Use Xbox Controller - Left Stick (Tail), Right Stick (Nose)</div>
+<div id="info">Left Stick = Tail, Right Stick = Nose</div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
 
 <script>
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x202030);
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x202030);
 
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.set(0, 5, 10);
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 5, 10);
 
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
 
-// Lights
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-dirLight.position.set(5, 10, 7);
-scene.add(dirLight);
+  // Lights
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+  scene.add(ambientLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(5, 10, 7);
+  scene.add(dirLight);
 
-// Ground
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(100, 100),
-  new THREE.MeshStandardMaterial({ color: 0x444455 })
-);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
+  // Ground
+  const groundMat = new THREE.MeshStandardMaterial({color: 0x444455});
+  const groundGeom = new THREE.PlaneGeometry(100, 100);
+  const ground = new THREE.Mesh(groundGeom, groundMat);
+  ground.rotation.x = -Math.PI/2;
+  ground.receiveShadow = true;
+  scene.add(ground);
 
-// Board
-const board = new THREE.Mesh(
-  new THREE.BoxGeometry(3, 0.1, 1),
-  new THREE.MeshStandardMaterial({ color: 0xffcc00 })
-);
-board.position.y = 0.2;
-scene.add(board);
+  // Skateboard
+  const boardMat = new THREE.MeshStandardMaterial({color: 0xffcc00});
+  const boardGeom = new THREE.BoxGeometry(3, 0.1, 1);
+  const board = new THREE.Mesh(boardGeom, boardMat);
+  board.position.set(0, 0.2, 0);
+  board.rotation.y = 0; // facing +Z
+  scene.add(board);
 
-// Skeleton
-const skeletonGroup = new THREE.Group();
-const joints = {
-  pelvis: new THREE.Vector3(0, 1, 0),
-  spine: new THREE.Vector3(0, 1.4, 0),
-  head: new THREE.Vector3(0, 1.8, 0),
-  leftShoulder: new THREE.Vector3(-0.3, 1.5, 0),
-  rightShoulder: new THREE.Vector3(0.3, 1.5, 0),
-  leftElbow: new THREE.Vector3(-0.6, 1.2, 0),
-  rightElbow: new THREE.Vector3(0.6, 1.2, 0),
-  leftHand: new THREE.Vector3(-0.7, 0.9, 0),
-  rightHand: new THREE.Vector3(0.7, 0.9, 0),
-  leftHip: new THREE.Vector3(-0.2, 0.8, 0),
-  rightHip: new THREE.Vector3(0.2, 0.8, 0),
-  leftKnee: new THREE.Vector3(-0.2, 0.4, 0),
-  rightKnee: new THREE.Vector3(0.2, 0.4, 0),
-  leftFoot: new THREE.Vector3(-0.2, 0.1, 0.1),
-  rightFoot: new THREE.Vector3(0.2, 0.1, 0.1),
-};
-function createBone(start, end) {
-  const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
-  const material = new THREE.LineBasicMaterial({ color: 0x3399ff });
-  return new THREE.Line(geometry, material);
-}
-const bones = [];
-function addBone(a, b) { bones.push(createBone(joints[a], joints[b])); }
-addBone('pelvis', 'spine');
-addBone('spine', 'head');
-addBone('spine', 'leftShoulder');
-addBone('spine', 'rightShoulder');
-addBone('leftShoulder', 'leftElbow');
-addBone('rightShoulder', 'rightElbow');
-addBone('leftElbow', 'leftHand');
-addBone('rightElbow', 'rightHand');
-addBone('pelvis', 'leftHip');
-addBone('pelvis', 'rightHip');
-addBone('leftHip', 'leftKnee');
-addBone('rightHip', 'rightKnee');
-addBone('leftKnee', 'leftFoot');
-addBone('rightKnee', 'rightFoot');
-bones.forEach(b => skeletonGroup.add(b));
-board.add(skeletonGroup);
-skeletonGroup.position.set(0, 0.5, 0);
+  // Physics state
+  let velocity = new THREE.Vector3(0, 0, 0);
+  let angularVelocity = 0; // for simplicity, rotation around Y-axis only
+  const gravity = -9.8;
 
-// Gamepad state
-let gamepadIndex = null;
-window.addEventListener("gamepadconnected", (e) => {
-  gamepadIndex = e.gamepad.index;
-  console.log("Gamepad connected:", gamepadIndex);
-});
-window.addEventListener("gamepaddisconnected", (e) => {
-  if (e.gamepad.index === gamepadIndex) gamepadIndex = null;
-  console.log("Gamepad disconnected");
-});
+  // Gamepad
+  let gamepadIndex = null;
+  window.addEventListener("gamepadconnected", (e) => {
+    gamepadIndex = e.gamepad.index;
+    console.log("Gamepad connected at index", gamepadIndex);
+  });
+  window.addEventListener("gamepaddisconnected", (e) => {
+    if(e.gamepad.index === gamepadIndex) gamepadIndex = null;
+    console.log("Gamepad disconnected");
+  });
 
-const clock = new THREE.Clock();
-const camOffset = new THREE.Vector3(0, 2.5, -6);
-const camLookAt = new THREE.Vector3(0, 1.2, 0);
+  // Clock
+  const clock = new THREE.Clock();
 
-function animate() {
-  requestAnimationFrame(animate);
-  const delta = clock.getDelta();
+  function animate() {
+    requestAnimationFrame(animate);
+    const delta = clock.getDelta();
 
-  // Handle gamepad sticks
-  if (gamepadIndex !== null) {
-    const gp = navigator.getGamepads()[gamepadIndex];
-    if (gp) {
-      const lx = gp.axes[0]; // Left stick X (tail)
-      const ly = gp.axes[1]; // Left stick Y (tail)
-      const rx = gp.axes[2]; // Right stick X (nose)
-      const ry = gp.axes[3]; // Right stick Y (nose)
+    // Control params
+    const torqueStrength = 5;
+    const thrust = 8;
 
-      const maxTilt = 0.3;
+    // Input
+    let noseInput = {x: 0, y: 0};
+    let tailInput = {x: 0, y: 0};
 
-      // Simulate front/back tilt based on left/right stick Y
-      const tiltTail = -ly * maxTilt; // tail pitch
-      const tiltNose = -ry * maxTilt; // nose pitch
-
-      const avgTilt = (tiltTail + tiltNose) / 2;
-
-      // Blend the board rotation in pitch and roll
-      board.rotation.x = avgTilt;
-      board.rotation.z = lx * 0.2 + rx * 0.2;
-
-      // Move forward based on right trigger (for now just simulate constant push)
-      board.position.x += Math.sin(board.rotation.y) * delta * 2;
-      board.position.z += Math.cos(board.rotation.y) * delta * 2;
-
-      // Rotate board from right stick X
-      board.rotation.y -= rx * delta;
+    if (gamepadIndex !== null) {
+      const gp = navigator.getGamepads()[gamepadIndex];
+      if (gp) {
+        tailInput.x = gp.axes[0]; // Left stick X
+        tailInput.y = gp.axes[1]; // Left stick Y
+        noseInput.x = gp.axes[2]; // Right stick X
+        noseInput.y = gp.axes[3]; // Right stick Y
+      }
     }
+
+    // Compute direction vectors based on board rotation
+    const forward = new THREE.Vector3(Math.sin(board.rotation.y), 0, Math.cos(board.rotation.y));
+    const right = new THREE.Vector3(forward.z, 0, -forward.x);
+
+    // Tail and nose positions relative to board center
+    const halfLength = 1.5;
+    const tailPos = board.position.clone().add(forward.clone().multiplyScalar(-halfLength));
+    const nosePos = board.position.clone().add(forward.clone().multiplyScalar(halfLength));
+
+    // Apply forces based on stick input
+    const tailForce = forward.clone().multiplyScalar(-tailInput.y * thrust);
+    const noseForce = forward.clone().multiplyScalar(-noseInput.y * thrust);
+
+    // Update linear velocity
+    const netForce = tailForce.clone().add(noseForce);
+    velocity.add(netForce.multiplyScalar(delta));
+
+    // Apply torque: difference between tail and nose lateral pushes
+    const torque = (noseInput.x - tailInput.x) * torqueStrength;
+    angularVelocity += torque * delta;
+
+    // Apply drag
+    velocity.multiplyScalar(0.98);
+    angularVelocity *= 0.96;
+
+    // Update position and rotation
+    board.position.add(velocity.clone().applyAxisAngle(new THREE.Vector3(0,1,0), board.rotation.y).multiplyScalar(delta));
+    board.rotation.y += angularVelocity * delta;
+
+    // Gravity
+    velocity.y += gravity * delta;
+    board.position.y += velocity.y * delta;
+    if (board.position.y < 0.2) {
+      board.position.y = 0.2;
+      velocity.y = 0;
+    }
+
+    // Camera follow
+    const cameraTargetOffset = new THREE.Vector3(0, 2.5, -6).applyAxisAngle(new THREE.Vector3(0, 1, 0), board.rotation.y);
+    const desiredCamPos = board.position.clone().add(cameraTargetOffset);
+    camera.position.lerp(desiredCamPos, 0.1);
+    const lookAtPos = board.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+    camera.lookAt(lookAtPos);
+
+    renderer.render(scene, camera);
   }
 
-  // Update camera
-  const targetCam = board.position.clone().add(camOffset.clone().applyAxisAngle(new THREE.Vector3(0,1,0), board.rotation.y));
-  camera.position.lerp(targetCam, 0.1);
-  const lookAt = board.position.clone().add(camLookAt);
-  camera.lookAt(lookAt);
-
-  renderer.render(scene, camera);
-}
-animate();
+  animate();
 </script>
 </body>
 </html>
