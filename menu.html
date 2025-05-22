@@ -2,132 +2,172 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>WebGL Terrain Editor with Grass Texture</title>
+  <title>Skate Sim Prototype</title>
   <style>
-    body { margin: 0; overflow: hidden; }
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 10px;
-      font-family: sans-serif;
-      border-radius: 5px;
-    }
-    button { margin-top: 5px; }
+    body { margin: 0; overflow: hidden; background: #202020; }
+    canvas { display: block; }
   </style>
 </head>
 <body>
-  <div id="ui">
-    <button id="exportBtn">Export Heightmap</button>
-    <p>Left-click to raise terrain</p>
-  </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r155/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/simplex-noise@3.0.0/simplex-noise.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/controls/OrbitControls.min.js"></script>
+<script>
+  // Basic scene setup
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x202530);
 
-  <script>
-    // Setup scene
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 5, 10);
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+  scene.add(ambientLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(5, 10, 7);
+  scene.add(dirLight);
+
+  // Ground plane
+  const groundMat = new THREE.MeshStandardMaterial({color: 0x444455});
+  const groundGeom = new THREE.PlaneGeometry(100, 100);
+  const ground = new THREE.Mesh(groundGeom, groundMat);
+  ground.rotation.x = -Math.PI/2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // Skateboard (simple low poly box)
+  const boardMat = new THREE.MeshStandardMaterial({color: 0xffcc00});
+  const boardGeom = new THREE.BoxGeometry(3, 0.1, 1);
+  const board = new THREE.Mesh(boardGeom, boardMat);
+  board.position.y = 0.2;
+  scene.add(board);
+
+  // Skater (simple stick figure: cylinder body + spheres for head and joints)
+  const skaterGroup = new THREE.Group();
+
+  // Body (cylinder)
+  const bodyMat = new THREE.MeshStandardMaterial({color: 0x3366cc});
+  const bodyGeom = new THREE.CylinderGeometry(0.2, 0.3, 1.2);
+  const body = new THREE.Mesh(bodyGeom, bodyMat);
+  body.position.y = 1;
+  skaterGroup.add(body);
+
+  // Head (sphere)
+  const headGeom = new THREE.SphereGeometry(0.3, 16, 16);
+  const head = new THREE.Mesh(headGeom, bodyMat);
+  head.position.y = 1.9;
+  skaterGroup.add(head);
+
+  // Legs (two cylinders)
+  const legGeom = new THREE.CylinderGeometry(0.1, 0.1, 0.8);
+  const leftLeg = new THREE.Mesh(legGeom, bodyMat);
+  const rightLeg = leftLeg.clone();
+  leftLeg.position.set(-0.15, 0.4, 0);
+  rightLeg.position.set(0.15, 0.4, 0);
+  skaterGroup.add(leftLeg);
+  skaterGroup.add(rightLeg);
+
+  // Arms (two cylinders)
+  const armGeom = new THREE.CylinderGeometry(0.07, 0.07, 0.6);
+  const leftArm = new THREE.Mesh(armGeom, bodyMat);
+  const rightArm = leftArm.clone();
+  leftArm.position.set(-0.45, 1.4, 0);
+  rightArm.position.set(0.45, 1.4, 0);
+  leftArm.rotation.z = Math.PI / 6;
+  rightArm.rotation.z = -Math.PI / 6;
+  skaterGroup.add(leftArm);
+  skaterGroup.add(rightArm);
+
+  skaterGroup.position.y = 0.2;
+  scene.add(skaterGroup);
+
+  // Parent the skater to the board (so they move together)
+  board.add(skaterGroup);
+  skaterGroup.position.set(0, 0.5, 0);
+
+  // Physics parameters
+  let velocity = new THREE.Vector3(0, 0, 0);
+  const gravity = -9.8;
+  let onGround = true;
+
+  // Controls state
+  const keys = {};
+  window.addEventListener('keydown', e => { keys[e.code] = true; });
+  window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+  // Resize handler
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+  });
 
-    camera.position.set(0, 40, 60);
-    camera.lookAt(0, 0, 0);
+  // Camera follow setup
+  const cameraTargetOffset = new THREE.Vector3(0, 2.5, -6);
+  const cameraLookAtOffset = new THREE.Vector3(0, 1.2, 0);
 
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(30, 50, 30);
-    scene.add(light);
+  // Clock for delta timing
+  const clock = new THREE.Clock();
 
-    // Terrain setup
-    const size = 64;
-    const geometry = new THREE.PlaneGeometry(50, 50, size - 1, size - 1);
-    geometry.rotateX(-Math.PI / 2);
+  // Main loop
+  function animate() {
+    requestAnimationFrame(animate);
 
-    const simplex = new SimplexNoise();
-    const heights = [];
+    const delta = clock.getDelta();
 
-    for (let i = 0; i < geometry.attributes.position.count; i++) {
-      const x = geometry.attributes.position.getX(i);
-      const z = geometry.attributes.position.getZ(i);
-      const y = simplex.noise2D(x * 0.1, z * 0.1) * 2;
-      geometry.attributes.position.setY(i, y);
-      heights.push(y);
+    // Handle controls
+    // Forward / Backward
+    if(keys['KeyW']) {
+      velocity.z -= 10 * delta;  // Accelerate forward
+    } else if(keys['KeyS']) {
+      velocity.z += 8 * delta;  // Brake/reverse slower
+    } else {
+      // Natural friction
+      velocity.z *= 0.95;
     }
 
-    geometry.computeVertexNormals();
+    // Rotate left/right
+    if(keys['KeyA']) {
+      board.rotation.y += 2 * delta;
+    }
+    if(keys['KeyD']) {
+      board.rotation.y -= 2 * delta;
+    }
 
-    // Load grass texture
-    const textureLoader = new THREE.TextureLoader();
-    const grassTexture = textureLoader.load('grass.jpg', () => {
-      grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping;
-      grassTexture.repeat.set(10, 10);
-      grassTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      grassTexture.encoding = THREE.sRGBEncoding;
+    // Jump (Ollie)
+    if(keys['Space'] && onGround) {
+      velocity.y = 5;
+      onGround = false;
+    }
 
-      const material = new THREE.MeshStandardMaterial({
-        map: grassTexture,
-        flatShading: true,
-      });
+    // Apply gravity
+    velocity.y += gravity * delta;
 
-      const terrain = new THREE.Mesh(geometry, material);
-      scene.add(terrain);
+    // Update board position
+    board.position.x += Math.sin(board.rotation.y) * velocity.z * delta;
+    board.position.z += Math.cos(board.rotation.y) * velocity.z * delta;
+    board.position.y += velocity.y * delta;
 
-      // Raycaster for interaction
-      const raycaster = new THREE.Raycaster();
-      const mouse = new THREE.Vector2();
+    // Collision with ground
+    if(board.position.y < 0.2) {
+      board.position.y = 0.2;
+      velocity.y = 0;
+      onGround = true;
+    }
 
-      function onMouseMove(event) {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-      }
+    // Smooth camera follow (lerp)
+    const desiredCamPos = board.position.clone().add(cameraTargetOffset.clone().applyAxisAngle(new THREE.Vector3(0,1,0), board.rotation.y));
+    camera.position.lerp(desiredCamPos, 0.1);
+    const lookAtPos = board.position.clone().add(cameraLookAtOffset);
+    camera.lookAt(lookAtPos);
 
-      function onMouseDown(event) {
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObject(terrain);
-        if (intersects.length > 0) {
-          const face = intersects[0].face;
-          const idx = face.a;
-          const pos = geometry.attributes.position;
-          pos.setY(idx, pos.getY(idx) + 0.5); // Raise terrain
-          pos.needsUpdate = true;
-          geometry.computeVertexNormals();
-        }
-      }
+    renderer.render(scene, camera);
+  }
 
-      window.addEventListener('mousemove', onMouseMove, false);
-      window.addEventListener('mousedown', onMouseDown, false);
-
-      // Export heightmap
-      document.getElementById('exportBtn').addEventListener('click', () => {
-        const pos = geometry.attributes.position;
-        const data = [];
-        for (let i = 0; i < pos.count; i++) {
-          data.push(pos.getY(i));
-        }
-        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'heightmap.json';
-        a.click();
-      });
-
-      // Animate
-      function animate() {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
-      }
-      animate();
-
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-    });
-  </script>
+  animate();
+</script>
 </body>
 </html>
