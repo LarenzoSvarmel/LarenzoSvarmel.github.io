@@ -4,33 +4,34 @@
   <meta charset="UTF-8" />
   <title>3D Terrain Generator/Builder</title>
   <style>
-    body, html { margin: 0; overflow: hidden; height: 100%; background: #222; }
+    body, html { margin: 0; overflow: hidden; height: 100%; background: #202020; }
     canvas { display: block; }
     #ui {
       position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7);
-      color: white; padding: 10px; border-radius: 10px; font-family: sans-serif;
-      max-width: 220px;
+      color: white; padding: 12px; border-radius: 10px; font-family: Arial, sans-serif;
+      max-width: 240px;
+      user-select: none;
+      z-index: 10;
     }
     #ui label, #ui input, #ui button, #ui select {
-      display: block; margin: 8px 0;
+      display: block;
+      margin: 8px 0;
       width: 100%;
       box-sizing: border-box;
     }
-    input[type=range] {
-      width: 100%;
-    }
+    input[type=range] { width: 100%; }
   </style>
 </head>
 <body>
   <div id="ui">
     <label>Hill Height:
-      <input type="range" id="hillHeight" min="0" max="100" value="30" />
+      <input type="range" id="hillHeight" min="0" max="100" value="40" />
     </label>
-    <label>Dip Depth:
-      <input type="range" id="dipDepth" min="0" max="100" value="20" />
+    <label>Roughness:
+      <input type="range" id="roughness" min="0" max="100" value="30" />
     </label>
-    <label>Foliage Density:
-      <input type="range" id="foliageDensity" min="0" max="100" value="50" />
+    <label>Foliage Density (future):
+      <input type="range" id="foliageDensity" min="0" max="100" value="50" disabled />
     </label>
     <label>Ground Texture:
       <select id="groundTexture">
@@ -41,16 +42,107 @@
     <button id="exportBtn">Export Terrain Data</button>
     <input type="file" id="importInput" />
   </div>
+
   <script type="module">
     import * as THREE from 'https://cdn.skypack.dev/three@0.152.2';
     import { OrbitControls } from 'https://cdn.skypack.dev/three@0.152.2/examples/jsm/controls/OrbitControls.js';
 
-    // Scene setup
+    // Simplex Noise Implementation (for smooth natural terrain)
+    // Source: https://github.com/jwagner/simplex-noise.js MIT License
+    class SimplexNoise {
+      constructor(randomOrSeed) {
+        let random = randomOrSeed;
+        if (!random) random = Math.random;
+        if (typeof random === 'string') {
+          // simple seed from string
+          let seed = 0;
+          for (let i=0; i < random.length; i++) seed += random.charCodeAt(i);
+          random = this._alea(seed);
+        }
+        this.p = new Uint8Array(256);
+        for (let i=0; i<256; i++) this.p[i] = i;
+        for (let i=255; i>0; i--) {
+          let n = Math.floor((i + 1) * random());
+          let q = this.p[i];
+          this.p[i] = this.p[n];
+          this.p[n] = q;
+        }
+        this.perm = new Uint8Array(512);
+        this.permMod12 = new Uint8Array(512);
+        for(let i=0; i<512; i++) {
+          this.perm[i] = this.p[i & 255];
+          this.permMod12[i] = this.perm[i] % 12;
+        }
+      }
+
+      _alea(seed) {
+        return function() {
+          var t = seed += 0x6D2B79F5;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        }
+      }
+
+      grad3 = new Float32Array([
+         1,1,0, -1,1,0, 1,-1,0, -1,-1,0,
+         1,0,1, -1,0,1, 1,0,-1, -1,0,-1,
+         0,1,1, 0,-1,1, 0,1,-1, 0,-1,-1
+      ]);
+
+      noise2D(xin, yin) {
+        const permMod12 = this.permMod12;
+        const perm = this.perm;
+        const grad3 = this.grad3;
+
+        let n0 = 0, n1 = 0, n2 = 0;
+        const F2 = 0.5*(Math.sqrt(3)-1);
+        const s = (xin+yin)*F2;
+        const i = Math.floor(xin+s);
+        const j = Math.floor(yin+s);
+        const G2 = (3-Math.sqrt(3))/6;
+        const t = (i+j)*G2;
+        const X0 = i-t;
+        const Y0 = j-t;
+        const x0 = xin - X0;
+        const y0 = yin - Y0;
+        let i1, j1;
+        if(x0>y0) {i1=1; j1=0;} else {i1=0; j1=1;}
+        const x1 = x0 - i1 + G2;
+        const y1 = y0 - j1 + G2;
+        const x2 = x0 - 1 + 2*G2;
+        const y2 = y0 - 1 + 2*G2;
+        const ii = i & 255;
+        const jj = j & 255;
+        const gi0 = permMod12[ii+perm[jj]]*3;
+        const gi1 = permMod12[ii+i1+perm[jj+j1]]*3;
+        const gi2 = permMod12[ii+1+perm[jj+1]]*3;
+
+        let t0 = 0.5 - x0*x0 - y0*y0;
+        if(t0 >= 0) {
+          t0 *= t0;
+          n0 = t0 * t0 * (grad3[gi0]*x0 + grad3[gi0+1]*y0);
+        }
+        let t1 = 0.5 - x1*x1 - y1*y1;
+        if(t1 >= 0) {
+          t1 *= t1;
+          n1 = t1 * t1 * (grad3[gi1]*x1 + grad3[gi1+1]*y1);
+        }
+        let t2 = 0.5 - x2*x2 - y2*y2;
+        if(t2 >= 0) {
+          t2 *= t2;
+          n2 = t2 * t2 * (grad3[gi2]*x2 + grad3[gi2+1]*y2);
+        }
+        return 70 * (n0 + n1 + n2);
+      }
+    }
+
+    // Initialize scene, camera, renderer
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x444444);
+    scene.background = new THREE.Color(0x1e1e1e);
 
     const camera = new THREE.PerspectiveCamera(
-      75,
+      60,
       window.innerWidth / window.innerHeight,
       0.1,
       1000
@@ -61,6 +153,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    // Orbit controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(0, 0, 0);
     controls.update();
@@ -71,75 +164,108 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Terrain setup
+    // Terrain variables
     const terrainSize = 128;
-    const planeSize = 100;
+    const terrainWidth = 120;
 
-    const geometry = new THREE.PlaneGeometry(planeSize, planeSize, terrainSize - 1, terrainSize - 1);
+    // Create plane geometry for terrain
+    const geometry = new THREE.PlaneGeometry(
+      terrainWidth,
+      terrainWidth,
+      terrainSize - 1,
+      terrainSize - 1
+    );
     geometry.rotateX(-Math.PI / 2);
 
-    // Texture Loader with stable CC0 textures
+    // Load textures from Poly Haven CDN (reliable, CORS friendly)
     const loader = new THREE.TextureLoader();
 
-    // Using CC0 textures from https://ambientcg.com
     const textures = {
-      sand: loader.load('https://cdn.jsdelivr.net/gh/ambientcg/ambientcg-textures/4K/Sand_001/Sand_001_COLOR.jpg'),
-      grass: loader.load('https://cdn.jsdelivr.net/gh/ambientcg/ambientcg-textures/4K/Grass_001/Grass_001_COLOR.jpg'),
+      sand: loader.load(
+        'https://cdn.polyhaven.com/file/ph-assets/Textures/sand_001_diff_1k.jpg'
+      ),
+      grass: loader.load(
+        'https://cdn.polyhaven.com/file/ph-assets/Textures/grass_001_diff_1k.jpg'
+      ),
     };
 
-    // Wait for textures to load fully before applying material
+    // Set texture wrapping and filtering for better tiling
+    for (const key in textures) {
+      const tex = textures[key];
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(terrainSize / 16, terrainSize / 16);
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    }
+
+    // Terrain material with initial grass texture
     const material = new THREE.MeshStandardMaterial({
       map: textures.grass,
       roughness: 1,
       metalness: 0,
     });
 
+    // Create mesh
     const terrain = new THREE.Mesh(geometry, material);
     scene.add(terrain);
 
-    // Lights
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(1, 2, 3);
-    scene.add(dirLight);
+    // Lighting
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(5, 10, 7);
+    scene.add(directionalLight);
 
     scene.add(new THREE.AmbientLight(0x404040));
 
-    // Terrain Regeneration function
+    // Create Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    // Regenerate terrain function with perlin/simplex noise for realistic hills
     function regenerateTerrain() {
-      const hills = parseFloat(document.getElementById('hillHeight').value);
-      const dips = parseFloat(document.getElementById('dipDepth').value);
+      const hillHeight = parseFloat(document.getElementById('hillHeight').value);
+      const roughness = parseFloat(document.getElementById('roughness').value);
 
       const pos = geometry.attributes.position;
       for (let i = 0; i < pos.count; i++) {
         const x = i % terrainSize;
         const y = Math.floor(i / terrainSize);
-        const dx = (x - terrainSize / 2) / terrainSize;
-        const dy = (y - terrainSize / 2) / terrainSize;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        // Height formula combining hills and dips
-        const height = Math.sin(dist * Math.PI * 4) * hills / 10 - Math.cos(dist * Math.PI * 3) * dips / 10;
-        pos.setY(i, height);
+
+        // Normalize coordinates to [-1, 1]
+        const nx = (x / (terrainSize - 1)) * 2 - 1;
+        const ny = (y / (terrainSize - 1)) * 2 - 1;
+
+        // Multi-octave noise for realistic terrain
+        let e = 0;
+        let frequency = roughness / 20; // scale factor
+        let amplitude = hillHeight;
+
+        // 4 octaves of noise, reducing amplitude and increasing frequency
+        for (let octave = 0; octave < 4; octave++) {
+          e += simplex.noise2D(nx * frequency, ny * frequency) * amplitude;
+          frequency *= 2;
+          amplitude /= 2;
+        }
+
+        pos.setY(i, e);
       }
       pos.needsUpdate = true;
       geometry.computeVertexNormals();
     }
 
-    // Event Listeners for inputs
+    // UI controls
     document.getElementById('hillHeight').addEventListener('input', regenerateTerrain);
-    document.getElementById('dipDepth').addEventListener('input', regenerateTerrain);
+    document.getElementById('roughness').addEventListener('input', regenerateTerrain);
 
-    document.getElementById('groundTexture').addEventListener('change', (e) => {
-      const val = e.target.value;
+    document.getElementById('groundTexture').addEventListener('change', (event) => {
+      const val = event.target.value;
       if (textures[val]) {
         material.map = textures[val];
         material.needsUpdate = true;
       }
     });
 
-    // Export button functionality
+    // Export terrain positions to JSON
     document.getElementById('exportBtn').addEventListener('click', () => {
       const positionsArray = geometry.attributes.position.array;
-      // Export as JSON string of float array
       const jsonData = JSON.stringify(Array.from(positionsArray));
       const blob = new Blob([jsonData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -153,7 +279,7 @@
       URL.revokeObjectURL(url);
     });
 
-    // Import button functionality
+    // Import terrain data from JSON file
     document.getElementById('importInput').addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -181,10 +307,10 @@
       reader.readAsText(file);
     });
 
-    // Initial call to generate terrain
+    // Initialize terrain on load
     regenerateTerrain();
 
-    // Animation Loop
+    // Animate loop
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
