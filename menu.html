@@ -2,235 +2,121 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Skater XL Style Controls</title>
+  <title>3D Terrain Generator/Builder</title>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body, html { margin: 0; overflow: hidden; height: 100%; }
     canvas { display: block; }
+    #ui {
+      position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6);
+      color: white; padding: 10px; border-radius: 10px; font-family: sans-serif;
+    }
+    #ui label, #ui input, #ui button, #ui select { display: block; margin: 5px 0; }
   </style>
 </head>
 <body>
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
-import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+  <div id="ui">
+    <label>Hill Height: <input type="range" id="hillHeight" min="0" max="100" value="30" /></label>
+    <label>Dip Depth: <input type="range" id="dipDepth" min="0" max="100" value="20" /></label>
+    <label>Foliage Density: <input type="range" id="foliageDensity" min="0" max="100" value="50" /></label>
+    <label>Ground Texture: 
+      <select id="groundTexture">
+        <option value="sand">Sand</option>
+        <option value="grass">Grass</option>
+      </select>
+    </label>
+    <button id="exportBtn">Export Terrain Data</button>
+    <input type="file" id="importInput" />
+  </div>
+  <script type="module">
+    import * as THREE from 'https://cdn.skypack.dev/three';
+    import { OrbitControls } from 'https://cdn.skypack.dev/three/examples/jsm/controls/OrbitControls.js';
 
-// Scene Setup
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+    let scene = new THREE.Scene();
+    let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    let renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-// Physics World
-const world = new CANNON.World();
-world.gravity.set(0, -9.82, 0);
+    const controls = new OrbitControls(camera, renderer.domElement);
 
-// Ground
-const groundMaterial = new CANNON.Material();
-const groundBody = new CANNON.Body({
-  mass: 0,
-  shape: new CANNON.Plane(),
-  material: groundMaterial
-});
-groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-world.addBody(groundBody);
+    camera.position.set(0, 40, 100);
+    controls.update();
 
-// Ground Mesh
-const groundGeometry = new THREE.PlaneGeometry(100, 100);
-const groundMesh = new THREE.Mesh(groundGeometry, new THREE.MeshStandardMaterial({ color: 0x808080 }));
-groundMesh.rotation.x = -Math.PI / 2;
-scene.add(groundMesh);
+    const terrainSize = 128;
+    const geometry = new THREE.PlaneGeometry(100, 100, terrainSize - 1, terrainSize - 1);
+    geometry.rotateX(-Math.PI / 2);
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-directionalLight.position.set(10, 10, 5);
-scene.add(directionalLight);
+    const loader = new THREE.TextureLoader();
+    const textures = {
+      sand: loader.load('https://upload.wikimedia.org/wikipedia/commons/7/7a/Sand_texture.jpg'),
+      grass: loader.load('https://upload.wikimedia.org/wikipedia/commons/b/be/Grass_texture.jpg'),
+    };
 
-// Skateboard
-const boardMaterial = new CANNON.Material();
-const boardShape = new CANNON.Box(new CANNON.Vec3(0.4, 0.05, 1));
-const boardBody = new CANNON.Body({ mass: 5, shape: boardShape, material: boardMaterial });
-boardBody.position.set(0, 0.5, 0);
-world.addBody(boardBody);
+    const material = new THREE.MeshStandardMaterial({map: textures.grass});
+    const terrain = new THREE.Mesh(geometry, material);
+    scene.add(terrain);
 
-const boardGeometry = new THREE.BoxGeometry(0.8, 0.1, 2);
-const boardMesh = new THREE.Mesh(boardGeometry, new THREE.MeshStandardMaterial({ color: 0x0000ff }));
-scene.add(boardMesh);
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(1, 1, 1);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x404040));
 
-// Feet
-const footShape = new CANNON.Sphere(0.1);
-const frontFootBody = new CANNON.Body({ mass: 1, shape: footShape });
-const backFootBody = new CANNON.Body({ mass: 1, shape: footShape });
-world.addBody(frontFootBody);
-world.addBody(backFootBody);
-
-const footGeometry = new THREE.SphereGeometry(0.1, 16, 16);
-const frontFootMesh = new THREE.Mesh(footGeometry, new THREE.MeshStandardMaterial({ color: 0xff0000 }));
-const backFootMesh = new THREE.Mesh(footGeometry, new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
-scene.add(frontFootMesh);
-scene.add(backFootMesh);
-
-// Variables for Control
-let frontFootSetupPos = null;
-let backFootSetupPos = null;
-let frontFootPushing = false;
-let backFootPushing = false;
-let turnTarget = 0;
-let removingTorque = false;
-let theta = 0;
-const maxBoardLean = 15; // degrees
-const wheelBase = 2;
-
-// Helper Functions
-function getFootLocalTarget(foot, x, y) {
-  if (Math.abs(x) < 0.1 && Math.abs(y) < 0.1) return null;
-  const offsetX = x * 0.3;
-  const offsetZ = y * 0.5;
-  return new CANNON.Vec3(offsetX, 0, offsetZ);
-}
-
-function applyFootForces(footBody, targetPos, pressure) {
-  const worldTarget = boardBody.pointToWorldFrame(targetPos);
-  const force = worldTarget.vsub(footBody.position).scale(pressure * 10);
-  footBody.applyForce(force, footBody.position);
-}
-
-function addTurnTorque(value) {
-  turnTarget = value;
-  removingTorque = false;
-  const min = value < 0 ? -3 : 0;
-  const max = value > 0 ? 3 : 0;
-
-  const localAngularVelocity = boardBody.angularVelocity.clone();
-  boardBody.quaternion.inverse().vmult(localAngularVelocity, localAngularVelocity);
-
-  localAngularVelocity.y = THREE.MathUtils.clamp(
-    THREE.MathUtils.moveTowards(localAngularVelocity.y, 3 * value, 16 * (1/60)),
-    min,
-    max
-  );
-
-  boardBody.quaternion.vmult(localAngularVelocity, boardBody.angularVelocity);
-}
-
-function doBoardLean() {
-  const forward = new THREE.Vector3();
-  boardMesh.getWorldDirection(forward);
-
-  const velocity = boardBody.velocity;
-  const velocityDir = velocity.clone().normalize();
-
-  const dot = forward.dot(velocityDir);
-  const sign = -Math.sign(dot);
-
-  const localVelocity = velocity.clone();
-  boardBody.quaternion.inverse().vmult(localVelocity, localVelocity);
-
-  const accelX = 0; // Placeholder for actual acceleration
-  const localAccel = new CANNON.Vec3(accelX, 0, 0);
-
-  const num2 = wheelBase * localAccel.x / (localVelocity.z || 0.001);
-  const clamped = THREE.MathUtils.clamp(num2, -1, 1);
-
-  if (Math.abs(localVelocity.z) > 0.1) {
-    theta = sign * (57.29578 * Math.asin(clamped));
-  } else {
-    theta = 0;
-  }
-
-  theta = THREE.MathUtils.clamp(theta, -maxBoardLean, maxBoardLean);
-  boardMesh.rotation.z = THREE.MathUtils.degToRad(theta);
-}
-
-// Gamepad Input
-function updateGamepadInputs() {
-  const gamepads = navigator.getGamepads();
-  if (!gamepads) return;
-
-  const gp = gamepads[0];
-  if (!gp) return;
-
-  // Left stick controls front foot
-  const lsX = gp.axes[0];
-  const lsY = gp.axes[1];
-  const frontTargetPos = getFootLocalTarget('front', lsX, lsY);
-  if (frontTargetPos) {
-    frontFootSetupPos = frontTargetPos;
-    frontFootPushing = true;
-  } else {
-    if (frontFootPushing) {
-      frontFootPushing = false;
-      frontFootSetupPos = null;
+    function regenerateTerrain() {
+      const hills = parseFloat(document.getElementById('hillHeight').value);
+      const dips = parseFloat(document.getElementById('dipDepth').value);
+      for (let i = 0; i < geometry.attributes.position.count; i++) {
+        const x = i % terrainSize;
+        const y = Math.floor(i / terrainSize);
+        const dx = (x - terrainSize / 2) / terrainSize;
+        const dy = (y - terrainSize / 2) / terrainSize;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const height = Math.sin(dist * Math.PI * 4) * hills / 10 - Math.cos(dist * Math.PI * 3) * dips / 10;
+        geometry.attributes.position.setY(i, height);
+      }
+      geometry.attributes.position.needsUpdate = true;
+      geometry.computeVertexNormals();
     }
-  }
 
-  // Right stick controls back foot
-  const rsX = gp.axes[2];
-  const rsY = gp.axes[3];
-  const backTargetPos = getFootLocalTarget('back', rsX, rsY);
-  if (backTargetPos) {
-    backFootSetupPos = backTargetPos;
-    backFootPushing = true;
-  } else {
-    if (backFootPushing) {
-      backFootPushing = false;
-      backFootSetupPos = null;
+    document.getElementById('hillHeight').oninput = regenerateTerrain;
+    document.getElementById('dipDepth').oninput = regenerateTerrain;
+    document.getElementById('groundTexture').oninput = (e) => {
+      material.map = textures[e.target.value];
+      material.needsUpdate = true;
+    };
+
+    document.getElementById('exportBtn').onclick = () => {
+      const data = geometry.attributes.position.array;
+      const blob = new Blob([JSON.stringify(Array.from(data))], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'terrain.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    document.getElementById('importInput').onchange = (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        const arr = JSON.parse(reader.result);
+        for (let i = 0; i < arr.length; i++) {
+          geometry.attributes.position.array[i] = arr[i];
+        }
+        geometry.attributes.position.needsUpdate = true;
+        geometry.computeVertexNormals();
+      };
+      reader.readAsText(file);
+    };
+
+    regenerateTerrain();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
     }
-  }
-
-  // Apply turn torque based on left stick X-axis
-  addTurnTorque(lsX);
-}
-
-// Animation Loop
-function animate() {
-  requestAnimationFrame(animate);
-
-  updateGamepadInputs();
-
-  if (frontFootSetupPos) {
-    const lsMag = Math.sqrt(Math.pow(gp.axes[0], 2) + Math.pow(gp.axes[1], 2));
-    applyFootForces(frontFootBody, frontFootSetupPos, lsMag);
-  }
-
-  if (backFootSetupPos) {
-    const rsMag = Math.sqrt(Math.pow(gp.axes[2], 2) + Math.pow(gp.axes[3], 2));
-    applyFootForces(backFootBody, backFootSetupPos, rsMag);
-  }
-
-  doBoardLean();
-
-  world.step(1/60);
-
-  // Update Mesh Positions
-  boardMesh.position.copy(boardBody.position);
-  boardMesh.quaternion.copy(boardBody.quaternion);
-
-  frontFootMesh.position.copy(frontFootBody.position);
-  frontFootMesh.quaternion.copy(frontFootBody.quaternion);
-
-  backFootMesh.position.copy(backFootBody.position);
-  backFootMesh.quaternion.copy(backFootBody.quaternion);
-
-  // Camera Follow
-  camera.position.lerp(new THREE.Vector3(
-    boardMesh.position.x,
-    boardMesh.position.y + 3,
-    boardMesh.position.z + 6
-  ), 0.1);
-  camera.lookAt(boardMesh.position);
-
-  renderer.render(scene, camera);
-}
-
-animate();
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-</script>
+    animate();
+  </script>
 </body>
 </html>
