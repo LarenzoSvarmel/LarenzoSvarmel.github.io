@@ -4,21 +4,35 @@
   <meta charset="UTF-8" />
   <title>3D Terrain Generator/Builder</title>
   <style>
-    body, html { margin: 0; overflow: hidden; height: 100%; }
+    body, html { margin: 0; overflow: hidden; height: 100%; background: #222; }
     canvas { display: block; }
     #ui {
-      position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6);
+      position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7);
       color: white; padding: 10px; border-radius: 10px; font-family: sans-serif;
+      max-width: 220px;
     }
-    #ui label, #ui input, #ui button, #ui select { display: block; margin: 5px 0; }
+    #ui label, #ui input, #ui button, #ui select {
+      display: block; margin: 8px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    input[type=range] {
+      width: 100%;
+    }
   </style>
 </head>
 <body>
   <div id="ui">
-    <label>Hill Height: <input type="range" id="hillHeight" min="0" max="100" value="30" /></label>
-    <label>Dip Depth: <input type="range" id="dipDepth" min="0" max="100" value="20" /></label>
-    <label>Foliage Density: <input type="range" id="foliageDensity" min="0" max="100" value="50" /></label>
-    <label>Ground Texture: 
+    <label>Hill Height:
+      <input type="range" id="hillHeight" min="0" max="100" value="30" />
+    </label>
+    <label>Dip Depth:
+      <input type="range" id="dipDepth" min="0" max="100" value="20" />
+    </label>
+    <label>Foliage Density:
+      <input type="range" id="foliageDensity" min="0" max="100" value="50" />
+    </label>
+    <label>Ground Texture:
       <select id="groundTexture">
         <option value="sand">Sand</option>
         <option value="grass">Grass</option>
@@ -28,89 +42,149 @@
     <input type="file" id="importInput" />
   </div>
   <script type="module">
-    import * as THREE from 'https://cdn.skypack.dev/three';
-    import { OrbitControls } from 'https://cdn.skypack.dev/three/examples/jsm/controls/OrbitControls.js';
+    import * as THREE from 'https://cdn.skypack.dev/three@0.152.2';
+    import { OrbitControls } from 'https://cdn.skypack.dev/three@0.152.2/examples/jsm/controls/OrbitControls.js';
 
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    let renderer = new THREE.WebGLRenderer({antialias: true});
+    // Scene setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x444444);
+
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 50, 100);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
-
-    camera.position.set(0, 40, 100);
+    controls.target.set(0, 0, 0);
     controls.update();
 
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Terrain setup
     const terrainSize = 128;
-    const geometry = new THREE.PlaneGeometry(100, 100, terrainSize - 1, terrainSize - 1);
+    const planeSize = 100;
+
+    const geometry = new THREE.PlaneGeometry(planeSize, planeSize, terrainSize - 1, terrainSize - 1);
     geometry.rotateX(-Math.PI / 2);
 
+    // Texture Loader with stable CC0 textures
     const loader = new THREE.TextureLoader();
+
+    // Using CC0 textures from https://ambientcg.com
     const textures = {
-      sand: loader.load('https://upload.wikimedia.org/wikipedia/commons/7/7a/Sand_texture.jpg'),
-      grass: loader.load('https://upload.wikimedia.org/wikipedia/commons/b/be/Grass_texture.jpg'),
+      sand: loader.load('https://cdn.jsdelivr.net/gh/ambientcg/ambientcg-textures/4K/Sand_001/Sand_001_COLOR.jpg'),
+      grass: loader.load('https://cdn.jsdelivr.net/gh/ambientcg/ambientcg-textures/4K/Grass_001/Grass_001_COLOR.jpg'),
     };
 
-    const material = new THREE.MeshStandardMaterial({map: textures.grass});
+    // Wait for textures to load fully before applying material
+    const material = new THREE.MeshStandardMaterial({
+      map: textures.grass,
+      roughness: 1,
+      metalness: 0,
+    });
+
     const terrain = new THREE.Mesh(geometry, material);
     scene.add(terrain);
 
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(1, 1, 1);
-    scene.add(light);
+    // Lights
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(1, 2, 3);
+    scene.add(dirLight);
+
     scene.add(new THREE.AmbientLight(0x404040));
 
+    // Terrain Regeneration function
     function regenerateTerrain() {
       const hills = parseFloat(document.getElementById('hillHeight').value);
       const dips = parseFloat(document.getElementById('dipDepth').value);
-      for (let i = 0; i < geometry.attributes.position.count; i++) {
+
+      const pos = geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
         const x = i % terrainSize;
         const y = Math.floor(i / terrainSize);
         const dx = (x - terrainSize / 2) / terrainSize;
         const dy = (y - terrainSize / 2) / terrainSize;
         const dist = Math.sqrt(dx * dx + dy * dy);
+        // Height formula combining hills and dips
         const height = Math.sin(dist * Math.PI * 4) * hills / 10 - Math.cos(dist * Math.PI * 3) * dips / 10;
-        geometry.attributes.position.setY(i, height);
+        pos.setY(i, height);
       }
-      geometry.attributes.position.needsUpdate = true;
+      pos.needsUpdate = true;
       geometry.computeVertexNormals();
     }
 
-    document.getElementById('hillHeight').oninput = regenerateTerrain;
-    document.getElementById('dipDepth').oninput = regenerateTerrain;
-    document.getElementById('groundTexture').oninput = (e) => {
-      material.map = textures[e.target.value];
-      material.needsUpdate = true;
-    };
+    // Event Listeners for inputs
+    document.getElementById('hillHeight').addEventListener('input', regenerateTerrain);
+    document.getElementById('dipDepth').addEventListener('input', regenerateTerrain);
 
-    document.getElementById('exportBtn').onclick = () => {
-      const data = geometry.attributes.position.array;
-      const blob = new Blob([JSON.stringify(Array.from(data))], {type: 'application/json'});
+    document.getElementById('groundTexture').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (textures[val]) {
+        material.map = textures[val];
+        material.needsUpdate = true;
+      }
+    });
+
+    // Export button functionality
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const positionsArray = geometry.attributes.position.array;
+      // Export as JSON string of float array
+      const jsonData = JSON.stringify(Array.from(positionsArray));
+      const blob = new Blob([jsonData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
+
       const a = document.createElement('a');
       a.href = url;
       a.download = 'terrain.json';
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    };
+    });
 
-    document.getElementById('importInput').onchange = (e) => {
-      const file = e.target.files[0];
+    // Import button functionality
+    document.getElementById('importInput').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
       const reader = new FileReader();
       reader.onload = () => {
-        const arr = JSON.parse(reader.result);
-        for (let i = 0; i < arr.length; i++) {
-          geometry.attributes.position.array[i] = arr[i];
+        try {
+          const arr = JSON.parse(reader.result);
+          const posAttr = geometry.attributes.position;
+
+          if (!Array.isArray(arr) || arr.length !== posAttr.array.length) {
+            alert('Invalid terrain data length!');
+            return;
+          }
+
+          for (let i = 0; i < arr.length; i++) {
+            posAttr.array[i] = arr[i];
+          }
+          posAttr.needsUpdate = true;
+          geometry.computeVertexNormals();
+        } catch (e) {
+          alert('Failed to parse terrain data!');
         }
-        geometry.attributes.position.needsUpdate = true;
-        geometry.computeVertexNormals();
       };
       reader.readAsText(file);
-    };
+    });
 
+    // Initial call to generate terrain
     regenerateTerrain();
 
+    // Animation Loop
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
